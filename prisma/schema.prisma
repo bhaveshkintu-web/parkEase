@@ -1,0 +1,428 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  firstName        String
+  lastName         String
+  phone            String?
+  avatar           String?
+  emailVerified    Boolean         @default(false)
+  role             UserRole        @default(CUSTOMER)
+  status           UserStatus      @default(ACTIVE)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  password         String
+  verifyToken      String?
+  tokenExpiry     DateTime?
+  moderatedReviews AdminReview[]
+  bookings         Booking[]
+  ownerProfile     OwnerProfile?
+  paymentMethods   PaymentMethod[]
+  reviews          Review[]
+  savedVehicles    SavedVehicle[]
+  watchmanProfile  Watchman?
+}
+
+model OwnerProfile {
+  id                 String            @id @default(cuid())
+  userId             String            @unique
+  businessName       String
+  businessType       String
+  taxId              String?
+  registrationNumber String?
+  street             String
+  city               String
+  state              String
+  zipCode            String
+  country            String
+  status             String            @default("pending")
+  verificationStatus String            @default("unverified")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  documents          OwnerDocument[]
+  user               User              @relation(fields: [userId], references: [id])
+  parkingApprovals   ParkingApproval[]
+  locations          ParkingLocation[]
+  wallet             Wallet?
+  watchmen           Watchman[]
+}
+
+model ParkingLocation {
+  id             String             @id @default(cuid())
+  ownerId        String
+  name           String
+  address        String
+  city           String
+  state          String?
+  country        String
+  zipCode        String?
+  airportCode    String?
+  latitude       Float
+  longitude      Float
+  description    String?
+  pricePerDay    Float
+  originalPrice  Float?
+  amenities      String[]
+  images         String[]
+  shuttle        Boolean            @default(false)
+  covered        Boolean            @default(false)
+  selfPark       Boolean            @default(true)
+  valet          Boolean            @default(false)
+  open24Hours    Boolean            @default(false)
+  availableSpots Int
+  totalSpots     Int
+  status         ParkingStatus      @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  bookings       Booking[]
+  analytics      LocationAnalytics?
+  owner          OwnerProfile       @relation(fields: [ownerId], references: [id])
+  sessions       ParkingSession[]
+  pricingRules   PricingRule[]
+  reviews        Review[]
+  watchmanShifts WatchmanShift[]
+}
+
+model Booking {
+  id               String          @id @default(cuid())
+  userId           String
+  locationId       String
+  checkIn          DateTime
+  checkOut         DateTime
+  guestFirstName   String
+  guestLastName    String
+  guestEmail       String
+  guestPhone       String
+  vehicleMake      String
+  vehicleModel     String
+  vehicleColor     String
+  vehiclePlate     String
+  totalPrice       Float
+  taxes            Float
+  fees             Float
+  status           BookingStatus   @default(PENDING)
+  confirmationCode String          @unique
+  qrCode           String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  location         ParkingLocation @relation(fields: [locationId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  parkingSession   ParkingSession?
+  payment          Payment?
+  refunds          RefundRequest[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String   @unique
+  amount        Float
+  currency      String   @default("USD")
+  provider      String
+  transactionId String
+  status        String
+  createdAt     DateTime @default(now())
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+}
+
+model Wallet {
+  id           String              @id @default(cuid())
+  ownerId      String              @unique
+  balance      Float               @default(0)
+  currency     String              @default("USD")
+  lastUpdated  DateTime            @updatedAt
+  owner        OwnerProfile        @relation(fields: [ownerId], references: [id])
+  transactions WalletTransaction[]
+  withdrawals  WithdrawalRequest[]
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  type        WalletTransactionType
+  amount      Float
+  description String
+  status      String
+  reference   String?
+  createdAt   DateTime              @default(now())
+  wallet      Wallet                @relation(fields: [walletId], references: [id])
+}
+
+model WithdrawalRequest {
+  id            String    @id @default(cuid())
+  walletId      String
+  amount        Float
+  accountName   String
+  accountNumber String
+  bankName      String
+  routingNumber String?
+  status        String
+  requestedAt   DateTime  @default(now())
+  processedAt   DateTime?
+  wallet        Wallet    @relation(fields: [walletId], references: [id])
+}
+
+model Watchman {
+  id           String                @id @default(cuid())
+  userId       String                @unique
+  ownerId      String
+  status       String                @default("active")
+  createdAt    DateTime              @default(now())
+  owner        OwnerProfile          @relation(fields: [ownerId], references: [id])
+  user         User                  @relation(fields: [userId], references: [id])
+  activityLogs WatchmanActivityLog[]
+  shifts       WatchmanShift[]
+}
+
+model WatchmanShift {
+  id             String              @id @default(cuid())
+  watchmanId     String
+  locationId     String
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  status         WatchmanShiftStatus @default(SCHEDULED)
+  location       ParkingLocation     @relation(fields: [locationId], references: [id])
+  watchman       Watchman            @relation(fields: [watchmanId], references: [id])
+}
+
+model WatchmanActivityLog {
+  id         String   @id @default(cuid())
+  watchmanId String
+  type       String
+  timestamp  DateTime @default(now())
+  details    Json?
+  watchman   Watchman @relation(fields: [watchmanId], references: [id])
+}
+
+model ParkingSession {
+  id           String          @id @default(cuid())
+  bookingId    String          @unique
+  locationId   String
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  status       String
+  booking      Booking         @relation(fields: [bookingId], references: [id])
+  location     ParkingLocation @relation(fields: [locationId], references: [id])
+}
+
+model Review {
+  id          String          @id @default(cuid())
+  locationId  String
+  userId      String
+  rating      Int
+  title       String?
+  content     String
+  helpful     Int             @default(0)
+  createdAt   DateTime        @default(now())
+  adminReview AdminReview?
+  location    ParkingLocation @relation(fields: [locationId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
+}
+
+model AdminReview {
+  id             String    @id @default(cuid())
+  reviewId       String    @unique
+  status         String
+  moderatorNotes String?
+  moderatedById  String?
+  moderatedAt    DateTime?
+  moderator      User?     @relation(fields: [moderatedById], references: [id])
+  review         Review    @relation(fields: [reviewId], references: [id])
+}
+
+model RefundRequest {
+  id             String       @id @default(cuid())
+  bookingId      String
+  amount         Float
+  reason         String
+  description    String?
+  status         RefundStatus @default(PENDING)
+  approvedAmount Float?
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  booking        Booking      @relation(fields: [bookingId], references: [id])
+}
+
+model SavedVehicle {
+  id           String   @id @default(cuid())
+  userId       String
+  make         String
+  model        String
+  year         Int
+  color        String
+  licensePlate String
+  state        String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  last4       String
+  brand       String?
+  expiryMonth Int?
+  expiryYear  Int?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model OwnerDocument {
+  id             String       @id @default(cuid())
+  ownerProfileId String
+  type           String
+  name           String
+  url            String
+  status         String
+  uploadedAt     DateTime     @default(now())
+  owner          OwnerProfile @relation(fields: [ownerProfileId], references: [id])
+}
+
+model ParkingApproval {
+  id             String       @id @default(cuid())
+  ownerProfileId String
+  status         String
+  submittedAt    DateTime     @default(now())
+  reviewedAt     DateTime?
+  owner          OwnerProfile @relation(fields: [ownerProfileId], references: [id])
+}
+
+model LocationAnalytics {
+  id            String          @id @default(cuid())
+  locationId    String          @unique
+  totalBookings Int             @default(0)
+  revenue       Float           @default(0)
+  averageRating Float           @default(0)
+  occupancyRate Float           @default(0)
+  location      ParkingLocation @relation(fields: [locationId], references: [id])
+}
+
+model PricingRule {
+  id         String           @id @default(cuid())
+  locationId String?
+  name       String
+  type       String
+  multiplier Float
+  startDate  DateTime?
+  endDate    DateTime?
+  isActive   Boolean          @default(true)
+  location   ParkingLocation? @relation(fields: [locationId], references: [id])
+}
+
+model Promotion {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  type       String
+  value      Float
+  validFrom  DateTime
+  validUntil DateTime
+  isActive   Boolean  @default(true)
+  usageLimit Int?
+  usedCount  Int      @default(0)
+}
+
+model CMSPage {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  content     String
+  status      String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CommissionRule {
+  id        String  @id @default(cuid())
+  name      String
+  type      String
+  value     Float
+  appliesTo String
+  isActive  Boolean @default(true)
+}
+
+model Workflow {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  definition  Json
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  executions  WorkflowExecution[]
+}
+
+model WorkflowExecution {
+  id          String    @id @default(cuid())
+  workflowId  String
+  status      String
+  data        Json?
+  results     Json?
+  error       Json?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+}
+
+enum UserRole {
+  CUSTOMER
+  OWNER
+  WATCHMAN
+  ADMIN
+  SUPPORT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum ParkingStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PARTIAL
+  REJECTED
+  PROCESSED
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+  WITHDRAWAL
+  REFUND
+  COMMISSION
+}
+
+enum WatchmanShiftStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  MISSED
+  PARTIAL
+}

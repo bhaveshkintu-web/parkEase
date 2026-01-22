@@ -1,0 +1,271 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { LayoutDashboard, MapPin, MessageSquare, Users, Wallet, Settings, BarChart3, Tag, Percent, FileText, AlertTriangle, QrCode, Car, Clock, Shield, Menu, ChevronRight, LogOut, Type as type, LucideIcon, Building2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: number;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+// System Admin Navigation
+const systemAdminNav: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Management",
+    items: [
+      { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Owners", href: "/admin/owners", icon: Building2 },
+      { label: "Locations", href: "/admin/locations", icon: MapPin },
+      { label: "Approvals", href: "/admin/approvals", icon: Shield },
+      { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "Support",
+    items: [
+      { label: "Disputes", href: "/admin/disputes", icon: AlertTriangle },
+      { label: "Refunds", href: "/admin/refunds", icon: Wallet },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { label: "Commissions", href: "/admin/commissions", icon: Percent },
+      { label: "Pricing Rules", href: "/admin/pricing", icon: Tag },
+      { label: "Promotions", href: "/admin/promotions", icon: FileText },
+    ],
+  },
+  {
+    title: "Content",
+    items: [
+      { label: "CMS Pages", href: "/admin/content", icon: FileText },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      { label: "System Settings", href: "/admin/settings", icon: Settings },
+    ],
+  },
+];
+
+// Owner Admin Navigation
+const ownerAdminNav: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { label: "Dashboard", href: "/owner", icon: LayoutDashboard },
+      { label: "Analytics", href: "/owner/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Parking",
+    items: [
+      { label: "My Locations", href: "/owner/locations", icon: MapPin },
+      { label: "Bookings", href: "/owner/bookings", icon: Car },
+      { label: "Reviews", href: "/owner/reviews", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "Team",
+    items: [
+      { label: "Watchmen", href: "/owner/watchmen", icon: Shield },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { label: "Wallet", href: "/owner/wallet", icon: Wallet },
+      { label: "Earnings", href: "/owner/earnings", icon: BarChart3 },
+    ],
+  },
+];
+
+// Watchman Admin Navigation
+const watchmanAdminNav: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { label: "Dashboard", href: "/watchman", icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { label: "Today's Bookings", href: "/watchman/bookings", icon: Car },
+      { label: "Scan QR", href: "/watchman/scan", icon: QrCode },
+      { label: "Check-In/Out", href: "/watchman/sessions", icon: Clock },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
+      { label: "My Activity", href: "/watchman/activity", icon: BarChart3 },
+    ],
+  },
+];
+
+interface AdminSidebarProps {
+  role: "admin" | "owner" | "watchman";
+}
+
+export function AdminSidebar({ role }: AdminSidebarProps) {
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navigation =
+    role === "admin"
+      ? systemAdminNav
+      : role === "owner"
+      ? ownerAdminNav
+      : watchmanAdminNav;
+
+  const roleLabels = {
+    admin: "System Admin",
+    owner: "Owner Portal",
+    watchman: "Watchman Portal",
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-lg font-bold text-primary-foreground">P</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground truncate">ParkEase</p>
+            <p className="text-xs text-muted-foreground">{roleLabels[role]}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1 py-4">
+        <div className="px-3 space-y-6">
+          {navigation.map((section) => (
+            <div key={section.title}>
+              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {section.title}
+              </p>
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== `/${role}` && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 text-xs rounded-full",
+                              isActive
+                                ? "bg-primary-foreground/20 text-primary-foreground"
+                                : "bg-primary/10 text-primary"
+                            )}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                        {isActive && (
+                          <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* User Section */}
+      <div className="p-4 border-t">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+            <span className="text-sm font-medium text-foreground">
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start bg-transparent"
+          onClick={logout}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col border-r bg-card h-[calc(100vh-64px)] sticky top-16">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <div className="lg:hidden fixed bottom-4 left-4 z-50">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button size="icon" className="rounded-full shadow-lg w-12 h-12">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-72">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
+  );
+}
