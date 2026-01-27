@@ -1,11 +1,9 @@
 "use client";
 
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth, getDashboardUrlForRole } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { registerSchema, type RegisterInput } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Car, Eye, EyeOff, Loader2, AlertCircle, Check } from "lucide-react";
+import { Car, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -97,9 +95,6 @@ export default function RegisterPage() {
 
     if (registerResult.success) {
       router.push("/auth/verify-email");
-      // router.push(
-      //   `/auth/verify-email?email=${encodeURIComponent(formData.email)}`,
-      // );
       return;
     }
 
@@ -123,6 +118,7 @@ export default function RegisterPage() {
             <CardTitle className="text-2xl">Create an account</CardTitle>
             <CardDescription>Get started with ParkEase today</CardDescription>
           </CardHeader>
+
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {serverError && (
