@@ -22,6 +22,8 @@ model User {
   password         String
   verifyToken      String?
   tokenExpiry     DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
   moderatedReviews AdminReview[]
   bookings         Booking[]
   ownerProfile     OwnerProfile?

@@ -38,6 +38,20 @@ export const passwordChangeSchema = z
     path: ["confirmNewPassword"],
   });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
 // Vehicle validations
 export const vehicleSchema = z.object({
   nickname: z.string().max(30).optional(),
@@ -108,3 +122,5 @@ export type PaymentInput = z.infer<typeof paymentSchema>;
 export type ReservationModifyInput = z.infer<typeof reservationModifySchema>;
 export type LocationInput = z.infer<typeof locationSchema>;
 export type ReviewModerationInput = z.infer<typeof reviewModerationSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

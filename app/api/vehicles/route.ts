@@ -12,9 +12,14 @@ export async function GET() {
     });
 
     return NextResponse.json(vehicles);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    console.error("VEHICLES_FETCH_ERROR:", error);
     return NextResponse.json(
-      { message: "Failed to fetch vehicles" },
+      { message: "Internal server error" },
       { status: 500 },
     );
   }
