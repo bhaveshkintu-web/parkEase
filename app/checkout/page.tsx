@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { parkingLocations, formatCurrency, formatDate, calculateQuote, generateConfirmationCode, calculateDays } from "@/lib/data";
+import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
+import { createBooking } from "@/lib/actions/booking-actions";
+import { getParkingLocationById } from "@/lib/actions/parking-actions";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,17 +38,16 @@ import {
   CheckCircle,
   Lock,
   Tag,
+  Loader2,
 } from "lucide-react";
 
 function CheckoutContent() {
   const router = useRouter();
-  const { location, checkIn, checkOut, setGuestInfo, setVehicleInfo } = useBooking();
+  const { toast } = useToast();
+  const { location: contextLocation, checkIn, checkOut, setGuestInfo, setVehicleInfo } = useBooking();
   
-  // Use first location as fallback for demo
-  const bookingLocation = location || parkingLocations[0];
-  const quote = calculateQuote(bookingLocation, checkIn, checkOut);
-  const { days, basePrice, taxes, fees, totalPrice, savings } = quote;
-
+  const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
+  const [isLoading, setIsLoading] = useState(!contextLocation);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -71,26 +73,100 @@ function CheckoutContent() {
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  useEffect(() => {
+    async function fetchLocation() {
+      if (!contextLocation) {
+        // In a real app, you'd get the ID from search params if not in context
+        // For now, if no location is selected, redirect back
+        toast({
+          title: "No location selected",
+          description: "Please select a parking location first.",
+          variant: "destructive",
+        });
+        router.push("/parking");
+        return;
+      }
+      setIsLoading(false);
+    }
+    fetchLocation();
+  }, [contextLocation, router, toast]);
+
+  const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut) : null;
+  
   const handleApplyPromo = () => {
     if (promoCode.toLowerCase() === "save10") {
       setPromoApplied(true);
+      toast({
+        title: "Promo Applied",
+        description: "10% discount has been applied to your total.",
+      });
+    } else {
+      toast({
+        title: "Invalid Code",
+        description: "The promo code you entered is not valid.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSubmit = async () => {
+    if (!canSubmit) return;
+
     setIsSubmitting(true);
-    
-    // Save info to context
-    setGuestInfo({ firstName, lastName, email, phone });
-    setVehicleInfo({ make, model, color, licensePlate });
+    try {
+      const { days, basePrice, taxes, fees, totalPrice } = quote!;
+      const finalPrice = promoApplied ? totalPrice * 0.9 : totalPrice;
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+      const bookingData = {
+        locationId: bookingLocation.id,
+        checkIn: new Date(checkIn),
+        checkOut: new Date(checkOut),
+        guestFirstName: firstName,
+        guestLastName: lastName,
+        guestEmail: email,
+        guestPhone: phone,
+        vehicleMake: make,
+        vehicleModel: model,
+        vehicleColor: color,
+        vehiclePlate: licensePlate,
+        totalPrice: finalPrice,
+        taxes: taxes,
+        fees: fees,
+        // We'll let the server action handle userId and confirmationCode
+      };
 
-    // Generate confirmation code and redirect
-    const confirmationCode = generateConfirmationCode();
-    router.push(`/confirmation?code=${confirmationCode}`);
+      const response = await createBooking(bookingData);
+
+      if (response.success && response.data) {
+        toast({
+          title: "Booking Confirmed!",
+          description: "Your parking spot has been reserved.",
+        });
+        router.push(`/confirmation?code=${response.data.confirmationCode}`);
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Preparing checkout...</p>
+      </div>
+    );
+  }
+
+  const { days, basePrice, taxes, fees, totalPrice, savings } = quote!;
 
   const isGuestInfoComplete = firstName && lastName && email && phone;
   const isVehicleInfoComplete = make && model && licensePlate;
@@ -343,11 +419,11 @@ function CheckoutContent() {
                     />
                     <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                       I agree to the{" "}
-                      <Link href="#" className="text-primary hover:underline">
+                      <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
                         Terms of Service
                       </Link>{" "}
                       and{" "}
-                      <Link href="#" className="text-primary hover:underline">
+                      <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
                         Cancellation Policy
                       </Link>
                       . I understand that my reservation is subject to availability.
@@ -516,8 +592,6 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <BookingProvider>
-      <CheckoutContent />
-    </BookingProvider>
+    <CheckoutContent />
   );
 }

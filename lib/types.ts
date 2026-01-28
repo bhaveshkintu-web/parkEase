@@ -42,9 +42,9 @@ export interface ParkingLocation {
   availableSpots: number;
   totalSpots: number;
   description: string;
-  redeemSteps: RedeemStep[];
+  redeemSteps?: RedeemStep[];
   specialInstructions?: string[];
-  cancellationPolicy: CancellationPolicy;
+  cancellationPolicy?: CancellationPolicy;
   heightLimit?: string;
   securityFeatures: string[];
 }
@@ -286,15 +286,9 @@ export interface WatchmanActivityLog {
 export interface ShiftBreak {
   id: string;
   startTime: Date;
-  endTime: Date;
-  duration: number; // in minutes
-}
-
-export interface ShiftBreak {
-  id: string;
-  startTime: Date;
   endTime?: Date;
-  type: "lunch" | "short" | "emergency";
+  duration?: number; // in minutes
+  type?: "lunch" | "short" | "emergency";
 }
 
 export interface WatchmanShift {

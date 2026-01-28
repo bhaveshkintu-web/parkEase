@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useDataStore } from "@/lib/data-store";
 import { useToast } from "@/hooks/use-toast";
-import { airports, parkingLocations } from "@/lib/data";
+import { airports } from "@/lib/data";
 
 const amenityOptions = [
   "Covered Parking",
@@ -47,8 +47,8 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Find location from store or fallback to mock data
-  const existingLocation = locations.find((l) => l.id === id) || parkingLocations.find((l) => l.id === id);
+  // Find location from store
+  const existingLocation = locations.find((l) => l.id === id);
 
   const [formData, setFormData] = useState({
     name: "",

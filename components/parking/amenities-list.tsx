@@ -32,6 +32,8 @@ interface AmenitiesListProps {
 }
 
 export function AmenitiesList({ amenities }: AmenitiesListProps) {
+  if (!amenities || !Array.isArray(amenities) || amenities.length === 0) return null;
+  
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-4 text-lg font-semibold text-foreground">What this place offers</h2>

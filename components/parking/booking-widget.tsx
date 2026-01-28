@@ -42,6 +42,10 @@ export function BookingWidget({ location }: BookingWidgetProps) {
   };
 
   const getCancellationText = () => {
+    if (!location.cancellationPolicy) {
+      return "Non-refundable";
+    }
+
     switch (location.cancellationPolicy.type) {
       case "free":
         return `Free cancellation ${location.cancellationPolicy.deadline}`;
@@ -75,7 +79,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
           </span>
           {quote.savings > 0 && (
             <span className="text-lg text-muted-foreground line-through">
-              {formatCurrency(location.originalPrice * quote.days + quote.taxes + quote.fees)}
+              {formatCurrency((location.originalPrice || location.pricePerDay) * quote.days + quote.taxes + quote.fees)}
             </span>
           )}
         </div>
