@@ -6,8 +6,6 @@ const footerLinks = {
     { label: "Airport Parking", href: "/parking" },
     { label: "Monthly Parking", href: "#" },
     { label: "Event Parking", href: "#" },
-    { label: "Car Wash", href: "#" },
-    { label: "Auto Insurance", href: "#" },
   ],
   Company: [
     { label: "About Us", href: "#" },
@@ -49,7 +47,7 @@ export function Footer() {
               <span className="text-xl font-bold text-foreground">ParkEase</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              Find and reserve parking spots near airports, events, and city centers. 
+              Find and reserve parking spots near airports, events, and city centers.
               Save money and time with guaranteed reservations.
             </p>
             <div className="mt-6 flex gap-4">

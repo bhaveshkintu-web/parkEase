@@ -6,6 +6,7 @@ import { PopularAirports } from "@/components/home/popular-airports";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { Testimonials } from "@/components/home/testimonials";
 import { AppDownload } from "@/components/home/app-download";
+import { BusinessCTA } from "@/components/home/business-cta"; // N
 import { BookingProvider } from "@/lib/booking-context";
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
           <PopularAirports />
           <HowItWorks />
           <Testimonials />
+          <BusinessCTA /> {/* N */}
           <AppDownload />
         </main>
         <Footer />

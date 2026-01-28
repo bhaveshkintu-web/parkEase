@@ -39,6 +39,7 @@ const systemAdminNav: NavSection[] = [
       { label: "Locations", href: "/admin/locations", icon: MapPin },
       { label: "Approvals", href: "/admin/approvals", icon: Shield },
       { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
+      { label: "Business Leads", href: "/admin/business-inquiries", icon: FileText }, // N
     ],
   },
   {
@@ -139,8 +140,8 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
     role === "admin"
       ? systemAdminNav
       : role === "owner"
-      ? ownerAdminNav
-      : watchmanAdminNav;
+        ? ownerAdminNav
+        : watchmanAdminNav;
 
   const roleLabels = {
     admin: "System Admin",

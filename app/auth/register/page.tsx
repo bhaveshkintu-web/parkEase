@@ -227,11 +227,10 @@ export default function RegisterPage() {
                       {[0, 1, 2, 3].map((i) => (
                         <div
                           key={i}
-                          className={`h-1 flex-1 rounded-full ${
-                            i < strength
+                          className={`h-1 flex-1 rounded-full ${i < strength
                               ? strengthColors[strength - 1]
                               : "bg-muted"
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -271,6 +270,7 @@ export default function RegisterPage() {
                   onCheckedChange={(checked) =>
                     setAgreedToTerms(checked === true)
                   }
+                  className="border-slate-400"
                 />
                 <label
                   htmlFor="terms"
@@ -294,7 +294,7 @@ export default function RegisterPage() {
             <CardFooter className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full mt-2"
                 disabled={isSubmitting || authLoading}
               >
                 {isSubmitting ? (
@@ -308,7 +308,7 @@ export default function RegisterPage() {
               </Button>
 
               <p className="text-sm text-center text-muted-foreground">
-                Already have an account?{" "}
+                Already have an account?&nbsp;
                 <Link
                   href="/auth/login"
                   className="text-primary hover:underline font-medium"

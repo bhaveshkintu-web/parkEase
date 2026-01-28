@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { ParkingLocation, GuestInfo, VehicleInfo } from "./types";
 
 interface BookingState {
@@ -42,13 +42,23 @@ const getDefaultCheckOut = () => {
 export function BookingProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<BookingState>({
     location: null,
-    checkIn: getDefaultCheckIn(),
-    checkOut: getDefaultCheckOut(),
+    // Initialize with stable dates to prevent hydration mismatch - N
+    checkIn: new Date("2025-01-01T12:00:00Z"),
+    checkOut: new Date("2025-01-04T12:00:00Z"),
     guestInfo: null,
     vehicleInfo: null,
     searchQuery: "",
     parkingType: "airport",
   });
+
+  // Update to actual default dates on the client after hydration - N
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      checkIn: getDefaultCheckIn(),
+      checkOut: getDefaultCheckOut()
+    }));
+  }, []); // N
 
   const setLocation = (location: ParkingLocation | null) => {
     setState((prev) => ({ ...prev, location }));

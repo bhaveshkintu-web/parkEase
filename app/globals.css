@@ -113,12 +113,20 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Business Section Custom Colors - N */
+  --color-navy-900: #0f172a;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+  --color-mint-100: #ecfdf5;
+  --color-mint-200: #d1fae5;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

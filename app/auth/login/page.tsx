@@ -200,7 +200,7 @@ export default function LoginPage() {
               <CardFooter className="flex flex-col gap-4">
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full mt-4"
                   disabled={isSubmitting || authLoading}
                 >
                   {isSubmitting ? (
@@ -214,7 +214,7 @@ export default function LoginPage() {
                 </Button>
 
                 <p className="text-sm text-center text-muted-foreground">
-                  Don&apos;t have an account?{" "}
+                  Don&apos;t have an account?&nbsp;
                   <Link
                     href="/auth/register"
                     className="text-primary hover:underline font-medium"

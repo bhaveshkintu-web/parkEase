@@ -83,7 +83,7 @@ function normalizeUser(raw: any): User {
     phone: raw.phone ?? null,
     avatar: raw.avatar ?? null,
     emailVerified: Boolean(raw.emailVerified),
-    role: raw.role,
+    role: (raw.role as string).toLowerCase() as UserRole,
     createdAt: raw.createdAt,
   };
 }
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(normalizeUser(data.user));
           setIsAuthenticated(true);
         }
-      } catch {}
+      } catch { }
       setIsLoading(false);
     }
     restoreSession();
