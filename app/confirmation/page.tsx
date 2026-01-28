@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { parkingLocations, formatCurrency, formatDate, calculateQuote } from "@/lib/data";
+import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,8 +24,9 @@ import {
   QrCode,
   Copy,
   Smartphone,
+  Loader2,
 } from "lucide-react";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Loading from "./loading";
 
 // Simple QR Code component using a data URL pattern
@@ -98,21 +99,202 @@ function QRCodeDisplay({ value, size = 180 }: { value: string; size?: number }) 
   );
 }
 
+import { getBookingByConfirmationCode } from "@/lib/actions/booking-actions";
+
 function ConfirmationContent() {
   const searchParams = useSearchParams();
-  const confirmationCode = searchParams.get("code") || "PARK" + Math.random().toString(36).substring(2, 8).toUpperCase();
-  const { location, checkIn, checkOut, guestInfo, vehicleInfo } = useBooking();
+  const code = searchParams.get("code");
+  const { location: contextLocation, checkIn: contextCheckIn, checkOut: contextCheckOut } = useBooking();
+  
+  const { toast } = require("@/hooks/use-toast");
+  const [booking, setBooking] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  // Use first location as fallback for demo
-  const bookingLocation = location || parkingLocations[0];
-  const quote = calculateQuote(bookingLocation, checkIn, checkOut);
+  useEffect(() => {
+    async function fetchBooking() {
+      if (!code) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const response = await getBookingByConfirmationCode(code);
+      if (response.success && response.data) {
+        setBooking(response.data);
+      }
+      setIsLoading(false);
+    }
+    fetchBooking();
+  }, [code]);
 
   const handleCopyCode = async () => {
-    await navigator.clipboard.writeText(confirmationCode);
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
     setCopied(true);
+    toast({
+      title: "Copied!",
+      description: "Confirmation code copied to clipboard.",
+    });
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownload = () => {
+    const receiptContent = `
+PARKEASE RESERVATION RECEIPT
+===========================
+Confirmation Code: ${confirmationCode}
+Status: CONFIRMED
+
+LOCATION DETAILS
+----------------
+Name: ${bookingLocation.name}
+Address: ${bookingLocation.address}
+
+RESERVATION DETAILS
+-------------------
+Drop-off: ${formatDate(checkIn)} 12:00 PM
+Pick-up: ${formatDate(checkOut)} 12:00 PM
+Duration: ${quote.days} day(s)
+
+GUEST INFORMATION
+-----------------
+Name: ${guestInfo ? `${guestInfo.firstName} ${guestInfo.lastName}` : "N/A"}
+Email: ${guestInfo?.email || "N/A"}
+Phone: ${guestInfo?.phone || "N/A"}
+
+VEHICLE INFORMATION
+-------------------
+Make/Model: ${vehicleInfo ? `${vehicleInfo.make} ${vehicleInfo.model}` : "N/A"}
+License Plate: ${vehicleInfo?.licensePlate || "N/A"}
+
+PAYMENT SUMMARY
+---------------
+Base Rate: ${formatCurrency(bookingLocation.pricePerDay)}/day
+Subtotal: ${formatCurrency(quote.basePrice)}
+Taxes & Fees: ${formatCurrency(quote.taxes + quote.fees)}
+TOTAL PAID: ${formatCurrency(quote.totalPrice)}
+
+===========================
+Thank you for booking with ParkEase!
+Visit our website at parkease.com for help.
+    `.trim();
+
+    const blob = new Blob([receiptContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ParkEase-Reservation-${confirmationCode}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Downloaded",
+      description: "Your reservation receipt has been saved.",
+    });
+  };
+
+  const handleAddToWallet = () => {
+    // Generate .ics file content
+    const formatDateICS = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    };
+
+    const start = formatDateICS(checkIn);
+    const end = formatDateICS(checkOut);
+    
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//ParkEase//Reservation//EN",
+      "BEGIN:VEVENT",
+      `UID:${confirmationCode}@parkease.com`,
+      `DTSTAMP:${formatDateICS(new Date())}`,
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `SUMMARY:Parking Reservation: ${bookingLocation.name}`,
+      `DESCRIPTION:Confirmation Code: ${confirmationCode}\\nAddress: ${bookingLocation.address}\\nVehicle: ${vehicleInfo?.make} ${vehicleInfo?.model}`,
+      `LOCATION:${bookingLocation.address}`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\\r\\n");
+
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ParkEase-${confirmationCode}.ics`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Added to Calendar",
+      description: "Reservation event has been saved to your device.",
+    });
+  };
+
+  const handleGetDirections = () => {
+    if (!bookingLocation) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(bookingLocation.address)}`;
+    window.open(url, "_blank");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading your confirmation...</p>
+      </div>
+    );
+  }
+
+  if (!booking && !code) {
+    return (
+      <div className="mx-auto max-w-3xl py-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">No Booking Found</h2>
+        <p className="text-muted-foreground mb-6">We couldn't find a booking with that code.</p>
+        <Link href="/parking">
+          <Button>Search Parking</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Use DB data if available, otherwise fallback to context (for immediate post-booking view)
+  const confirmationCode = booking?.confirmationCode || code || "";
+  const bookingLocation = booking?.location || contextLocation;
+  
+  if (!bookingLocation) {
+    return (
+      <div className="mx-auto max-w-3xl py-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">Location Details Missing</h2>
+        <p className="text-muted-foreground mb-6">We couldn't load the parking location details.</p>
+        <Link href="/parking">
+          <Button>Search Parking</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const checkIn = booking ? new Date(booking.checkIn) : contextCheckIn;
+  const checkOut = booking ? new Date(booking.checkOut) : contextCheckOut;
+  const guestInfo = booking ? {
+    firstName: booking.guestFirstName,
+    lastName: booking.guestLastName,
+    email: booking.guestEmail,
+    phone: booking.guestPhone
+  } : null;
+  const vehicleInfo = booking ? {
+    make: booking.vehicleMake,
+    model: booking.vehicleModel,
+    color: booking.vehicleColor,
+    licensePlate: booking.vehiclePlate
+  } : null;
+
+  const quote = calculateQuote(bookingLocation, checkIn, checkOut);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -167,15 +349,15 @@ function ConfirmationContent() {
                       </Button>
                     </div>
                     <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleAddToWallet}>
                         <Smartphone className="h-4 w-4" />
                         Add to Wallet
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handlePrint}>
                         <Printer className="h-4 w-4" />
                         Print
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleDownload}>
                         <Download className="h-4 w-4" />
                         Download
                       </Button>
@@ -208,7 +390,7 @@ function ConfirmationContent() {
                           Free Shuttle
                         </span>
                       )}
-                      {bookingLocation.cancellationPolicy.type === "free" && (
+                      {bookingLocation.cancellationPolicy?.type === "free" && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                           <CheckCircle className="h-3 w-3" />
                           Free Cancellation
@@ -305,28 +487,82 @@ function ConfirmationContent() {
               </Card>
             </div>
 
-            {/* How to Redeem */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <QrCode className="h-5 w-5 text-primary" />
-                  How to Check In
+            {/* How to Redeem & Directions */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    How to Check In
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(bookingLocation.redeemSteps || [
+                      { step: 1, title: "Arrive at Facility", description: "Arrive 15-20 mins before your desired airport arrival time." },
+                      { step: 2, title: "Show Confirmation", description: "Present this confirmation to the attendant or scan QR code." },
+                      { step: 3, title: "Park Your Vehicle", description: "Follow attendant instructions or look for any open spot." },
+                      { step: 4, title: "Take the Shuttle", description: "Board the complimentary shuttle to your terminal." }
+                    ]).map((step: any) => (
+                      <div key={step.step} className="flex gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                          {step.step}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Navigation className="h-5 w-5 text-primary" />
+                    How to Return
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { step: 1, title: "Collect Luggage", description: "Once you land and collect your bags, call the shuttle service." },
+                      { step: 2, title: "Find Pick-up Point", description: "Head to the designated 'Off-Airport' shuttle area." },
+                      { step: 3, title: "Show Receipt", description: "Present your confirmation when exiting the lot if required." },
+                      { step: 4, title: "Safe Travels", description: "Your car will be ready or where you left it. Have a safe drive!" }
+                    ].map((step: any) => (
+                      <div key={step.step} className="flex gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                          {step.step}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Important Notes */}
+            <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-900/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-200">
+                  <QrCode className="h-5 w-5" />
+                  Important Information
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {bookingLocation.redeemSteps.map((step) => (
-                    <div key={step.step} className="flex gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                        {step.step}
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-foreground">{step.title}</h4>
-                        <p className="text-sm text-muted-foreground">{step.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <CardContent className="text-sm text-amber-800/80 dark:text-amber-200/80">
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Please have your license plate number ready when arriving.</li>
+                  <li>Over-sized vehicles (e.g., campers, large trucks) may be subject to additional fees.</li>
+                  <li>The shuttle frequency is typically every 15-20 minutes.</li>
+                  <li>Your reservation is guaranteed for the dates and times selected.</li>
+                </ul>
               </CardContent>
             </Card>
 
@@ -369,11 +605,25 @@ function ConfirmationContent() {
 
             {/* Actions */}
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={handleGetDirections}>
                 <Navigation className="h-4 w-4" />
                 Get Directions
               </Button>
-              <Button variant="outline" className="gap-2 bg-transparent">
+              <Button 
+                variant="outline" 
+                className="gap-2 bg-transparent"
+                onClick={() => {
+                  const facilityPhone = bookingLocation.shuttleInfo?.phone || bookingLocation.owner?.user?.phone;
+                  if (facilityPhone) {
+                    window.location.href = `tel:${facilityPhone}`;
+                  } else {
+                    toast({
+                      title: "Contact Info",
+                      description: "Facility contact information not available.",
+                    });
+                  }
+                }}
+              >
                 <Phone className="h-4 w-4" />
                 Contact Parking Lot
               </Button>
@@ -394,10 +644,8 @@ function ConfirmationContent() {
 
 export default function ConfirmationPage() {
   return (
-    <BookingProvider>
-      <Suspense fallback={<Loading />}>
-        <ConfirmationContent />
-      </Suspense>
-    </BookingProvider>
+    <Suspense fallback={<Loading />}>
+      <ConfirmationContent />
+    </Suspense>
   );
 }

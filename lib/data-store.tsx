@@ -87,6 +87,7 @@ function generateMockPayments(userId: string): PaymentMethod[] {
 }
 
 function generateMockReservations(userId: string): Reservation[] {
+  if (parkingLocations.length === 0) return [];
   const now = new Date();
   const upcoming = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const past = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -188,6 +189,7 @@ function generateAdminLocations(): AdminParkingLocation[] {
 }
 
 function generateMockWatchmen(ownerId: string): Watchman[] {
+  if (parkingLocations.length === 0) return [];
   return [
     {
       id: "wm_1",
@@ -686,6 +688,7 @@ function generateMockOwnerProfiles(): OwnerProfile[] {
 }
 
 function generateMockParkingSessions(): ParkingSession[] {
+  if (parkingLocations.length === 0) return [];
   const now = new Date();
   return [
     {

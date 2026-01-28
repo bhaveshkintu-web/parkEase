@@ -10,19 +10,17 @@ import { BookingProvider } from "@/lib/booking-context";
 
 export default function HomePage() {
   return (
-    <BookingProvider>
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <main className="flex-1">
-          <HeroSection />
-          <BenefitsSection />
-          <PopularAirports />
-          <HowItWorks />
-          <Testimonials />
-          <AppDownload />
-        </main>
-        <Footer />
-      </div>
-    </BookingProvider>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1">
+        <HeroSection />
+        <BenefitsSection />
+        <PopularAirports />
+        <HowItWorks />
+        <Testimonials />
+        <AppDownload />
+      </main>
+      <Footer />
+    </div>
   );
 }
