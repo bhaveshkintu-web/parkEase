@@ -370,7 +370,7 @@ export function getDashboardUrlForRole(role: string) {
     case "admin":
       return "/admin";
     case "owner":
-      return "/owner";
+      return "/owner/dashboard";
     case "watchman":
       return "/watchman";
     default:
