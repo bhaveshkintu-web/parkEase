@@ -192,14 +192,6 @@ export function VehicleForm({
 
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          <div>
-            <Label>Nickname</Label>
-            <Input
-              value={formData.nickname ?? ""}
-              onChange={(e) => handleChange("nickname", e.target.value)}
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Make</Label>

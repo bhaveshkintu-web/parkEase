@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { vehicleSchema } from "@/lib/validations";
 import { getAuthUserId } from "@/lib/auth";
+import crypto from "crypto";
 
 export async function addVehicle(_: any, formData: FormData) {
   try {
@@ -16,7 +17,7 @@ export async function addVehicle(_: any, formData: FormData) {
       color: formData.get("color"),
       licensePlate: formData.get("licensePlate"),
       state: formData.get("state"),
-      isDefault: formData.get("isDefault") === "on",
+      isDefault: formData.get("isDefault") === "true",
     };
 
     const validated = vehicleSchema.safeParse(rawData);
@@ -29,18 +30,25 @@ export async function addVehicle(_: any, formData: FormData) {
     }
 
     if (validated.data.isDefault) {
-      await prisma.savedVehicle.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
+      await prisma.$executeRawUnsafe(
+        'UPDATE "SavedVehicle" SET "isDefault" = false WHERE "userId" = $1',
+        userId
+      );
     }
 
-    await prisma.savedVehicle.create({
-      data: {
-        ...validated.data,
-        userId,
-      },
-    });
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "SavedVehicle" (id, "userId", make, model, year, color, "licensePlate", state, "isDefault", "createdAt") 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+      crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7),
+      userId,
+      validated.data.make,
+      validated.data.model,
+      validated.data.year,
+      validated.data.color,
+      validated.data.licensePlate,
+      validated.data.state,
+      validated.data.isDefault
+    );
 
     revalidatePath("/account/vehicles");
     return { success: true };

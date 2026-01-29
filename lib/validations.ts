@@ -54,7 +54,6 @@ export const resetPasswordSchema = z
 
 // Vehicle validations
 export const vehicleSchema = z.object({
-  nickname: z.string().max(30).optional(),
   make: z.string().min(1, "Make is required"),
   model: z.string().min(1, "Model is required"),
   year: z

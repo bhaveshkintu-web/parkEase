@@ -228,8 +228,8 @@ export default function RegisterPage() {
                         <div
                           key={i}
                           className={`h-1 flex-1 rounded-full ${i < strength
-                              ? strengthColors[strength - 1]
-                              : "bg-muted"
+                            ? strengthColors[strength - 1]
+                            : "bg-muted"
                             }`}
                         />
                       ))}
@@ -316,6 +316,13 @@ export default function RegisterPage() {
                   Sign in
                 </Link>
               </p>
+
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs text-center text-muted-foreground hover:text-primary hover:underline"
+              >
+                Forgot your password?
+              </Link>
             </CardFooter>
           </form>
         </Card>

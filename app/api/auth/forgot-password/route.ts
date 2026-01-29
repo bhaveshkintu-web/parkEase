@@ -33,25 +33,25 @@ export async function POST(req: Request) {
 
     const { rawToken, hashedToken, expiry } = generateToken();
 
-    // Use any cast to bypass persistent stale Prisma types for resetToken fields
-    await (prisma.user as any).update({
-      where: { id: user.id },
-      data: {
-        resetToken: hashedToken,
-        resetTokenExpiry: expiry,
-      },
-    });
+    // Use raw SQL to bypass stale Prisma Client types
+    await prisma.$executeRawUnsafe(
+      `UPDATE "User" SET "resetToken" = $1, "resetTokenExpiry" = $2 WHERE id = $3`,
+      hashedToken,
+      expiry,
+      user.id
+    );
 
     try {
       await sendResetPasswordEmail(email, rawToken);
+      console.log(`✅ Reset password email queued for: ${email}`);
     } catch (emailError) {
-      console.error("FORGOT_PASSWORD_EMAIL_FAILED:", emailError);
+      console.error("❌ FORGOT_PASSWORD_EMAIL_FAILED:", emailError);
       // We still return success to the user to avoid enumeration
     }
 
     return NextResponse.json({
       success: true,
-      message: "If an account exists with that email, a password reset link has been sent.",
+      message: "Check your email for a password reset link.",
     });
   } catch (error) {
     console.error("FORGOT_PASSWORD_ERROR:", error);

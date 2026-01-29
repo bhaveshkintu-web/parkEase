@@ -17,7 +17,6 @@ export default function AddVehiclePage() {
       description="Add a new vehicle"
       submitLabel="Save Vehicle"
       initialData={{
-        nickname: "",
         make: "",
         model: "",
         year: new Date().getFullYear(),
@@ -33,7 +32,6 @@ export default function AddVehiclePage() {
         // Object.entries(data).forEach(([k, v]) => {
         //   if (v !== undefined) fd.append(k, String(v));
         // });
-        fd.append("nickname", data.nickname || "");
         fd.append("make", data.make);
         fd.append("model", data.model);
         fd.append("year", String(data.year));
@@ -41,7 +39,6 @@ export default function AddVehiclePage() {
         fd.append("licensePlate", data.licensePlate);
         fd.append("state", data.state);
         fd.append("isDefault", data.isDefault ? "true" : "false");
-        fd.append("userId", user.id);
         fd.append("userId", user.id);
 
         const res = await addVehicle(null, fd);
