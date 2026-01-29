@@ -157,6 +157,7 @@ export default function ParkingApprovalsPage() {
 
   const pendingCount = locations.filter((l) => l.status?.toUpperCase() === "PENDING").length;
   const activeCount = locations.filter((l) => l.status?.toUpperCase() === "ACTIVE").length;
+  const rejectedCount = locations.filter((l) => l.status?.toUpperCase() === "REJECTED").length;
 
   if (isLoading) {
     return (
@@ -186,9 +187,13 @@ export default function ParkingApprovalsPage() {
             <Clock className="w-3 h-3 mr-1" />
             {pendingCount} Pending
           </Badge>
-          <Badge variant="outline" className="py-1.5">
+          <Badge variant="outline" className="py-1.5 text-green-600 border-green-200">
             <CheckCircle className="w-3 h-3 mr-1" />
             {activeCount} Active
+          </Badge>
+          <Badge variant="outline" className="py-1.5 text-red-600 border-red-200">
+            <XCircle className="w-3 h-3 mr-1" />
+            {rejectedCount} Rejected
           </Badge>
         </div>
       </div>
@@ -205,14 +210,15 @@ export default function ParkingApprovalsPage() {
       </div>
 
       {/* Locations List */}
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="pending" className="w-full">
         <TabsList>
-          <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
           <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
           <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
+          <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
+          <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
         </TabsList>
 
-        {["all", "pending", "active"].map((tab) => (
+        {["all", "pending", "active", "rejected"].map((tab) => (
           <TabsContent key={tab} value={tab} className="mt-4">
             <div className="grid gap-4">
               {filteredLocations
