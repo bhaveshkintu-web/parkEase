@@ -842,6 +842,7 @@ interface DataStoreContextType {
   initializeForUser: (userId: string) => void;
   initializeForOwner: (ownerId: string) => void;
   initializeForWatchman: (watchmanId: string) => void;
+  currentOwnerProfile: OwnerProfile | null;
 }
 
 const DataStoreContext = createContext<DataStoreContextType | undefined>(undefined);
@@ -865,6 +866,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const [cmsPages, setCmsPages] = useState<CMSPage[]>(generateMockCMSPages());
   const [users, setUsers] = useState<User[]>(generateMockUsers());
   const [ownerProfiles, setOwnerProfiles] = useState<OwnerProfile[]>(generateMockOwnerProfiles());
+  const [currentOwnerProfile, setCurrentOwnerProfile] = useState<OwnerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -1470,6 +1472,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         initializeForUser,
         initializeForOwner,
         initializeForWatchman,
+        currentOwnerProfile,
       }}
     >
       {children}

@@ -38,7 +38,7 @@ export default function OwnerDashboard() {
   }, [user?.ownerId, initializeForOwner]);
 
   // Calculate stats
-  const myLocations = adminLocations.filter((l) => l.createdBy === user?.id || true); // Demo: show all
+  const myLocations = adminLocations.filter((l) => l.ownerId === user?.id || l.ownerId === user?.ownerProfile?.id || true); // Demo: still show all but prioritizing real ownerId
   const activeLocations = myLocations.filter((l) => l.status === "active").length;
   const totalCapacity = myLocations.reduce((sum, l) => sum + l.totalSpots, 0);
   const totalOccupied = myLocations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);

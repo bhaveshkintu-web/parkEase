@@ -86,23 +86,41 @@ export const reservationModifySchema = z.object({
   path: ["checkOut"],
 });
 
-// Admin location validations
-export const locationSchema = z.object({
+// Owner profile validations
+export const ownerProfileSchema = z.object({
+  businessName: z.string().min(2, "Business name must be at least 2 characters"),
+  businessType: z.enum(["individual", "company"]),
+  taxId: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  street: z.string().min(5, "Street address must be at least 5 characters"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().min(2, "State is required"),
+  zipCode: z.string().min(5, "Valid zip code is required"),
+  country: z.string().min(2, "Country is required"),
+});
+
+// Owner location creation validations
+export const ownerLocationSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   address: z.string().min(1, "Address is required"),
-  airport: z.string().min(1, "Airport name is required"),
-  airportCode: z.string().length(3, "Use 3-letter airport code"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required").optional(),
+  country: z.string().min(1, "Country is required"),
+  zipCode: z.string().min(1, "Zip code is required").optional(),
+  airportCode: z.string().optional().nullable().transform(v => v === "" || v === null ? undefined : v),
+  latitude: z.number({ required_error: "Latitude is required" }),
+  longitude: z.number({ required_error: "Longitude is required" }),
+  description: z.string().min(10, "Description must be at least 10 characters").optional().nullable(),
   pricePerDay: z.number().min(0.01, "Price must be greater than 0"),
-  originalPrice: z.number().min(0.01, "Original price must be greater than 0"),
-  totalSpots: z.number().min(1, "Must have at least 1 spot"),
-  shuttle: z.boolean(),
-  covered: z.boolean(),
-  selfPark: z.boolean(),
-  valet: z.boolean(),
-  open24Hours: z.boolean(),
-  amenities: z.array(z.string()),
-  status: z.enum(["active", "inactive", "maintenance"]),
+  originalPrice: z.number().min(0.01, "Original price must be greater than 0").optional().nullable(),
+  totalSpots: z.number().int().min(1, "Must have at least 1 spot"),
+  amenities: z.array(z.string()).default([]),
+  images: z.array(z.string()).default([]), // Made optional until image upload is implemented
+  shuttle: z.boolean().default(false),
+  covered: z.boolean().default(false),
+  selfPark: z.boolean().default(true),
+  valet: z.boolean().default(false),
+  open24Hours: z.boolean().default(false),
 });
 
 // Admin review moderation validations
@@ -120,7 +138,8 @@ export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
 export type VehicleInput = z.infer<typeof vehicleSchema>;
 export type PaymentInput = z.infer<typeof paymentSchema>;
 export type ReservationModifyInput = z.infer<typeof reservationModifySchema>;
-export type LocationInput = z.infer<typeof locationSchema>;
+export type OwnerLocationInput = z.infer<typeof ownerLocationSchema>;
+export type OwnerProfileInput = z.infer<typeof ownerProfileSchema>;
 export type ReviewModerationInput = z.infer<typeof reviewModerationSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

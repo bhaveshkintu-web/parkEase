@@ -60,7 +60,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useDataStore } from "@/lib/data-store";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { airports } from "@/lib/data";
@@ -154,7 +153,6 @@ const initialRedeemSteps: RedeemStep[] = [
 export default function OwnerNewLocationPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { addLocation } = useDataStore();
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -269,25 +267,53 @@ export default function OwnerNewLocationPage() {
     try {
       const selectedAirport = airports.find((a) => a.code === formData.airportCode);
       
-      await addLocation({
+      // Prepare data for API
+      const locationData = {
         name: formData.name,
-        address: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`,
-        airportCode: formData.airportCode,
-        airportName: selectedAirport?.name || "",
-        pricePerDay: parseFloat(formData.pricePerDay),
-        rating: 0,
-        reviewCount: 0,
-        amenities: formData.amenities,
-        shuttleTime: formData.shuttle ? "5-10 min" : undefined,
-        images: [],
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: "USA",
+        zipCode: formData.zipCode,
+        airportCode: formData.airportCode || undefined,
+        latitude: 0, // TODO: Implement geocoding
+        longitude: 0, // TODO: Implement geocoding
         description: formData.description,
-        coordinates: { lat: 0, lng: 0 },
+        pricePerDay: parseFloat(formData.pricePerDay),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         totalSpots: parseInt(formData.totalSpots),
-        availableSpots: parseInt(formData.totalSpots),
-        operatingHours: formData.open24Hours ? "24/7" : "6:00 AM - 11:00 PM",
-        securityFeatures: formData.securityFeatures,
-        redeemSteps: redeemSteps.filter((s) => s.title.trim()),
+        amenities: formData.amenities,
+        images: [], // TODO: Implement image upload
+        shuttle: formData.shuttle,
+        covered: formData.covered,
+        selfPark: formData.selfPark,
+        valet: formData.valetPark,
+        open24Hours: formData.open24Hours,
+      };
+
+      // Call the real API
+      const response = await fetch("/api/owner/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(locationData),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Location creation failed:", error);
+        
+        // Show validation details if available
+        if (error.details) {
+          const fieldErrors = Object.entries(error.details)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+            .join('\n');
+          throw new Error(`Validation failed:\n${fieldErrors}`);
+        }
+        
+        throw new Error(error.error || "Failed to create location");
+      }
+
+      const result = await response.json();
 
       toast({
         title: "Location created",
@@ -295,16 +321,17 @@ export default function OwnerNewLocationPage() {
       });
 
       router.push("/owner/locations");
-    } catch {
+    } catch (error) {
+      console.error("Location creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create location. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create location. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [currentStep, formData, redeemSteps, addLocation, router, toast, validateStep]);
+  }, [currentStep, formData, redeemSteps, router, toast, validateStep]);
 
   const selectedAirport = airports.find((a) => a.code === formData.airportCode);
 
@@ -763,11 +790,10 @@ export default function OwnerNewLocationPage() {
                   <Label>Amenities</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {amenityOptions.map((amenity) => (
-                      <button
+                      <div
                         key={amenity.id}
-                        type="button"
                         className={cn(
-                          "flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors text-left",
+                          "flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors cursor-pointer",
                           formData.amenities.includes(amenity.id)
                             ? "bg-primary/10 border-primary text-primary"
                             : "hover:bg-muted"
@@ -776,7 +802,7 @@ export default function OwnerNewLocationPage() {
                       >
                         <Checkbox checked={formData.amenities.includes(amenity.id)} />
                         <span>{amenity.label}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -787,11 +813,10 @@ export default function OwnerNewLocationPage() {
                   <Label>Security Features</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {securityFeatureOptions.map((feature) => (
-                      <button
+                      <div
                         key={feature}
-                        type="button"
                         className={cn(
-                          "flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors text-left",
+                          "flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors cursor-pointer",
                           formData.securityFeatures.includes(feature)
                             ? "bg-primary/10 border-primary text-primary"
                             : "hover:bg-muted"
@@ -800,7 +825,7 @@ export default function OwnerNewLocationPage() {
                       >
                         <Checkbox checked={formData.securityFeatures.includes(feature)} />
                         <span>{feature}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

@@ -47,6 +47,7 @@ export interface ParkingLocation {
   cancellationPolicy?: CancellationPolicy;
   heightLimit?: string;
   securityFeatures: string[];
+  ownerId?: string;
 }
 
 export interface Destination {
@@ -166,6 +167,7 @@ export interface User {
   preferences: UserPreferences;
   // Owner specific
   ownerId?: string;
+  ownerProfile?: OwnerProfile;
   assignedParkingIds?: string[];
 }
 

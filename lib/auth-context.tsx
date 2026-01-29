@@ -13,7 +13,7 @@ import { signIn, signOut } from "next-auth/react";
    TYPES
 ======================= */
 
-export type UserRole = "admin" | "owner" | "watchman" | "customer";
+export type UserRole = "ADMIN" | "OWNER" | "WATCHMAN" | "CUSTOMER" | "admin" | "owner" | "watchman" | "customer";
 
 export type User = {
   id: string;
@@ -24,6 +24,8 @@ export type User = {
   avatar: string | null;
   emailVerified: boolean;
   role: UserRole;
+  ownerId?: string;
+  ownerProfile?: any; // Avoiding circular dependency if possible, or just use any for now
   createdAt?: string;
 };
 
@@ -83,7 +85,9 @@ function normalizeUser(raw: any): User {
     phone: raw.phone ?? null,
     avatar: raw.avatar ?? null,
     emailVerified: Boolean(raw.emailVerified),
-    role: raw.role,
+    role: raw.role, // Preserve exact role from database (ADMIN, OWNER, CUSTOMER, etc.)
+    ownerId: raw.ownerId,
+    ownerProfile: raw.ownerProfile,
     createdAt: raw.createdAt,
   };
 }
@@ -360,8 +364,9 @@ export function useAuth() {
    ROLE → DASHBOARD
 ======================= */
 
-export function getDashboardUrlForRole(role: UserRole) {
-  switch (role) {
+export function getDashboardUrlForRole(role: string) {
+  const normalizedRole = role.toLowerCase();
+  switch (normalizedRole) {
     case "admin":
       return "/admin";
     case "owner":

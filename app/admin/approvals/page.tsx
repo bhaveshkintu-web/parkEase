@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,312 +29,343 @@ import {
   Calendar,
   Eye,
   Clock,
+  Loader2,
 } from "lucide-react";
-import type { ParkingApproval } from "@/lib/types";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useToast } from "@/hooks/use-toast";
 
-const Loading = () => null;
+interface ParkingLocation {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  status: string;
+  createdAt: string;
+  owner: {
+    id: string;
+    businessName: string;
+    user: {
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
+}
 
 export default function ParkingApprovalsPage() {
-  const searchParams = useSearchParams();
-  const { parkingApprovals, reviewParkingApproval } = useDataStore();
+  const { toast } = useToast();
+  const [locations, setLocations] = useState<ParkingLocation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedApproval, setSelectedApproval] = useState<ParkingApproval | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<ParkingLocation | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
-  const [requiredChanges, setRequiredChanges] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const filteredApprovals = parkingApprovals.filter(
-    (a) =>
-      a.location.name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.ownerName.toLowerCase().includes(search.toLowerCase())
-  );
+  // Fetch parking locations
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
-  const pendingCount = parkingApprovals.filter((a) => a.status === "pending").length;
-  const underReviewCount = parkingApprovals.filter((a) => a.status === "under_review").length;
-
-  const handleReview = async (action: "approve" | "reject" | "request_changes") => {
-    if (!selectedApproval) return;
-    setIsProcessing(true);
-    const changes = action === "request_changes" ? requiredChanges.split("\n").filter(Boolean) : undefined;
-    await reviewParkingApproval(selectedApproval.id, action, reviewNotes, changes);
-    setSelectedApproval(null);
-    setReviewNotes("");
-    setRequiredChanges("");
-    setIsProcessing(false);
-  };
-
-  const getStatusVariant = (status: ParkingApproval["status"]) => {
-    switch (status) {
-      case "pending": return "warning";
-      case "under_review": return "info";
-      case "approved": return "success";
-      case "rejected": return "error";
-      case "requires_changes": return "warning";
-      default: return "default";
+  const fetchLocations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/admin/approvals");
+      if (response.ok) {
+        const data = await response.json();
+        setLocations(data.locations || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch locations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load parking locations",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleApprove = async (locationId: string) => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch(`/api/admin/locations/${locationId}/approve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", notes: reviewNotes }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to approve location");
+      }
+
+      toast({
+        title: "Location Approved",
+        description: "The parking location has been approved successfully.",
+      });
+
+      setSelectedLocation(null);
+      setReviewNotes("");
+      fetchLocations(); // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve location",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async (locationId: string) => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch(`/api/admin/locations/${locationId}/approve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", notes: reviewNotes }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reject location");
+      }
+
+      toast({
+        title: "Location Rejected",
+        description: "The parking location has been rejected.",
+      });
+
+      setSelectedLocation(null);
+      setReviewNotes("");
+      fetchLocations(); // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject location",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredLocations = locations.filter(
+    (loc) =>
+      loc.name?.toLowerCase().includes(search.toLowerCase()) ||
+      loc.owner?.businessName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const pendingCount = locations.filter((l) => l.status?.toUpperCase() === "PENDING").length;
+  const activeCount = locations.filter((l) => l.status?.toUpperCase() === "ACTIVE").length;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <Suspense fallback={<Loading />}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/admin">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Parking Approvals</h1>
-              <p className="text-muted-foreground">Review and approve new parking location submissions</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="py-1.5">
-              <Clock className="w-3 h-3 mr-1" />
-              {pendingCount} Pending
-            </Badge>
-            <Badge variant="outline" className="py-1.5">
-              <Eye className="w-3 h-3 mr-1" />
-              {underReviewCount} Under Review
-            </Badge>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/admin">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Parking Approvals</h1>
+            <p className="text-muted-foreground">Review and approve new parking location submissions</p>
           </div>
         </div>
-
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by location or owner..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="py-1.5">
+            <Clock className="w-3 h-3 mr-1" />
+            {pendingCount} Pending
+          </Badge>
+          <Badge variant="outline" className="py-1.5">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            {activeCount} Active
+          </Badge>
         </div>
+      </div>
 
-        {/* Approvals List */}
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList>
-            <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-            <TabsTrigger value="under_review">Under Review ({underReviewCount})</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by location or owner..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
-          {["pending", "under_review", "all"].map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-4">
-              <div className="grid gap-4">
-                {filteredApprovals
-                  .filter((a) => tab === "all" || a.status === tab)
-                  .map((approval) => (
-                    <Card key={approval.id} className="hover:border-primary/50 transition-colors">
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          <div className="flex-1 space-y-3">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h3 className="font-semibold text-lg text-foreground">
-                                  {approval.location.name}
-                                </h3>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                  <MapPin className="w-4 h-4" />
-                                  {approval.location.address}
-                                </div>
-                              </div>
-                              <StatusBadge status={approval.status} variant={getStatusVariant(approval.status)} />
-                            </div>
+      {/* Locations List */}
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList>
+          <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
+          <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
+          <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
+        </TabsList>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Owner:</span>
-                                <span className="font-medium">{approval.ownerName}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Submitted:</span>
-                                <span className="font-medium">
-                                  {new Date(approval.submittedAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Documents:</span>
-                                <span className="font-medium">{approval.documents.length}</span>
+        {["all", "pending", "active"].map((tab) => (
+          <TabsContent key={tab} value={tab} className="mt-4">
+            <div className="grid gap-4">
+              {filteredLocations
+                .filter((loc) => tab === "all" || loc.status?.toUpperCase() === tab.toUpperCase())
+                .map((location) => (
+                  <Card key={location.id} className="hover:border-primary/50 transition-colors">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg text-foreground">
+                                {location.name}
+                              </h3>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                <MapPin className="w-4 h-4" />
+                                {location.address}, {location.city}
                               </div>
                             </div>
-
-                            {/* Documents */}
-                            <div className="flex flex-wrap gap-2">
-                              {approval.documents.map((doc) => (
-                                <Badge
-                                  key={doc.id}
-                                  variant={doc.verified ? "default" : "outline"}
-                                  className="text-xs"
-                                >
-                                  {doc.verified && <CheckCircle className="w-3 h-3 mr-1" />}
-                                  {doc.type.charAt(0).toUpperCase() + doc.type.slice(1)}
-                                </Badge>
-                              ))}
-                            </div>
+                            <Badge variant={location.status === "active" ? "default" : "secondary"}>
+                              {location.status}
+                            </Badge>
                           </div>
 
-                          <div className="flex flex-row lg:flex-col gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 lg:flex-none bg-transparent"
-                              onClick={() => setSelectedApproval(approval)}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Review
-                            </Button>
-                            {(approval.status === "pending" || approval.status === "under_review") && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  className="flex-1 lg:flex-none"
-                                  onClick={() => {
-                                    setSelectedApproval(approval);
-                                  }}
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Approve
-                                </Button>
-                              </>
-                            )}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Owner:</span>
+                              <span className="font-medium">{location.owner?.businessName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Created:</span>
+                              <span className="font-medium">
+                                {new Date(location.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
 
-                {filteredApprovals.filter((a) => tab === "all" || a.status === tab).length === 0 && (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium text-foreground">No approvals found</h3>
-                      <p className="text-muted-foreground mt-1">
-                        {tab === "pending" ? "No pending approvals at this time" : "No approvals match your search"}
-                      </p>
+                        <div className="flex flex-row lg:flex-col gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 lg:flex-none bg-transparent"
+                            onClick={() => setSelectedLocation(location)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Review
+                          </Button>
+                          {location.status?.toUpperCase() === "PENDING" && (
+                            <Button
+                              size="sm"
+                              className="flex-1 lg:flex-none"
+                              onClick={() => {
+                                setSelectedLocation(location);
+                              }}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Approve
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+                ))}
 
-        {/* Review Dialog */}
-        <Dialog open={!!selectedApproval} onOpenChange={() => setSelectedApproval(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Review Parking Location</DialogTitle>
-              <DialogDescription>
-                {selectedApproval?.location.name} - Submitted by {selectedApproval?.ownerName}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {/* Location Details */}
-              <Card>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm">Location Details</CardTitle>
-                </CardHeader>
-                <CardContent className="py-2 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Address:</span>
-                    <span>{selectedApproval?.location.address}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Airport:</span>
-                    <span>{selectedApproval?.location.airport || "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Owner Email:</span>
-                    <span>{selectedApproval?.ownerEmail}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Documents */}
-              <Card>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm">Documents ({selectedApproval?.documents.length})</CardTitle>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <div className="space-y-2">
-                    {selectedApproval?.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">{doc.name}</span>
-                        </div>
-                        <Badge variant={doc.verified ? "default" : "outline"} className="text-xs">
-                          {doc.verified ? "Verified" : "Pending"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Review Notes */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Review Notes</label>
-                <Textarea
-                  placeholder="Add notes about this approval..."
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              {/* Required Changes (for request_changes action) */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Required Changes (one per line)</label>
-                <Textarea
-                  placeholder="List required changes..."
-                  value={requiredChanges}
-                  onChange={(e) => setRequiredChanges(e.target.value)}
-                  rows={3}
-                />
-              </div>
+              {filteredLocations.filter((loc) => tab === "all" || loc.status?.toUpperCase() === tab.toUpperCase()).length === 0 && (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-foreground">No locations found</h3>
+                    <p className="text-muted-foreground mt-1">
+                      {tab === "pending" ? "No pending locations at this time" : "No locations match your search"}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
+          </TabsContent>
+        ))}
+      </Tabs>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => handleReview("reject")}
-                disabled={isProcessing}
-                className="w-full sm:w-auto"
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Reject
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleReview("request_changes")}
-                disabled={isProcessing}
-                className="w-full sm:w-auto"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Request Changes
-              </Button>
-              <Button
-                onClick={() => handleReview("approve")}
-                disabled={isProcessing}
-                className="w-full sm:w-auto"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Approve
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </Suspense>
+      {/* Review Dialog */}
+      <Dialog open={!!selectedLocation} onOpenChange={() => setSelectedLocation(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Parking Location</DialogTitle>
+            <DialogDescription>
+              {selectedLocation?.name} - Submitted by {selectedLocation?.owner?.businessName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Location Details */}
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm">Location Details</CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Address:</span>
+                  <span>{selectedLocation?.address}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">City:</span>
+                  <span>{selectedLocation?.city}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Owner Email:</span>
+                  <span>{selectedLocation?.owner?.user?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge>{selectedLocation?.status}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Review Notes */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Review Notes</label>
+              <Textarea
+                placeholder="Add notes about this approval..."
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => selectedLocation && handleReject(selectedLocation.id)}
+              disabled={isProcessing}
+              className="w-full sm:w-auto"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              {isProcessing ? "Processing..." : "Reject"}
+            </Button>
+            <Button
+              onClick={() => selectedLocation && handleApprove(selectedLocation.id)}
+              disabled={isProcessing}
+              className="w-full sm:w-auto"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {isProcessing ? "Processing..." : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
