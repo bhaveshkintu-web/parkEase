@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { getBookingDetails, cancelBooking, submitReview } from "@/lib/actions/booking-actions";
+import { emailBookingDetails, emailBookingReceipt } from "@/lib/actions/email-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -78,6 +79,64 @@ export default function ReservationDetailPage({
   const [reviewContent, setReviewContent] = React.useState("");
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = React.useState(false);
+
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendingReceipt, setIsSendingReceipt] = useState(false);
+
+  const handleSendEmail = async () => {
+    setIsSendingEmail(true);
+    try {
+      const result = await emailBookingDetails(id);
+      if (result.success) {
+        toast({
+          title: "Email Sent",
+          description: "Booking details have been sent to your email.",
+        });
+        setShowShareDialog(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || "Failed to send email.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred.",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendReceipt = async () => {
+    setIsSendingReceipt(true);
+    try {
+      const result = await emailBookingReceipt(id);
+      if (result.success) {
+        toast({
+          title: "Receipt Sent",
+          description: "Payment receipt has been sent to your email.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || "Failed to send receipt.",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred.",
+      });
+    } finally {
+      setIsSendingReceipt(false);
+    }
+  };
 
   React.useEffect(() => {
     async function loadBooking() {
@@ -393,8 +452,18 @@ export default function ReservationDetailPage({
                           <Download className="w-4 h-4 mr-2" />
                           Add to Wallet
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
-                          <Mail className="w-4 h-4 mr-2" />
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-transparent"
+                          onClick={handleSendReceipt}
+                          disabled={isSendingReceipt}
+                        >
+                          {isSendingReceipt ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
                           Email Receipt
                         </Button>
                       </div>
@@ -709,11 +778,30 @@ export default function ReservationDetailPage({
                   <CardTitle>Need Help?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start bg-transparent"
+                    onClick={() => {
+                      const phone = reservation.location.phone || reservation.location.shuttleInfo?.phone;
+                      if (phone) {
+                        window.location.href = `tel:${phone}`;
+                      } else {
+                        toast({
+                          title: "Not Available",
+                          description: "Direct phone number for this location is not available.",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
                     <Phone className="w-4 h-4 mr-3" />
                     Call Location
                   </Button>
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start bg-transparent"
+                    onClick={() => window.location.href = "mailto:support@parkease.com"}
+                  >
                     <MessageSquare className="w-4 h-4 mr-3" />
                     Contact Support
                   </Button>
@@ -765,7 +853,7 @@ export default function ReservationDetailPage({
           </Card>
         </TabsContent>
 
-        {reservation.modificationHistory.length > 0 && (
+        {(reservation.modificationHistory || []).length > 0 && (
           <TabsContent value="history" className="mt-6">
             <Card>
               <CardHeader>
@@ -980,8 +1068,17 @@ export default function ReservationDetailPage({
                 <Copy className="w-4 h-4 mr-2" />
                 Copy Code
               </Button>
-              <Button variant="outline" className="bg-transparent">
-                <Mail className="w-4 h-4 mr-2" />
+              <Button 
+                variant="outline" 
+                className="bg-transparent"
+                onClick={handleSendEmail}
+                disabled={isSendingEmail}
+              >
+                {isSendingEmail ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4 mr-2" />
+                )}
                 Send Email
               </Button>
             </div>

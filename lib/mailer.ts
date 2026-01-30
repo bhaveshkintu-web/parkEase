@@ -123,3 +123,141 @@ export async function sendResetPasswordEmail(email: string, token: string) {
 //     throw new Error("Email send failed");
 //   }
 // }
+
+export async function sendBookingConfirmation(email: string, booking: any) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: `Booking Confirmation - ${booking.confirmationCode}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0f172a;">Booking Confirmed!</h2>
+          <p>Thank you for booking with ParkEase. Here are your reservation details:</p>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Location:</strong> ${booking.location.name}</p>
+            <p style="margin: 5px 0;"><strong>Confirmation Code:</strong> <span style="font-family: monospace; font-size: 1.2em;">${booking.confirmationCode}</span></p>
+            <p style="margin: 5px 0;"><strong>Check-in:</strong> ${new Date(booking.checkIn).toLocaleString()}</p>
+            <p style="margin: 5px 0;"><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleString()}</p>
+            <p style="margin: 5px 0;"><strong>Vehicle:</strong> ${booking.vehicleMake} ${booking.vehicleModel} (${booking.vehiclePlate})</p>
+          </div>
+
+          <p>Please show your confirmation code or QR code at the entrance.</p>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.APP_URL}/account/reservations/${booking.id}" style="background-color: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Reservation</a>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log("✅ Confirmation email sent!", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("❌ Failed to send confirmation email:", error);
+    return { success: false, error };
+  }
+}
+
+export async function sendBookingReceipt(email: string, booking: any) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: `Receipt for Booking ${booking.confirmationCode}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+            .header { background-color: #0f172a; color: white; padding: 20px; text-align: center; }
+            .logo { font-size: 24px; font-weight: bold; letter-spacing: 1px; }
+            .content { padding: 30px 20px; }
+            .receipt-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+            .row.total { border-top: 2px solid #cbd5e1; padding-top: 10px; margin-top: 10px; font-weight: bold; font-size: 1.2em; }
+            .footer { background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 0.8em; color: #64748b; }
+            .button { display: inline-block; background-color: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">ParkEase</div>
+              <div style="font-size: 0.9em; opacity: 0.8;">Payment Receipt</div>
+            </div>
+            
+            <div class="content">
+              <h2 style="margin-top: 0; color: #0f172a;">Thank you for your payment</h2>
+              <p>Your reservation at <strong>${booking.location.name}</strong> has been successfully paid.</p>
+              
+              <div class="receipt-box">
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                  <div style="font-size: 0.9em; color: #64748b; margin-bottom: 5px;">Confirmation Code</div>
+                  <div style="font-family: monospace; font-size: 1.2em; font-weight: bold;">${booking.confirmationCode}</div>
+                </div>
+
+                <div class="row">
+                  <span>Parking Fee</span>
+                  <span>$${(booking.totalPrice - booking.taxes - booking.fees).toFixed(2)}</span>
+                </div>
+                <div class="row">
+                  <span>Taxes</span>
+                  <span>$${booking.taxes.toFixed(2)}</span>
+                </div>
+                <div class="row">
+                  <span>Service Fee</span>
+                  <span>$${booking.fees.toFixed(2)}</span>
+                </div>
+                
+                <div class="row total">
+                  <span>Total Paid</span>
+                  <span>$${booking.totalPrice.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${process.env.APP_URL}/account/reservations/${booking.id}" class="button" style="color: white;">View Reservation</a>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+              <p>If you have any questions, please contact <a href="mailto:support@parkease.com" style="color: #0f172a;">support@parkease.com</a></p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log("✅ Receipt email sent!", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("❌ Failed to send receipt email:", error);
+    return { success: false, error };
+  }
+}

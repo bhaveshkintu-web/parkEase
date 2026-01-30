@@ -46,7 +46,7 @@ export default function ReservationsPage() {
         return bookings.filter(
           (b) => 
             (b.status === "CONFIRMED" || b.status === "PENDING") && 
-            new Date(b.checkIn) > now
+            new Date(b.checkOut) > now
         );
       case "past":
         return bookings.filter(
@@ -63,16 +63,27 @@ export default function ReservationsPage() {
 
   const filteredBookings = getFilteredBookings();
 
-  const getStatusBadge = (status: string, checkOut: string) => {
+  const getStatusBadge = (status: string, checkIn: string, checkOut: string) => {
     const isPast = new Date(checkOut) < now;
+    const isActive = new Date(checkIn) <= now && new Date(checkOut) > now;
     
     switch (status) {
       case "CONFIRMED":
-        return isPast ? (
-          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
-            Completed
-          </Badge>
-        ) : (
+        if (isPast) {
+          return (
+            <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
+              Completed
+            </Badge>
+          );
+        }
+        if (isActive) {
+          return (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              Active
+            </Badge>
+          );
+        }
+        return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             Confirmed
           </Badge>
@@ -112,7 +123,17 @@ export default function ReservationsPage() {
   const upcomingCount = bookings.filter(
     (b) => 
       (b.status === "CONFIRMED" || b.status === "PENDING") && 
-      new Date(b.checkIn) > now
+      new Date(b.checkOut) > now
+  ).length;
+
+  const pastCount = bookings.filter(
+    (b) => 
+      (b.status === "CONFIRMED" || b.status === "COMPLETED") && 
+      new Date(b.checkOut) < now
+  ).length;
+
+  const cancelledCount = bookings.filter(
+    (b) => b.status === "CANCELLED"
   ).length;
 
   return (
@@ -140,8 +161,22 @@ export default function ReservationsPage() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="past">Past</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-2">
+            Past
+            {pastCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {pastCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="cancelled" className="flex items-center gap-2">
+            Cancelled
+            {cancelledCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {cancelledCount}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
@@ -194,7 +229,7 @@ export default function ReservationsPage() {
                               {booking.location.airportCode && ` (${booking.location.airportCode})`}
                             </div>
                           </div>
-                          {getStatusBadge(booking.status, booking.checkOut)}
+                          {getStatusBadge(booking.status, booking.checkIn, booking.checkOut)}
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
