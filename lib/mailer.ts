@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const verifyUrl = `${appUrl}/auth/verify-email?token=${token}`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
@@ -12,8 +13,8 @@ export async function sendVerificationEmail(email: string, token: string) {
       port: Number(process.env.SMTP_PORT),
       secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER as string,
+        pass: process.env.SMTP_PASS as string,
       },
     });
 
@@ -52,7 +53,8 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendResetPasswordEmail(email: string, token: string) {
-  const resetUrl = `${process.env.APP_URL}/auth/reset-password?token=${token}`;
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const resetUrl = `${appUrl}/auth/reset-password?token=${token}`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
@@ -63,8 +65,8 @@ export async function sendResetPasswordEmail(email: string, token: string) {
       port: Number(process.env.SMTP_PORT),
       secure,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER as string,
+        pass: process.env.SMTP_PASS as string,
       },
     });
 

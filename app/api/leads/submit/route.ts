@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyAdmins } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   try {
@@ -54,6 +55,14 @@ export async function POST(req: Request) {
         country,
         status: "pending",
       },
+    });
+
+    // Notify all Admins
+    await notifyAdmins({
+      title: "New Partner Inquiry",
+      message: `${fullName} from ${businessName} has submitted a new partner inquiry.`,
+      type: "info",
+      link: "/admin/approvals/owners",
     });
 
     return NextResponse.json(

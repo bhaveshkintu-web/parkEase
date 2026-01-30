@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getUserInitials } from "@/lib/user-utils";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 
 const navLinks = [
   { href: "/parking", label: "Parking", icon: Car },
@@ -77,6 +78,8 @@ export function Navbar() {
             <Download className="h-4 w-4" />
             Get App
           </Button>
+
+          {isAuthenticated && <NotificationCenter />}
 
           {isAuthenticated && user ? (
             <DropdownMenu>

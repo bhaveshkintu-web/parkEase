@@ -53,6 +53,9 @@ export async function POST(req: Request) {
           adminNotes: notes,
         },
       });
+
+      // (Optional) Could notify admins that a lead was rejected, but usually not needed.
+      
       return NextResponse.json({ message: "Lead rejected successfully" });
     }
 
@@ -109,6 +112,17 @@ export async function POST(req: Request) {
           data: {
             status: "approved",
             adminNotes: notes,
+          },
+        });
+
+        // Add notification for the new owner
+        await tx.notification.create({
+          data: {
+            userId: user.id,
+            title: "Welcome to ParkEase!",
+            message: "Your partner inquiry has been approved. You can now manage your parking locations from the Owner Dashboard.",
+            type: "success",
+            link: "/owner/dashboard",
           },
         });
       });

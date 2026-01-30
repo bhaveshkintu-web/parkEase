@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
+import { createNotification, notifyAdmins } from "@/lib/notifications";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -63,6 +64,7 @@ export async function getBookingDetails(bookingId: string) {
   }
 }
 
+
 /**
  * Creates a new booking.
  */
@@ -87,7 +89,10 @@ export async function createBooking(data: any) {
     // 2. Fetch location and validate
     const location = await prisma.parkingLocation.findUnique({
       where: { id: locationId },
-      include: { analytics: true }
+      include: { 
+        analytics: true,
+        owner: true 
+      }
     });
 
     if (!location) {
@@ -173,6 +178,16 @@ export async function createBooking(data: any) {
         }
       });
 
+      // e. Notify Owner
+      await createNotification({
+        userId: location.owner.userId,
+        title: "New Booking Received",
+        message: `New reservation for "${location.name}" from ${guestFirstName} ${guestLastName}.`,
+        type: "success",
+        link: "/owner/bookings",
+        prisma: tx,
+      });
+
       return booking;
     });
 
@@ -219,6 +234,7 @@ export async function cancelBooking(bookingId: string, reason: string) {
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED },
+        include: { location: { include: { owner: true } } }
       });
 
       await tx.refundRequest.create({
@@ -238,6 +254,25 @@ export async function cancelBooking(bookingId: string, reason: string) {
             increment: 1
           }
         }
+      });
+
+      // Notify Owner
+      await createNotification({
+        userId: updatedBooking.location.owner.userId,
+        title: "Booking Cancelled",
+        message: `Reservation ${updatedBooking.confirmationCode} for "${updatedBooking.location.name}" has been cancelled.`,
+        type: "warning",
+        link: "/owner/bookings",
+        prisma: tx,
+      });
+
+      // Notify Admins about Refund Request
+      await notifyAdmins({
+        title: "New Refund Request",
+        message: `A new refund request has been created for booking ${updatedBooking.confirmationCode}.`,
+        type: "info",
+        link: "/admin/approvals/refunds",
+        prisma: tx,
       });
 
       return updatedBooking;
@@ -306,7 +341,7 @@ export async function submitReview(bookingId: string, reviewData: {
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { location: true },
+      include: { location: { include: { owner: true } } },
     });
 
     if (!booking || booking.userId !== userId) {
@@ -327,6 +362,15 @@ export async function submitReview(bookingId: string, reviewData: {
         title: reviewData.title,
         content: reviewData.content,
       },
+    });
+
+    // Notify Owner
+    await createNotification({
+      userId: (booking.location as any).owner.userId,
+      title: "New Review Posted",
+      message: `A customer left a ${reviewData.rating}-star review for "${booking.location.name}".`,
+      type: "info",
+      link: `/owner/locations/${booking.locationId}/reviews`,
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);

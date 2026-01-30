@@ -34,7 +34,23 @@ export async function PATCH(
           data: {
             status: "ACTIVE",
           },
+          include: { owner: true }
         });
+
+        // Notify owner
+        try {
+          await prisma.notification.create({
+            data: {
+              userId: updatedLocation.owner.userId,
+              title: "Location Approved",
+              message: `Your parking location "${updatedLocation.name}" has been approved and is now active.`,
+              type: "success",
+              link: "/owner/locations",
+            },
+          });
+        } catch (notifyError) {
+          console.error("[ADMIN_LOCATION_APPROVE] Notification failed:", notifyError);
+        }
 
         console.log(`[ADMIN_LOCATION_APPROVE] Successfully approved location ${id}`);
 
@@ -56,7 +72,23 @@ export async function PATCH(
           data: {
             status: "INACTIVE",
           },
+          include: { owner: true }
         });
+
+        // Notify owner
+        try {
+          await prisma.notification.create({
+            data: {
+              userId: updatedLocation.owner.userId,
+              title: "Location Rejected",
+              message: `Your parking location "${updatedLocation.name}" has been rejected. Please review the admin notes for details.`,
+              type: "warning",
+              link: "/owner/locations",
+            },
+          });
+        } catch (notifyError) {
+          console.error("[ADMIN_LOCATION_APPROVE] Notification failed:", notifyError);
+        }
 
         return NextResponse.json({
           message: "Parking location rejected",

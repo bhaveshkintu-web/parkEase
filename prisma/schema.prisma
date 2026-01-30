@@ -31,6 +31,7 @@ model User {
   reviews          Review[]
   savedVehicles    SavedVehicle[]
   watchmanProfile  Watchman?
+  notifications    Notification[]
 }
 
 model OwnerProfile {
@@ -215,6 +216,8 @@ model ParkingSession {
   locationId   String
   checkInTime  DateTime?
   checkOutTime DateTime?
+  checkInBy    String?
+  checkOutBy   String?
   status       String
   booking      Booking         @relation(fields: [bookingId], references: [id])
   location     ParkingLocation @relation(fields: [locationId], references: [id])
@@ -319,6 +322,18 @@ model OwnerLead {
   adminNotes      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // info, success, warning, error
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model LocationAnalytics {
