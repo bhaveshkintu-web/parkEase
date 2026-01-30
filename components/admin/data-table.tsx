@@ -49,7 +49,7 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T>({
   data,
   columns,
   actions,
@@ -67,29 +67,29 @@ export function DataTable<T extends Record<string, unknown>>({
   // Filter data
   const filteredData = searchKey
     ? data.filter((item) => {
-        const value = item[searchKey];
-        if (typeof value === "string") {
-          return value.toLowerCase().includes(search.toLowerCase());
-        }
-        return true;
-      })
+      const value = (item as any)[searchKey];
+      if (typeof value === "string") {
+        return value.toLowerCase().includes(search.toLowerCase());
+      }
+      return true;
+    })
     : data;
 
   // Sort data
   const sortedData = sortColumn
     ? [...filteredData].sort((a, b) => {
-        const aVal = a[sortColumn];
-        const bVal = b[sortColumn];
-        if (typeof aVal === "string" && typeof bVal === "string") {
-          return sortDirection === "asc"
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
-        }
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-        }
-        return 0;
-      })
+      const aVal = (a as any)[sortColumn];
+      const bVal = (b as any)[sortColumn];
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return sortDirection === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      return 0;
+    })
     : filteredData;
 
   // Paginate data
@@ -178,37 +178,37 @@ export function DataTable<T extends Record<string, unknown>>({
                     <TableCell key={column.key}>
                       {column.render
                         ? column.render(item)
-                        : (item[column.key] as React.ReactNode)}
+                        : ((item as any)[column.key] as React.ReactNode)}
                     </TableCell>
                   ))}
                   {actions && (() => {
                     const itemActions = typeof actions === 'function' ? actions(item) : actions;
                     return itemActions.length > 0 ? (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {itemActions.map((action, i) => (
-                            <DropdownMenuItem
-                              key={i}
-                              onClick={() => action.onClick(item)}
-                              className={cn(
-                                action.variant === "destructive" &&
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {itemActions.map((action, i) => (
+                              <DropdownMenuItem
+                                key={i}
+                                onClick={() => action.onClick(item)}
+                                className={cn(
+                                  action.variant === "destructive" &&
                                   "text-destructive focus:text-destructive"
-                              )}
-                            >
-                              {action.icon}
-                              {action.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  ) : null;
+                                )}
+                              >
+                                {action.icon}
+                                {action.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    ) : null;
                   })()}
                 </TableRow>
               ))
@@ -247,7 +247,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       <span className="text-sm font-medium text-right">
                         {column.render
                           ? column.render(item)
-                          : (item[column.key] as React.ReactNode)}
+                          : ((item as any)[column.key] as React.ReactNode)}
                       </span>
                     </div>
                   ))}
@@ -255,24 +255,24 @@ export function DataTable<T extends Record<string, unknown>>({
               {actions && (() => {
                 const itemActions = typeof actions === 'function' ? actions(item) : actions;
                 return itemActions.length > 0 ? (
-                <div
-                  className="flex gap-2 mt-3 pt-3 border-t"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {itemActions.map((action, i) => (
-                    <Button
-                      key={i}
-                      variant={action.variant === "destructive" ? "destructive" : "outline"}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => action.onClick(item)}
-                    >
-                      {action.icon}
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-              ) : null;
+                  <div
+                    className="flex gap-2 mt-3 pt-3 border-t"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {itemActions.map((action, i) => (
+                      <Button
+                        key={i}
+                        variant={action.variant === "destructive" ? "destructive" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => action.onClick(item)}
+                      >
+                        {action.icon}
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null;
               })()}
             </div>
           ))

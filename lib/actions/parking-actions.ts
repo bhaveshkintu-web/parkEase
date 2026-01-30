@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 import { calculatePricing } from "@/lib/utils/booking-utils";
+import { ownerLocationSchema, type OwnerLocationInput } from "@/lib/validations";
 
 /**
  * Common shape for location search results
@@ -36,7 +38,7 @@ export async function getParkingLocations(searchParams?: {
 }) {
   try {
     const { city, airportCode, checkIn: ci, checkOut: co } = searchParams || {};
-    
+
     // Default dates if none provided (next 24 hours) for general listing
     const checkIn = ci ? new Date(ci) : new Date();
     const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
@@ -72,7 +74,7 @@ export async function getParkingLocations(searchParams?: {
       .filter((loc) => loc.totalSpots - loc._count.bookings > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
-        const rating = reviewCount > 0 
+        const rating = reviewCount > 0
           ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
           : 0;
 
@@ -129,7 +131,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
     if (!location) return { success: false, error: "Location not found" };
 
     const reviewCount = location.reviews.length;
-    const rating = reviewCount > 0 
+    const rating = reviewCount > 0
       ? Number((location.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
       : 0;
 
@@ -160,15 +162,15 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
       pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         ...location,
         reviewCount,
         rating,
         availability,
         pricing
-      } 
+      }
     };
   } catch (error) {
     console.error("Failed to fetch location details:", error);
@@ -195,10 +197,10 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
 
     const locationsWithStats = locations.map(loc => {
       const reviewCount = loc.reviews.length;
-      const rating = reviewCount > 0 
+      const rating = reviewCount > 0
         ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
         : 0;
-      
+
       return {
         ...loc,
         reviewCount,
@@ -213,3 +215,140 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
   }
 }
 
+/**
+ * Retrieves all locations owned by a specific owner.
+ */
+export async function getOwnerLocations(userId: string) {
+  try {
+    // 1. Find owner profile
+    const ownerProfile = await prisma.ownerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!ownerProfile) {
+      return { success: false, error: "Owner profile not found" };
+    }
+
+    // 2. Fetch locations
+    const locations = await prisma.parkingLocation.findMany({
+      where: { ownerId: ownerProfile.id },
+      include: {
+        reviews: true,
+        analytics: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 3. Map to UI-friendly format
+    const formattedLocations = locations.map((loc) => {
+      const reviewCount = loc.reviews.length;
+      const rating = reviewCount > 0
+        ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
+        : 0;
+
+      return {
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        city: loc.city,
+        airport: loc.airportCode || "Custom Location",
+        pricePerDay: loc.pricePerDay,
+        availableSpots: loc.availableSpots,
+        totalSpots: loc.totalSpots,
+        rating,
+        reviewCount,
+        status: loc.status.toLowerCase(),
+        analytics: {
+          revenue: loc.analytics?.revenue || 0,
+          bookings: loc.analytics?.totalBookings || 0,
+        },
+      };
+    });
+
+    return { success: true, data: formattedLocations };
+  } catch (error) {
+    console.error("Failed to fetch owner locations:", error);
+    return { success: false, error: "Internal server error" };
+  }
+}
+
+/**
+ * Updates the status of a parking location.
+ */
+export async function updateLocationStatus(id: string, status: string) {
+  try {
+    const updated = await prisma.parkingLocation.update({
+      where: { id },
+      data: { status: status.toUpperCase() as any },
+    });
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Failed to update location status:", error);
+    return { success: false, error: "Failed to update status" };
+  }
+}
+
+/**
+ * Deletes a parking location.
+ */
+export async function deleteLocation(id: string) {
+  try {
+    // Check for associated bookings before deletion
+    const bookingCount = await prisma.booking.count({
+      where: { locationId: id },
+    });
+
+    if (bookingCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete location with existing bookings. Try deactivating it instead."
+      };
+    }
+
+    await prisma.parkingLocation.delete({
+      where: { id },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete location:", error);
+    return { success: false, error: "Failed to delete location" };
+  }
+}
+
+
+/**
+ * Updates an existing parking location.
+ */
+export async function updateParkingLocation(id: string, data: OwnerLocationInput) {
+  try {
+    const result = ownerLocationSchema.safeParse(data);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: result.error.flatten().fieldErrors
+      };
+    }
+
+    const updatedLocation = await prisma.parkingLocation.update({
+      where: { id },
+      data: {
+        ...result.data,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/owner/locations");
+    revalidatePath(`/owner/locations/${id}`);
+
+    return { success: true, data: updatedLocation };
+  } catch (error) {
+    console.error("Failed to update location:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update location"
+    };
+  }
+}

@@ -266,7 +266,7 @@ export default function OwnerNewLocationPage() {
     setIsSubmitting(true);
     try {
       const selectedAirport = airports.find((a) => a.code === formData.airportCode);
-      
+
       // Prepare data for API
       const locationData = {
         name: formData.name,
@@ -282,6 +282,8 @@ export default function OwnerNewLocationPage() {
         pricePerDay: parseFloat(formData.pricePerDay),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         totalSpots: parseInt(formData.totalSpots),
+        heightLimit: formData.heightLimit || undefined,
+        securityFeatures: formData.securityFeatures,
         amenities: formData.amenities,
         images: [], // TODO: Implement image upload
         shuttle: formData.shuttle,
@@ -301,7 +303,7 @@ export default function OwnerNewLocationPage() {
       if (!response.ok) {
         const error = await response.json();
         console.error("Location creation failed:", error);
-        
+
         // Show validation details if available
         if (error.details) {
           const fieldErrors = Object.entries(error.details)
@@ -309,7 +311,7 @@ export default function OwnerNewLocationPage() {
             .join('\n');
           throw new Error(`Validation failed:\n${fieldErrors}`);
         }
-        
+
         throw new Error(error.error || "Failed to create location");
       }
 

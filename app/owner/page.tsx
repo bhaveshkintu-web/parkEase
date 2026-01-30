@@ -289,8 +289,8 @@ export default function OwnerDashboard() {
                         booking.status === "confirmed"
                           ? "success"
                           : booking.status === "pending"
-                          ? "warning"
-                          : "error"
+                            ? "warning"
+                            : "error"
                       }
                     />
                   </div>
@@ -339,8 +339,8 @@ export default function OwnerDashboard() {
                         location.status === "active"
                           ? "success"
                           : location.status === "maintenance"
-                          ? "warning"
-                          : "default"
+                            ? "warning"
+                            : "default"
                       }
                     />
                   </div>

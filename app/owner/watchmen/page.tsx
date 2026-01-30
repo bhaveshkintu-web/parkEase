@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDataStore } from "@/lib/data-store";
+import { useAuth } from "@/lib/auth-context";
+import { getOwnerLocations } from "@/lib/actions/parking-actions";
 import { DataTable, StatusBadge, type Column, type Action } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,9 @@ import {
 } from "lucide-react";
 
 export default function OwnerWatchmenPage() {
-  const { watchmen, addWatchman, updateWatchman, deleteWatchman, adminLocations } = useDataStore();
+  const { user } = useAuth();
+  const { watchmen, addWatchman, updateWatchman, deleteWatchman } = useDataStore();
+  const [locations, setLocations] = useState<any[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingWatchman, setEditingWatchman] = useState<Watchman | null>(null);
   const [formData, setFormData] = useState({
@@ -47,6 +51,18 @@ export default function OwnerWatchmenPage() {
     shift: "morning" as "morning" | "evening" | "night" | "all",
     assignedParkingIds: [] as string[],
   });
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (user?.id) {
+        const result = await getOwnerLocations(user.id);
+        if (result.success && result.data) {
+          setLocations(result.data);
+        }
+      }
+    };
+    fetchLocations();
+  }, [user]);
 
   const resetForm = () => {
     setFormData({
@@ -66,7 +82,7 @@ export default function OwnerWatchmenPage() {
       addWatchman({
         ...formData,
         userId: `user-${Date.now()}`,
-        ownerId: "owner-1",
+        ownerId: user?.id || "",
         status: "active",
         createdAt: new Date(),
         todayCheckIns: 0,
@@ -284,7 +300,10 @@ export default function OwnerWatchmenPage() {
               <div className="space-y-2">
                 <Label>Assigned Locations</Label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {adminLocations.map((location) => (
+                  {locations.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-1">No locations found. Please add a parking location first.</p>
+                  )}
+                  {locations.map((location) => (
                     <label
                       key={location.id}
                       className="flex items-center gap-2 cursor-pointer"

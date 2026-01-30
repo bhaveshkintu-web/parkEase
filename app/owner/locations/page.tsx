@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDataStore } from "@/lib/data-store";
+import { useAuth } from "@/lib/auth-context";
+import {
+  getOwnerLocations,
+  updateLocationStatus,
+  deleteLocation as removeLocation
+} from "@/lib/actions/parking-actions";
 import { formatCurrency } from "@/lib/data";
 import { DataTable, StatusBadge, type Column, type Action } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import type { AdminParkingLocation } from "@/lib/types";
 import {
   Plus,
@@ -24,13 +30,36 @@ import {
 
 export default function OwnerLocationsPage() {
   const router = useRouter();
-  const { adminLocations, updateLocation, deleteLocation } = useDataStore();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [locations, setLocations] = useState<AdminParkingLocation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+
+  const fetchLocations = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    const result = await getOwnerLocations(user.id);
+    if (result.success) {
+      setLocations(result.data as unknown as AdminParkingLocation[]);
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to fetch locations",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchLocations();
+  }, [user]);
 
   const filteredLocations =
     activeTab === "all"
-      ? adminLocations
-      : adminLocations.filter((l) => l.status === activeTab);
+      ? locations
+      : locations.filter((l) => l.status === activeTab);
 
   const columns: Column<AdminParkingLocation>[] = [
     {
@@ -104,15 +133,15 @@ export default function OwnerLocationsPage() {
             item.status === "active"
               ? "success"
               : item.status === "maintenance"
-              ? "warning"
-              : "default"
+                ? "warning"
+                : "default"
           }
         />
       ),
     },
   ];
 
-  const actions: Action<AdminParkingLocation>[] = [
+  const getActions = (item: AdminParkingLocation): Action<AdminParkingLocation>[] => [
     {
       label: "View",
       icon: <Eye className="w-4 h-4 mr-2" />,
@@ -124,27 +153,35 @@ export default function OwnerLocationsPage() {
       onClick: (item) => router.push(`/owner/locations/${item.id}/edit`),
     },
     {
-      label:
-        adminLocations.find((l) => l.id)?.status === "active"
-          ? "Deactivate"
-          : "Activate",
-      icon:
-        adminLocations.find((l) => l.id)?.status === "active" ? (
-          <ToggleLeft className="w-4 h-4 mr-2" />
-        ) : (
-          <ToggleRight className="w-4 h-4 mr-2" />
-        ),
-      onClick: (item) => {
+      label: item.status === "active" ? "Deactivate" : "Activate",
+      icon: item.status === "active" ? (
+        <ToggleLeft className="w-4 h-4 mr-2" />
+      ) : (
+        <ToggleRight className="w-4 h-4 mr-2" />
+      ),
+      onClick: async (item) => {
         const newStatus = item.status === "active" ? "inactive" : "active";
-        updateLocation(item.id, { status: newStatus });
+        const result = await updateLocationStatus(item.id, newStatus);
+        if (result.success) {
+          toast({ title: `Location ${newStatus === 'active' ? 'activated' : 'deactivated'}` });
+          fetchLocations();
+        } else {
+          toast({ title: "Error", description: result.error, variant: "destructive" });
+        }
       },
     },
     {
       label: "Delete",
       icon: <Trash2 className="w-4 h-4 mr-2" />,
-      onClick: (item) => {
+      onClick: async (item) => {
         if (confirm("Are you sure you want to delete this location?")) {
-          deleteLocation(item.id);
+          const result = await removeLocation(item.id);
+          if (result.success) {
+            toast({ title: "Location deleted" });
+            fetchLocations();
+          } else {
+            toast({ title: "Error", description: result.error, variant: "destructive" });
+          }
         }
       },
       variant: "destructive",
@@ -169,19 +206,18 @@ export default function OwnerLocationsPage() {
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total Locations</p>
-            <p className="text-2xl font-bold text-foreground">{adminLocations.length}</p>
+            <p className="text-2xl font-bold text-foreground">{locations.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Active</p>
             <p className="text-2xl font-bold text-green-600">
-              {adminLocations.filter((l) => l.status === "active").length}
+              {locations.filter((l) => l.status === "active").length}
             </p>
           </CardContent>
         </Card>
@@ -189,7 +225,7 @@ export default function OwnerLocationsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">In Maintenance</p>
             <p className="text-2xl font-bold text-amber-600">
-              {adminLocations.filter((l) => l.status === "maintenance").length}
+              {locations.filter((l) => l.status === "maintenance").length}
             </p>
           </CardContent>
         </Card>
@@ -197,7 +233,7 @@ export default function OwnerLocationsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total Revenue</p>
             <p className="text-2xl font-bold text-foreground">
-              {formatCurrency(adminLocations.reduce((sum, l) => sum + l.analytics.revenue, 0))}
+              {formatCurrency(locations.reduce((sum, l) => sum + (l.analytics?.revenue || 0), 0))}
             </p>
           </CardContent>
         </Card>
@@ -208,15 +244,15 @@ export default function OwnerLocationsPage() {
         <CardHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
-              <TabsTrigger value="all">All ({adminLocations.length})</TabsTrigger>
+              <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
               <TabsTrigger value="active">
-                Active ({adminLocations.filter((l) => l.status === "active").length})
+                Active ({locations.filter((l) => l.status === "active").length})
               </TabsTrigger>
               <TabsTrigger value="inactive">
-                Inactive ({adminLocations.filter((l) => l.status === "inactive").length})
+                Inactive ({locations.filter((l) => l.status === "inactive").length})
               </TabsTrigger>
               <TabsTrigger value="maintenance">
-                Maintenance ({adminLocations.filter((l) => l.status === "maintenance").length})
+                Maintenance ({locations.filter((l) => l.status === "maintenance").length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -225,7 +261,7 @@ export default function OwnerLocationsPage() {
           <DataTable
             data={filteredLocations}
             columns={columns}
-            actions={actions}
+            actions={getActions}
             searchKey="name"
             searchPlaceholder="Search locations..."
             emptyMessage="No locations found"
