@@ -1,29 +1,26 @@
-
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function checkApprovals() {
+async function checkData() {
   try {
-    const approvals = await prisma.parkingApproval.findMany({
-      include: {
-        owner: {
-          include: {
-            user: true
-          }
-        }
-      }
+    console.log('--- OWNER LEADS ---');
+    const leads = await prisma.ownerLead.findMany();
+    console.log(`Found ${leads.length} leads.`);
+    leads.forEach(l => console.log(`- ${l.fullName} (${l.email}): ${l.status}`));
+
+    console.log('\n--- PENDING OWNER PROFILES ---');
+    const pendingOwners = await prisma.ownerProfile.findMany({
+      where: { status: 'pending' },
+      include: { user: true }
     });
-    console.log('--- PARKING APPROVALS ---');
-    console.table(approvals.map(a => ({
-      id: a.id,
-      owner: a.owner.businessName,
-      status: a.status
-    })));
+    console.log(`Found ${pendingOwners.length} pending owner profiles.`);
+    pendingOwners.forEach(o => console.log(`- ${o.businessName} (${o.user.email}): ${o.status}`));
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error querying data:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-checkApprovals();
+checkData();

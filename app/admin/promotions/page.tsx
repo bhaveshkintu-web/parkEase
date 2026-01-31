@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
+import {
+  getPromotions,
+  addPromotion as createPromo,
+  updatePromotion as updatePromo,
+  deletePromotion as removePromo
+} from "@/lib/actions/promotion-actions";
 import { formatCurrency } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,12 +52,24 @@ import {
 import type { Promotion } from "@/lib/types";
 
 export default function PromotionsPage() {
-  const { promotions, addPromotion, updatePromotion, deletePromotion } = useDataStore();
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const fetchPromos = async () => {
+    setIsLoading(true);
+    const data = await getPromotions();
+    setPromotions(data as unknown as Promotion[]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPromos();
+  }, []);
 
   const [formData, setFormData] = useState({
     code: "",
@@ -90,9 +107,9 @@ export default function PromotionsPage() {
       name: promo.name,
       type: promo.type,
       value: promo.value,
-      minBookingValue: promo.minBookingValue,
-      maxDiscount: promo.maxDiscount,
-      usageLimit: promo.usageLimit,
+      minBookingValue: promo.minBookingValue || undefined,
+      maxDiscount: promo.maxDiscount || undefined,
+      usageLimit: promo.usageLimit || undefined,
       validFrom: new Date(promo.validFrom).toISOString().split("T")[0],
       validUntil: new Date(promo.validUntil).toISOString().split("T")[0],
       isActive: promo.isActive,
@@ -102,35 +119,41 @@ export default function PromotionsPage() {
 
   const handleSubmit = async () => {
     setIsProcessing(true);
-    const data: Omit<Promotion, "id" | "usedCount"> = {
-      code: formData.code.toUpperCase(),
-      name: formData.name,
-      type: formData.type,
-      value: formData.value,
-      minBookingValue: formData.minBookingValue,
-      maxDiscount: formData.maxDiscount,
-      usageLimit: formData.usageLimit,
-      validFrom: new Date(formData.validFrom),
-      validUntil: new Date(formData.validUntil),
-      isActive: formData.isActive,
-    };
-
+    let result;
     if (editingPromo) {
-      await updatePromotion(editingPromo.id, { ...data, usedCount: editingPromo.usedCount });
+      result = await updatePromo(editingPromo.id, formData);
     } else {
-      await addPromotion(data);
+      result = await createPromo(formData);
     }
-    setIsDialogOpen(false);
-    resetForm();
+
+    if (result.success) {
+      await fetchPromos();
+      setIsDialogOpen(false);
+      resetForm();
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setIsProcessing(true);
-    await deletePromotion(deleteId);
-    setDeleteId(null);
+    const result = await removePromo(deleteId);
+    if (result.success) {
+      await fetchPromos();
+      setDeleteId(null);
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
+  };
+
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    const result = await updatePromo(id, { isActive });
+    if (result.success) {
+      await fetchPromos();
+    }
   };
 
   const copyCode = (code: string) => {
@@ -159,7 +182,6 @@ export default function PromotionsPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/admin">
@@ -311,8 +333,8 @@ export default function PromotionsPage() {
               <Button variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }} className="bg-transparent">
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={isProcessing || !formData.code || !formData.name || !formData.validFrom || !formData.validUntil}
               >
                 {isProcessing ? "Saving..." : editingPromo ? "Update" : "Create"}
@@ -322,7 +344,6 @@ export default function PromotionsPage() {
         </Dialog>
       </div>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -333,7 +354,7 @@ export default function PromotionsPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total Redemptions</p>
-            <p className="text-2xl font-bold text-foreground">{promotions.reduce((sum, p) => sum + p.usedCount, 0)}</p>
+            <p className="text-2xl font-bold text-foreground">{promotions.reduce((sum, p) => sum + (p.usedCount || 0), 0)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -350,7 +371,6 @@ export default function PromotionsPage() {
         </Card>
       </div>
 
-      {/* Promotions Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {promotions.map((promo) => (
           <Card key={promo.id} className={`${!promo.isActive || isExpired(promo) ? "opacity-60" : ""}`}>
@@ -407,9 +427,9 @@ export default function PromotionsPage() {
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
                     <span>Used</span>
-                    <span>{promo.usedCount} / {promo.usageLimit}</span>
+                    <span>{promo.usedCount || 0} / {promo.usageLimit}</span>
                   </div>
-                  <Progress value={(promo.usedCount / promo.usageLimit) * 100} className="h-2" />
+                  <Progress value={((promo.usedCount || 0) / promo.usageLimit) * 100} className="h-2" />
                 </div>
               )}
 
@@ -417,7 +437,7 @@ export default function PromotionsPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={promo.isActive}
-                    onCheckedChange={(checked) => updatePromotion(promo.id, { isActive: checked })}
+                    onCheckedChange={(checked) => handleToggleActive(promo.id, checked)}
                   />
                   <span className="text-sm text-muted-foreground">
                     {promo.isActive ? "Enabled" : "Disabled"}
@@ -437,7 +457,7 @@ export default function PromotionsPage() {
         ))}
       </div>
 
-      {promotions.length === 0 && (
+      {(isLoading || promotions.length === 0) && !isLoading && (
         <Card>
           <CardContent className="p-12 text-center">
             <Tag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -447,7 +467,10 @@ export default function PromotionsPage() {
         </Card>
       )}
 
-      {/* Delete Confirmation */}
+      {isLoading && (
+        <div className="text-center py-12 text-muted-foreground">Loading promotions...</div>
+      )}
+
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

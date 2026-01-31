@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
+import {
+  getCommissionRules,
+  addCommissionRule as createRule,
+  updateCommissionRule as updateRule,
+  deleteCommissionRule as removeRule
+} from "@/lib/actions/commission-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,11 +38,23 @@ import { ArrowLeft, Plus, Pencil, Trash2, Percent, DollarSign } from "lucide-rea
 import type { CommissionRule } from "@/lib/types";
 
 export default function CommissionsPage() {
-  const { commissionRules, addCommissionRule, updateCommissionRule, deleteCommissionRule } = useDataStore();
+  const [commissionRules, setCommissionRules] = useState<CommissionRule[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchRules = async () => {
+    setIsLoading(true);
+    const data = await getCommissionRules();
+    setCommissionRules(data as unknown as CommissionRule[]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -78,26 +95,41 @@ export default function CommissionsPage() {
 
   const handleSubmit = async () => {
     setIsProcessing(true);
+    let result;
     if (editingRule) {
-      await updateCommissionRule(editingRule.id, formData);
+      result = await updateRule(editingRule.id, formData);
     } else {
-      await addCommissionRule(formData);
+      result = await createRule(formData);
     }
-    setIsDialogOpen(false);
-    resetForm();
+
+    if (result.success) {
+      await fetchRules();
+      setIsDialogOpen(false);
+      resetForm();
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setIsProcessing(true);
-    await deleteCommissionRule(deleteId);
-    setDeleteId(null);
+    const result = await removeRule(deleteId);
+    if (result.success) {
+      await fetchRules();
+      setDeleteId(null);
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
   };
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
-    await updateCommissionRule(id, { isActive });
+    const result = await updateRule(id, { isActive });
+    if (result.success) {
+      await fetchRules();
+    }
   };
 
   return (

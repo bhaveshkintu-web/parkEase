@@ -104,8 +104,8 @@ export default function OwnerLocationsPage() {
             item.status === "active"
               ? "success"
               : item.status === "maintenance"
-              ? "warning"
-              : "default"
+                ? "warning"
+                : "default"
           }
         />
       ),
