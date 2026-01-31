@@ -36,7 +36,7 @@ export async function getParkingLocations(searchParams?: {
 }) {
   try {
     const { city, airportCode, checkIn: ci, checkOut: co } = searchParams || {};
-    
+
     // Default dates if none provided (next 24 hours) for general listing
     const checkIn = ci ? new Date(ci) : new Date();
     const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
@@ -72,7 +72,7 @@ export async function getParkingLocations(searchParams?: {
       .filter((loc) => loc.totalSpots - loc._count.bookings > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
-        const rating = reviewCount > 0 
+        const rating = reviewCount > 0
           ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
           : 0;
 
@@ -129,7 +129,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
     if (!location) return { success: false, error: "Location not found" };
 
     const reviewCount = location.reviews.length;
-    const rating = reviewCount > 0 
+    const rating = reviewCount > 0
       ? Number((location.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
       : 0;
 
@@ -160,15 +160,15 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
       pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         ...location,
         reviewCount,
         rating,
         availability,
         pricing
-      } 
+      }
     };
   } catch (error) {
     console.error("Failed to fetch location details:", error);
@@ -195,10 +195,10 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
 
     const locationsWithStats = locations.map(loc => {
       const reviewCount = loc.reviews.length;
-      const rating = reviewCount > 0 
+      const rating = reviewCount > 0
         ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
         : 0;
-      
+
       return {
         ...loc,
         reviewCount,
@@ -213,3 +213,27 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
   }
 }
 
+/**
+ * Fetches all parking locations belonging to a specific owner.
+ */
+export async function getOwnerLocations(userId: string) {
+  try {
+    const ownerProfile = await prisma.ownerProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!ownerProfile) {
+      return { success: false, error: "Owner profile not found" };
+    }
+
+    const locations = await prisma.parkingLocation.findMany({
+      where: { ownerId: ownerProfile.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { success: true, data: locations };
+  } catch (error) {
+    console.error("Failed to fetch owner locations:", error);
+    return { success: false, error: "Internal server error" };
+  }
+}
