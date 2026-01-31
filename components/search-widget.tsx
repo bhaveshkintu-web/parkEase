@@ -61,11 +61,11 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
   // Filter and group destinations
   const filteredDestinations = localQuery.length >= 1
     ? destinations.filter(
-        (dest) =>
-          dest.name.toLowerCase().includes(localQuery.toLowerCase()) ||
-          dest.city.toLowerCase().includes(localQuery.toLowerCase()) ||
-          (dest.code && dest.code.toLowerCase().includes(localQuery.toLowerCase()))
-      )
+      (dest) =>
+        dest.name.toLowerCase().includes(localQuery.toLowerCase()) ||
+        dest.city.toLowerCase().includes(localQuery.toLowerCase()) ||
+        (dest.code && dest.code.toLowerCase().includes(localQuery.toLowerCase()))
+    )
     : [];
 
   const groupedResults = {
@@ -92,7 +92,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
   const handleUseLocation = async () => {
     if (!navigator.geolocation) return;
-    
+
     setIsLocating(true);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -101,12 +101,12 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
           timeout: 5000,
         });
       });
-      
+
       // Find nearest airport (simplified)
       const { latitude, longitude } = position.coords;
       let nearest = destinations[0];
       let minDist = Number.POSITIVE_INFINITY;
-      
+
       for (const dest of destinations.filter(d => d.type === "airport")) {
         const dist = Math.sqrt(
           Math.pow(dest.coordinates.lat - latitude, 2) +
@@ -117,7 +117,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
           nearest = dest;
         }
       }
-      
+
       handleSelectDestination(nearest);
     } catch {
       // Silently fail - user denied or timeout
@@ -192,7 +192,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
   const renderGroup = (title: string, items: Destination[], startIndex: number) => {
     if (items.length === 0) return null;
-    
+
     return (
       <div key={title}>
         <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
@@ -254,6 +254,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
           <button
             key={type.id}
             onClick={() => setParkingType(type.id)}
+            suppressHydrationWarning
             className={cn(
               "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
               parkingType === type.id

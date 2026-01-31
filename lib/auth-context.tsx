@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(normalizeUser(data.user));
           setIsAuthenticated(true);
         }
-      } catch {}
+      } catch { }
       setIsLoading(false);
     }
     restoreSession();
