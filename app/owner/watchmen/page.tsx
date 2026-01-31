@@ -61,7 +61,6 @@ export default function OwnerWatchmenPage() {
     email: "",
     shift: "morning" as "morning" | "evening" | "night" | "all",
     assignedParkingIds: [] as string[],
-    password: "",
   });
   const [allAvailableWatchmen, setAllAvailableWatchmen] = useState<any[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
@@ -109,7 +108,6 @@ export default function OwnerWatchmenPage() {
       email: "",
       shift: "morning",
       assignedParkingIds: [],
-      password: "",
     });
     setEditingWatchman(null);
   };
@@ -151,7 +149,6 @@ export default function OwnerWatchmenPage() {
       email: watchman.email,
       shift: watchman.shift,
       assignedParkingIds: watchman.assignedParkingIds,
-      password: "", // Keep empty when editing
     });
     setIsAddDialogOpen(true);
   };
@@ -403,18 +400,6 @@ export default function OwnerWatchmenPage() {
                   disabled={(!!editingWatchman) || (!isManualEntry && !editingWatchman)}
                 />
               </div>
-              {!editingWatchman && isManualEntry && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password (Optional)</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Leave blank for default: Watchman@123"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="shift">Shift</Label>
                 <Select
@@ -435,37 +420,29 @@ export default function OwnerWatchmenPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Assigned Locations</Label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {locations.map((location: any) => (
-                    <label
-                      key={location.id}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        className="rounded border-input"
-                        checked={formData.assignedParkingIds.includes(location.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({
-                              ...formData,
-                              assignedParkingIds: [...formData.assignedParkingIds, location.id],
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              assignedParkingIds: formData.assignedParkingIds.filter(
-                                (id) => id !== location.id
-                              ),
-                            });
-                          }
-                        }}
-                      />
-                      <span className="text-sm">{location.name}</span>
-                    </label>
-                  ))}
-                </div>
+                <Label htmlFor="location-select">Assigned Location</Label>
+                <Select
+                  value={formData.assignedParkingIds[0] || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, assignedParkingIds: value ? [value] : [] })
+                  }
+                >
+                  <SelectTrigger id="location-select">
+                    <SelectValue placeholder="Select a location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.length === 0 && (
+                      <div className="p-2 text-sm text-center text-muted-foreground">
+                        No locations found
+                      </div>
+                    )}
+                    {locations.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

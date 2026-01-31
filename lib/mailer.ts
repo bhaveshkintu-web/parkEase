@@ -121,3 +121,55 @@ export async function sendResetPasswordEmail(email: string, token: string) {
 //     throw new Error("Email send failed");
 //   }
 // }
+export async function sendWatchmanWelcomeEmail(email: string, name: string, password: string) {
+  const loginUrl = `${process.env.APP_URL}/auth/login`;
+
+  try {
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Welcome to ParkEase - Your Watchman Account Credentials",
+      html: `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #0d9488;">Welcome to the Team, ${name}!</h2>
+        <p>You have been added as a watchman on the ParkEase platform. You can now log in to manage your shift and parking activities.</p>
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Login Email:</strong> ${email}</p>
+          <p style="margin: 0;"><strong>Temporary Password:</strong> ${password}</p>
+        </div>
+
+        <p>Use the link below to access your dashboard:</p>
+        <a href="${loginUrl}" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Watchman Dashboard</a>
+        
+        <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
+          For security reasons, we recommend changing your password after your first login.<br>
+          If you have any questions, please contact your manager.
+        </p>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+      </div>
+    `,
+    });
+
+    console.log("✅ Watchman welcome email sent!");
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("❌ Failed to send watchman welcome email:", error);
+    return { success: false, error: error.message };
+  }
+}

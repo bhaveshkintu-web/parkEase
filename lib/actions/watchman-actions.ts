@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { sendWatchmanWelcomeEmail } from "@/lib/mailer";
 
 /**
  * Fetches all watchmen belonging to an owner's profile.
@@ -116,7 +117,8 @@ export async function createWatchman(ownerUserId: string, data: any) {
     }
 
     // 2. Hash password (provided or default)
-    const hashedPassword = await bcrypt.hash(password || "Watchman@123", 10);
+    const defaultPassword = "Watchman@123";
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
     const [firstName, ...lastNameParts] = name.split(" ");
     const lastName = lastNameParts.join(" ") || ".";
@@ -152,6 +154,14 @@ export async function createWatchman(ownerUserId: string, data: any) {
         }
       });
     });
+
+    // 4. Send welcome email with credentials
+    try {
+      await sendWatchmanWelcomeEmail(email, name, defaultPassword);
+    } catch (emailError) {
+      console.error("Failed to send welcome email, but watchman was created:", emailError);
+      // We don't fail the whole operation if email fails, but we log it
+    }
 
     revalidatePath("/owner/watchmen");
     return { success: true, data: watchman };
