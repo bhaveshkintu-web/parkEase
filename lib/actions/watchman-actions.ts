@@ -77,7 +77,7 @@ export async function createWatchman(ownerUserId: string, data: any) {
       return { success: false, error: "Owner profile not found" };
     }
 
-    const { name, email, phone, shift, assignedParkingIds, password } = data;
+    const { name, email, phone, shift, assignedParkingIds } = data;
 
     // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({

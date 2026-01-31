@@ -343,19 +343,26 @@ model PricingRule {
   startDate  DateTime?
   endDate    DateTime?
   isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
   location   ParkingLocation? @relation(fields: [locationId], references: [id])
 }
 
 model Promotion {
-  id         String   @id @default(cuid())
-  code       String   @unique
-  type       String
-  value      Float
-  validFrom  DateTime
-  validUntil DateTime
-  isActive   Boolean  @default(true)
-  usageLimit Int?
-  usedCount  Int      @default(0)
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String   @default("")
+  type            String
+  value           Float
+  minBookingValue Float?
+  maxDiscount     Float?
+  validFrom       DateTime
+  validUntil      DateTime
+  isActive        Boolean  @default(true)
+  usageLimit      Int?
+  usedCount       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model CMSPage {
@@ -370,12 +377,16 @@ model CMSPage {
 }
 
 model CommissionRule {
-  id        String  @id @default(cuid())
-  name      String
-  type      String
-  value     Float
-  appliesTo String
-  isActive  Boolean @default(true)
+  id              String   @id @default(cuid())
+  name            String
+  type            String
+  value           Float
+  appliesTo       String
+  isActive        Boolean  @default(true)
+  minBookingValue Float?
+  maxCommission   Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Workflow {
