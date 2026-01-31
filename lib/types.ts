@@ -23,6 +23,8 @@ export interface ParkingLocation {
   id: string;
   name: string;
   address: string;
+  city: string;
+  zipCode: string;
   airport: string;
   airportCode: string;
   coordinates: { lat: number; lng: number };
@@ -180,7 +182,7 @@ export interface Watchman {
   phone: string;
   email: string;
   assignedParkingIds: string[];
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "archived";
   shift: "morning" | "evening" | "night" | "all";
   createdAt: Date;
   lastActive?: Date;
@@ -492,7 +494,7 @@ export interface AdminReview extends Review {
 
 // Admin Location Types
 export interface AdminParkingLocation extends ParkingLocation {
-  status: "active" | "inactive" | "maintenance";
+  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "PENDING";
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

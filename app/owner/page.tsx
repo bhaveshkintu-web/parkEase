@@ -5,6 +5,8 @@ import React from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { useAuth } from "@/lib/auth-context";
+import { getOwnerLocations } from "@/lib/actions/parking-actions";
+import { getOwnerWatchmen } from "@/lib/actions/watchman-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { StatCard } from "@/components/admin/stat-card";
 import { QuickActions } from "@/components/admin/quick-actions";
@@ -27,28 +29,53 @@ import {
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  const { adminLocations, reservations, watchmen, wallet, transactions, initializeForOwner } = useDataStore();
-  const walletTransactions = transactions; // Declare walletTransactions variable
+  const { wallet, transactions } = useDataStore(); // Using store for other items for now
+  const [locations, setLocations] = React.useState<any[]>([]);
+  const [watchmen, setWatchmen] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  // Initialize owner data
+  // Fetch real owner data
   React.useEffect(() => {
-    if (user?.ownerId) {
-      initializeForOwner(user.ownerId);
-    }
-  }, [user?.ownerId, initializeForOwner]);
+    const fetchData = async () => {
+      if (user?.id) {
+        try {
+          const [locationsResult, watchmenResult] = await Promise.all([
+            getOwnerLocations(user.id),
+            getOwnerWatchmen(user.id)
+          ]);
 
-  // Calculate stats
-  const myLocations = adminLocations.filter((l) => l.ownerId === user?.id || l.ownerId === user?.ownerProfile?.id || true); // Demo: still show all but prioritizing real ownerId
-  const activeLocations = myLocations.filter((l) => l.status === "active").length;
-  const totalCapacity = myLocations.reduce((sum, l) => sum + l.totalSpots, 0);
-  const totalOccupied = myLocations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);
+          if (locationsResult.success && locationsResult.data) {
+            setLocations(locationsResult.data);
+          }
+          if (watchmenResult.success && watchmenResult.data) {
+            setWatchmen(watchmenResult.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchData();
+  }, [user?.id]);
+
+  // Calculate stats from real data
+  const activeLocations = locations.filter((l) => l.status === "ACTIVE").length;
+  const totalCapacity = locations.reduce((sum, l) => sum + l.totalSpots, 0);
+  const totalOccupied = locations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);
   const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
 
-  const todayBookings = reservations.filter(
-    (r) => new Date(r.checkIn).toDateString() === new Date().toDateString()
-  );
-  const totalRevenue = myLocations.reduce((sum, l) => sum + l.analytics.revenue, 0);
-  const totalBookings = myLocations.reduce((sum, l) => sum + l.analytics.totalBookings, 0);
+  const totalRevenue = locations.reduce((sum, l) => sum + (l.analytics?.revenue || 0), 0);
+  const totalBookings = locations.reduce((sum, l) => sum + (l.analytics?.bookings || 0), 0);
+
+  // Use a spinner or skeleton if loading
+  if (loading) {
+    return <div className="p-8 text-center">Loading dashboard...</div>;
+  }
+
+  // Placeholder for today's bookings until we have an API for it
+  const todayBookings: any[] = [];
 
   const activeWatchmen = watchmen.filter((w) => w.status === "active").length;
 
@@ -57,6 +84,7 @@ export default function OwnerDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+          {/* ... */}
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Owner Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Welcome back, {user?.firstName}! Here&apos;s your parking overview.
@@ -93,7 +121,7 @@ export default function OwnerDashboard() {
         />
         <StatCard
           title="Active Locations"
-          value={`${activeLocations}/${myLocations.length}`}
+          value={`${activeLocations}/${locations.length}`}
           icon={MapPin}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
@@ -289,8 +317,8 @@ export default function OwnerDashboard() {
                         booking.status === "confirmed"
                           ? "success"
                           : booking.status === "pending"
-                          ? "warning"
-                          : "error"
+                            ? "warning"
+                            : "error"
                       }
                     />
                   </div>
@@ -316,7 +344,7 @@ export default function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {myLocations.slice(0, 4).map((location) => (
+              {locations.slice(0, 4).map((location) => (
                 <div
                   key={location.id}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
@@ -336,11 +364,11 @@ export default function OwnerDashboard() {
                     <StatusBadge
                       status={location.status}
                       variant={
-                        location.status === "active"
+                        location.status === "ACTIVE"
                           ? "success"
-                          : location.status === "maintenance"
-                          ? "warning"
-                          : "default"
+                          : location.status === "MAINTENANCE"
+                            ? "warning"
+                            : "default"
                       }
                     />
                   </div>
@@ -377,7 +405,7 @@ export default function OwnerDashboard() {
                     <span className="text-sm font-medium text-foreground">
                       {watchman.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")}
                     </span>
                   </div>

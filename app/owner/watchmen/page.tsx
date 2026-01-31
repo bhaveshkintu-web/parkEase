@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useDataStore } from "@/lib/data-store";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { getOwnerLocations } from "@/lib/actions/parking-actions";
+import {
+  getOwnerWatchmen,
+  createWatchman,
+  updateWatchmanAction,
+  deleteWatchmanAction,
+  getAllWatchmen
+} from "@/lib/actions/watchman-actions";
 import { DataTable, StatusBadge, type Column, type Action } from "@/components/admin/data-table";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +47,12 @@ import {
 } from "lucide-react";
 
 export default function OwnerWatchmenPage() {
-  const { watchmen, addWatchman, updateWatchman, deleteWatchman, adminLocations } = useDataStore();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [watchmen, setWatchmen] = useState<Watchman[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locations, setLocations] = useState<any[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingWatchman, setEditingWatchman] = useState<Watchman | null>(null);
   const [formData, setFormData] = useState({
@@ -46,8 +61,47 @@ export default function OwnerWatchmenPage() {
     email: "",
     shift: "morning" as "morning" | "evening" | "night" | "all",
     assignedParkingIds: [] as string[],
+    password: "",
   });
+  const [allAvailableWatchmen, setAllAvailableWatchmen] = useState<any[]>([]);
+  const [isManualEntry, setIsManualEntry] = useState(false);
 
+  const fetchWatchmen = useCallback(async () => {
+    if (user?.id) {
+      setIsLoading(true);
+      const result = await getOwnerWatchmen(user.id);
+      if (result.success && result.data) {
+        setWatchmen(result.data);
+      } else if (result.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      }
+      setIsLoading(false);
+    }
+  }, [user?.id, toast]);
+
+  useEffect(() => {
+    fetchWatchmen();
+  }, [fetchWatchmen]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (user?.id) {
+        const result = await getOwnerLocations(user.id);
+        if (result.success && result.data) {
+          setLocations(result.data);
+        }
+      }
+    };
+    fetchLocations();
+
+    const fetchAllWatchmen = async () => {
+      const result = await getAllWatchmen();
+      if (result.success && result.data) {
+        setAllAvailableWatchmen(result.data);
+      }
+    };
+    fetchAllWatchmen();
+  }, [user]);
   const resetForm = () => {
     setFormData({
       name: "",
@@ -55,26 +109,38 @@ export default function OwnerWatchmenPage() {
       email: "",
       shift: "morning",
       assignedParkingIds: [],
+      password: "",
     });
     setEditingWatchman(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user?.id) return;
+
+    setIsSubmitting(true);
+    let result;
     if (editingWatchman) {
-      updateWatchman(editingWatchman.id, formData);
+      result = await updateWatchmanAction(editingWatchman.id, formData);
     } else {
-      addWatchman({
-        ...formData,
-        userId: `user-${Date.now()}`,
-        ownerId: "owner-1",
-        status: "active",
-        createdAt: new Date(),
-        todayCheckIns: 0,
-        todayCheckOuts: 0,
+      result = await createWatchman(user.id, formData);
+    }
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: (result as any).message || `Watchman ${editingWatchman ? "updated" : "created"} successfully`
+      });
+      fetchWatchmen();
+      setIsAddDialogOpen(false);
+      resetForm();
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Something went wrong",
+        variant: "destructive"
       });
     }
-    setIsAddDialogOpen(false);
-    resetForm();
+    setIsSubmitting(false);
   };
 
   const openEditDialog = (watchman: Watchman) => {
@@ -85,8 +151,32 @@ export default function OwnerWatchmenPage() {
       email: watchman.email,
       shift: watchman.shift,
       assignedParkingIds: watchman.assignedParkingIds,
+      password: "", // Keep empty when editing
     });
     setIsAddDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to archive this watchman? They will be unassigned from all locations but their account will be preserved.")) {
+      const result = await deleteWatchmanAction(id);
+      if (result.success) {
+        toast({ title: "Archived", description: (result as any).message || "Watchman archived successfully" });
+        fetchWatchmen();
+      } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      }
+    }
+  };
+
+  const handleStatusToggle = async (watchman: Watchman) => {
+    const newStatus = watchman.status === "active" ? "inactive" : "active";
+    const result = await updateWatchmanAction(watchman.id, {
+      ...watchman,
+      status: newStatus
+    });
+    if (result.success) {
+      fetchWatchmen();
+    }
   };
 
   const columns: Column<Watchman>[] = [
@@ -167,39 +257,31 @@ export default function OwnerWatchmenPage() {
     },
   ];
 
-  const actions: Action<Watchman>[] = [
-    {
-      label: "Edit",
-      icon: <Edit className="w-4 h-4 mr-2" />,
-      onClick: (item) => openEditDialog(item),
-    },
-    {
-      label: (item) => item.status === "active" ? "Deactivate" : "Activate",
-      icon: <Clock className="w-4 h-4 mr-2" />,
-      onClick: (item) => {
-        const newStatus = item.status === "active" ? "inactive" : "active";
-        updateWatchman(item.id, { status: newStatus });
-      },
-    },
-    {
-      label: "Delete",
-      icon: <Trash2 className="w-4 h-4 mr-2" />,
-      onClick: (item) => {
-        if (confirm("Are you sure you want to remove this watchman?")) {
-          deleteWatchman(item.id);
-        }
-      },
-      variant: "destructive",
-    },
-  ];
 
   const getActions = (item: Watchman) => {
-    return actions.filter((action) => {
-      if (action.label === "Delete") {
-        return item.status !== "inactive"; // Only allow deletion if the watchman is not inactive
-      }
-      return true;
-    });
+    const baseActions: Action<Watchman>[] = [
+      {
+        label: "Edit",
+        icon: <Edit className="w-4 h-4 mr-2" />,
+        onClick: () => openEditDialog(item),
+      },
+      {
+        label: item.status === "active" ? "Deactivate" : "Activate",
+        icon: isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Clock className="w-4 h-4 mr-2" />,
+        onClick: () => handleStatusToggle(item),
+      },
+    ];
+
+    if (item.status !== "inactive") {
+      baseActions.push({
+        label: "Delete",
+        icon: <Trash2 className="w-4 h-4 mr-2" />,
+        onClick: () => handleDelete(item.id),
+        variant: "destructive",
+      });
+    }
+
+    return baseActions;
   };
 
   return (
@@ -230,10 +312,66 @@ export default function OwnerWatchmenPage() {
               <DialogDescription>
                 {editingWatchman
                   ? "Update watchman details and assignments"
-                  : "Add a new watchman to manage your parking locations"}
+                  : "Add a new watchman or select from existing staff"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              {!editingWatchman && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="watchman-select">Select Existing Watchman</Label>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="px-0 h-auto"
+                      type="button"
+                      onClick={() => {
+                        const nextManual = !isManualEntry;
+                        resetForm();
+                        setIsManualEntry(nextManual);
+                      }}
+                    >
+                      {isManualEntry ? "Select from list" : "Manual Entry"}
+                    </Button>
+                  </div>
+                  {!isManualEntry ? (
+                    <Select
+                      onValueChange={(value) => {
+                        const selected = allAvailableWatchmen.find(w => w.id === value);
+                        if (selected) {
+                          setFormData({
+                            ...formData,
+                            name: selected.name,
+                            email: selected.email,
+                            phone: selected.phone,
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pick a watchman from the list" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allAvailableWatchmen.length === 0 && (
+                          <div className="p-2 text-sm text-center text-muted-foreground">
+                            No registered watchmen found
+                          </div>
+                        )}
+                        {allAvailableWatchmen.map((w) => (
+                          <SelectItem key={w.id} value={w.id}>
+                            {w.name} ({w.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Entering details manually will create a new account if the email is not registered.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
@@ -241,6 +379,7 @@ export default function OwnerWatchmenPage() {
                   placeholder="John Doe"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  disabled={!isManualEntry && !editingWatchman}
                 />
               </div>
               <div className="space-y-2">
@@ -250,6 +389,7 @@ export default function OwnerWatchmenPage() {
                   placeholder="+1 (555) 123-4567"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={!isManualEntry && !editingWatchman}
                 />
               </div>
               <div className="space-y-2">
@@ -260,8 +400,21 @@ export default function OwnerWatchmenPage() {
                   placeholder="john@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={(!!editingWatchman) || (!isManualEntry && !editingWatchman)}
                 />
               </div>
+              {!editingWatchman && isManualEntry && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password (Optional)</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Leave blank for default: Watchman@123"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="shift">Shift</Label>
                 <Select
@@ -284,7 +437,7 @@ export default function OwnerWatchmenPage() {
               <div className="space-y-2">
                 <Label>Assigned Locations</Label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {adminLocations.map((location) => (
+                  {locations.map((location: any) => (
                     <label
                       key={location.id}
                       className="flex items-center gap-2 cursor-pointer"
@@ -319,8 +472,15 @@ export default function OwnerWatchmenPage() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={!formData.name || !formData.phone}>
-                {editingWatchman ? "Save Changes" : "Add Watchman"}
+              <Button onClick={handleSubmit} disabled={isSubmitting || !formData.name || !formData.phone}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {editingWatchman ? "Saving..." : "Adding..."}
+                  </>
+                ) : (
+                  editingWatchman ? "Save Changes" : "Add Watchman"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -368,16 +528,23 @@ export default function OwnerWatchmenPage() {
           <CardDescription>View and manage your parking staff</CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable
-            data={watchmen}
-            columns={columns}
-            actions={actions}
-            searchKey="name"
-            searchPlaceholder="Search watchmen..."
-            emptyMessage="No watchmen added yet"
-          />
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground italic">
+              <Loader2 className="w-8 h-8 animate-spin mb-4" />
+              <p>Loading watchmen...</p>
+            </div>
+          ) : (
+            <DataTable
+              data={watchmen as any}
+              columns={columns as any}
+              actions={getActions as any}
+              searchKey="name"
+              searchPlaceholder="Search watchmen..."
+              emptyMessage="No watchmen added yet"
+            />
+          )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

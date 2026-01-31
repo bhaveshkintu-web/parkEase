@@ -95,6 +95,7 @@ model ParkingLocation {
   pricingRules   PricingRule[]
   reviews        Review[]
   watchmanShifts WatchmanShift[]
+  watchmen       Watchman[]
 }
 
 model Booking {
@@ -180,9 +181,11 @@ model Watchman {
   userId       String                @unique
   ownerId      String
   status       String                @default("active")
+  shift        String?
   createdAt    DateTime              @default(now())
   owner        OwnerProfile          @relation(fields: [ownerId], references: [id])
   user         User                  @relation(fields: [userId], references: [id])
+  assignedLocations ParkingLocation[]
   activityLogs WatchmanActivityLog[]
   shifts       WatchmanShift[]
 }
