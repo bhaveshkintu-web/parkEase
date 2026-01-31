@@ -558,7 +558,7 @@ function generateMockUsers(): User[] {
 function generateMockOwnerProfiles(): OwnerProfile[] {
   const users = generateMockUsers();
   const ownerUsers = users.filter(u => u.role === "owner");
-  
+
   return [
     {
       id: "owner_1",
@@ -781,8 +781,8 @@ interface DataStoreContextType {
 
   // Watchman: Sessions
   parkingSessions: ParkingSession[];
-  checkInVehicle: (sessionId: string, watchmanId: string) => Promise<void>;
-  checkOutVehicle: (sessionId: string, watchmanId: string) => Promise<void>;
+  checkInVehicle: (bookingId: string, notes?: string) => Promise<void>;
+  checkOutVehicle: (bookingId: string, notes?: string) => Promise<void>;
 
   // Admin: Disputes
   disputes: Dispute[];
@@ -1003,12 +1003,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
-              moderatorNotes: notes,
-              moderatedAt: new Date(),
-              moderatedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
+            moderatorNotes: notes,
+            moderatedAt: new Date(),
+            moderatedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1026,15 +1026,15 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId
           ? {
-              ...review,
-              ownerReply: {
-                id: `reply_${Date.now()}`,
-                content,
-                createdAt: new Date(),
-                ownerId,
-                ownerName,
-              },
-            }
+            ...review,
+            ownerReply: {
+              id: `reply_${Date.now()}`,
+              content,
+              createdAt: new Date(),
+              ownerId,
+              ownerName,
+            },
+          }
           : review
       )
     );
@@ -1046,13 +1046,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId && review.ownerReply
           ? {
-              ...review,
-              ownerReply: {
-                ...review.ownerReply,
-                content,
-                updatedAt: new Date(),
-              },
-            }
+            ...review,
+            ownerReply: {
+              ...review.ownerReply,
+              content,
+              updatedAt: new Date(),
+            },
+          }
           : review
       )
     );
@@ -1156,23 +1156,47 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   }, [wallet]);
 
   // Parking session operations
-  const checkInVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+  // Parking session operations
+  const checkInVehicle = useCallback(async (bookingId: string, notes?: string) => {
     await new Promise((r) => setTimeout(r, 500));
-    setParkingSessions((prev) =>
-      prev.map((s) =>
-        s.id === sessionId
-          ? { ...s, status: "checked_in", checkInTime: new Date(), checkInBy: watchmanId }
-          : s
-      )
-    );
-  }, []);
 
-  const checkOutVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+    setParkingSessions((prev) => {
+      const existingSession = prev.find(s => s.bookingId === bookingId);
+
+      if (existingSession) {
+        return prev.map((s) =>
+          s.bookingId === bookingId
+            ? { ...s, status: "checked_in", checkInTime: new Date(), notes: notes || s.notes }
+            : s
+        );
+      }
+
+      // Create new session if one doesn't exist
+      // We need reservation details to create a session, so we'll look it up
+      const reservation = reservations.find(r => r.id === bookingId);
+      if (!reservation) return prev; // Should not happen if validation passed
+
+      const newSession: ParkingSession = {
+        id: `sess_${Date.now()}`,
+        bookingId: bookingId,
+        parkingId: reservation.locationId,
+        vehiclePlate: reservation.vehicleInfo.licensePlate,
+        vehicleType: "Car", // Default
+        checkInTime: new Date(),
+        status: "checked_in",
+        notes: notes
+      };
+
+      return [...prev, newSession];
+    });
+  }, [reservations]);
+
+  const checkOutVehicle = useCallback(async (bookingId: string, notes?: string) => {
     await new Promise((r) => setTimeout(r, 500));
     setParkingSessions((prev) =>
       prev.map((s) =>
-        s.id === sessionId
-          ? { ...s, status: "checked_out", checkOutTime: new Date(), checkOutBy: watchmanId }
+        s.bookingId === bookingId
+          ? { ...s, status: "checked_out", checkOutTime: new Date(), notes: notes || s.notes }
           : s
       )
     );
@@ -1191,13 +1215,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((a) =>
         a.id === id
           ? {
-              ...a,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
-              reviewNotes: notes,
-              requiredChanges: changes,
-              reviewedAt: new Date(),
-              reviewedBy: currentUserId || undefined,
-            }
+            ...a,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
+            reviewNotes: notes,
+            requiredChanges: changes,
+            reviewedAt: new Date(),
+            reviewedBy: currentUserId || undefined,
+          }
           : a
       )
     );
@@ -1210,12 +1234,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
-              approvedAmount: action === "reject" ? 0 : amount || r.amount,
-              processedAt: new Date(),
-              processedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
+            approvedAmount: action === "reject" ? 0 : amount || r.amount,
+            processedAt: new Date(),
+            processedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1376,18 +1400,18 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((p) =>
         p.id === ownerId
           ? {
-              ...p,
-              documents: p.documents.map((d) =>
-                d.id === documentId
-                  ? {
-                      ...d,
-                      status: action === "verify" ? "verified" : "rejected",
-                      verifiedAt: action === "verify" ? new Date() : undefined,
-                      rejectionReason: action === "reject" ? reason : undefined,
-                    }
-                  : d
-              ),
-            }
+            ...p,
+            documents: p.documents.map((d) =>
+              d.id === documentId
+                ? {
+                  ...d,
+                  status: action === "verify" ? "verified" : "rejected",
+                  verifiedAt: action === "verify" ? new Date() : undefined,
+                  rejectionReason: action === "reject" ? reason : undefined,
+                }
+                : d
+            ),
+          }
           : p
       )
     );

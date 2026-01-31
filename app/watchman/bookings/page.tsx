@@ -152,26 +152,29 @@ export default function WatchmanBookingsPage() {
   const { reservations, adminLocations } = useDataStore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  
+
   const [activeTab, setActiveTab] = useState("today");
   const [requestTab, setRequestTab] = useState("pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Dialog states
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
-  const [bookingRequests, setBookingRequests] = useState(mockBookingRequests);
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
+  const [confirmedBookings, setConfirmedBookings] = useState<any[]>([]);
+  const [locations, setLocations] = useState<{ id: string, name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   // New request form
   const [newRequest, setNewRequest] = useState({
     customerName: "",
     customerPhone: "",
+    customerEmail: "",
     vehiclePlate: "",
     vehicleType: "sedan",
     parkingId: "",
@@ -181,16 +184,64 @@ export default function WatchmanBookingsPage() {
   });
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Fetch data from API
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch locations
+      const locRes = await fetch('/api/watchman/locations');
+      const locData = await locRes.json();
+      if (locData.success) {
+        setLocations(locData.locations);
+        // Pre-select first location if available
+        if (locData.locations.length > 0 && !newRequest.parkingId) {
+          setNewRequest(prev => ({ ...prev, parkingId: locData.locations[0].id }));
+        }
+      }
+
+      // Fetch booking requests
+      const reqRes = await fetch('/api/watchman/booking-requests');
+      const reqData = await reqRes.json();
+      if (reqData.success) {
+        console.log("Fetched requests:", reqData.requests);
+        setBookingRequests(reqData.requests);
+      }
+
+      // Fetch confirmed bookings
+      const bookRes = await fetch('/api/watchman/bookings?status=CONFIRMED');
+      const bookData = await bookRes.json();
+      if (bookData.success) {
+        setConfirmedBookings(bookData.bookings);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch data from server",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Helper to normalize status (handles both UPPERCASE and lowercase from DB)
+  const normalizeStatus = (status: string) => status.toUpperCase();
+
   // Filter today's bookings
   const today = new Date();
   const todayBookings = useMemo(() => {
-    return reservations.filter((r) => {
-      const checkInDate = new Date(r.checkIn);
-      const checkOutDate = new Date(r.checkOut);
-      const isToday = 
+    return confirmedBookings.filter((b) => {
+      const checkInDate = new Date(b.checkIn);
+      const checkOutDate = new Date(b.checkOut);
+      const isToday =
         checkInDate.toDateString() === today.toDateString() ||
         checkOutDate.toDateString() === today.toDateString();
-      
+
       if (dateFilter === "today") return isToday;
       if (dateFilter === "tomorrow") {
         const tomorrow = new Date(today);
@@ -204,15 +255,15 @@ export default function WatchmanBookingsPage() {
       }
       return true;
     });
-  }, [reservations, dateFilter, today]);
+  }, [confirmedBookings, dateFilter, today.toDateString()]);
 
   const filteredBookings = useMemo(() => {
     let filtered = todayBookings;
-    
+
     if (statusFilter !== "all") {
-      filtered = filtered.filter((b) => b.status === statusFilter);
+      filtered = filtered.filter((b) => normalizeStatus(b.status) === normalizeStatus(statusFilter));
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
@@ -221,7 +272,7 @@ export default function WatchmanBookingsPage() {
           b.id.toLowerCase().includes(searchLower)
       );
     }
-    
+
     return filtered;
   }, [todayBookings, statusFilter, search]);
 
@@ -265,70 +316,90 @@ export default function WatchmanBookingsPage() {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const response = await fetch('/api/watchman/booking-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRequest),
+      });
 
-    const parking = adminLocations.find((l) => l.id === newRequest.parkingId);
-    const newReq: WatchmanBookingRequest = {
-      id: `req_${Date.now()}`,
-      customerId: `cust_${Date.now()}`,
-      customerName: newRequest.customerName,
-      customerPhone: newRequest.customerPhone,
-      vehiclePlate: newRequest.vehiclePlate.toUpperCase(),
-      vehicleType: newRequest.vehicleType,
-      parkingId: newRequest.parkingId,
-      parkingName: parking?.name || "Unknown",
-      requestType: newRequest.requestType,
-      requestedStart: new Date(),
-      requestedEnd: new Date(Date.now() + parseInt(newRequest.duration) * 3600000),
-      estimatedAmount: parseInt(newRequest.duration) * 5,
-      status: "pending",
-      priority: "normal",
-      notes: newRequest.notes,
-      requestedBy: user?.id || "watchman_1",
-      requestedAt: new Date(),
-    };
+      const data = await response.json();
 
-    setBookingRequests((prev) => [newReq, ...prev]);
-    setIsNewRequestOpen(false);
-    setNewRequest({
-      customerName: "",
-      customerPhone: "",
-      vehiclePlate: "",
-      vehicleType: "sedan",
-      parkingId: "",
-      requestType: "walk_in",
-      duration: "2",
-      notes: "",
-    });
-    setIsLoading(false);
-
-    toast({
-      title: "Request Created",
-      description: "Booking request submitted for approval",
-    });
+      if (data.success) {
+        toast({
+          title: "Request Created",
+          description: "Booking request submitted for approval",
+        });
+        setIsNewRequestOpen(false);
+        setNewRequest({
+          customerName: "",
+          customerPhone: "",
+          customerEmail: "",
+          vehiclePlate: "",
+          vehicleType: "sedan",
+          parkingId: locations[0]?.id || "",
+          requestType: "walk_in",
+          duration: "2",
+          notes: "",
+        });
+        fetchData(); // Refresh list
+      } else {
+        throw new Error(data.error || "Failed to create request");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleApproveRequest = async () => {
     if (!selectedRequest) return;
 
+    if (!selectedRequest.id) {
+      toast({
+        title: "Error",
+        description: "Booking request ID is missing. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      console.log("Approving ID:", selectedRequest.id);
+      const response = await fetch(`/api/watchman/booking-requests/${selectedRequest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "approve" }),
+      });
 
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequest.id
-          ? { ...r, status: "approved", processedBy: user?.id, processedAt: new Date() }
-          : r
-      )
-    );
-    setIsApproveDialogOpen(false);
-    setSelectedRequest(null);
-    setIsLoading(false);
+      const data = await response.json();
 
-    toast({
-      title: "Request Approved",
-      description: "The booking request has been approved",
-    });
+      if (data.success) {
+        toast({
+          title: "Request Approved",
+          description: "The booking request has been approved and booking created",
+        });
+        setIsApproveDialogOpen(false);
+        setSelectedRequest(null);
+        fetchData();
+      } else {
+        throw new Error(data.error || "Failed to approve request");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRejectRequest = async () => {
@@ -342,45 +413,69 @@ export default function WatchmanBookingsPage() {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      const response = await fetch(`/api/watchman/booking-requests/${selectedRequest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "reject", rejectionReason }),
+      });
 
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequest.id
-          ? {
-              ...r,
-              status: "rejected",
-              processedBy: user?.id,
-              processedAt: new Date(),
-              rejectionReason,
-            }
-          : r
-      )
-    );
-    setIsRejectDialogOpen(false);
-    setSelectedRequest(null);
-    setRejectionReason("");
-    setIsLoading(false);
+      const data = await response.json();
 
-    toast({
-      title: "Request Rejected",
-      description: "The booking request has been rejected",
-    });
+      if (data.success) {
+        toast({
+          title: "Request Rejected",
+          description: "The booking request has been rejected",
+        });
+        setIsRejectDialogOpen(false);
+        setSelectedRequest(null);
+        setRejectionReason("");
+        fetchData();
+      } else {
+        throw new Error(data.error || "Failed to reject request");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelRequest = async (request: WatchmanBookingRequest) => {
     if (!confirm("Are you sure you want to cancel this request?")) return;
 
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === request.id ? { ...r, status: "cancelled" } : r
-      )
-    );
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/watchman/booking-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "cancel" }),
+      });
 
-    toast({
-      title: "Request Cancelled",
-      description: "The booking request has been cancelled",
-    });
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Request Cancelled",
+          description: "The booking request has been cancelled",
+        });
+        fetchData();
+      } else {
+        throw new Error(data.error || "Failed to cancel request");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const pendingCount = bookingRequests.filter((r) => r.status === "pending").length;
@@ -453,7 +548,7 @@ export default function WatchmanBookingsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Confirmed</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {todayBookings.filter((b) => b.status === "confirmed").length}
+                    {todayBookings.filter((b) => normalizeStatus(b.status) === "CONFIRMED").length}
                   </p>
                 </div>
               </div>
@@ -540,9 +635,8 @@ export default function WatchmanBookingsPage() {
                         >
                           <div className="flex items-start gap-4">
                             <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-                                isCheckIn ? "bg-green-100" : "bg-blue-100"
-                              }`}
+                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${isCheckIn ? "bg-green-100" : "bg-blue-100"
+                                }`}
                             >
                               <Car className={`w-6 h-6 ${isCheckIn ? "text-green-600" : "text-blue-600"}`} />
                             </div>
@@ -644,11 +738,10 @@ export default function WatchmanBookingsPage() {
                     filteredRequests.map((request) => (
                       <div
                         key={request.id}
-                        className={`p-4 border rounded-lg ${
-                          request.priority === "urgent" && request.status === "pending"
-                            ? "border-red-200 bg-red-50/50"
-                            : ""
-                        }`}
+                        className={`p-4 border rounded-lg ${request.priority === "urgent" && request.status === "pending"
+                          ? "border-red-200 bg-red-50/50"
+                          : ""
+                          }`}
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -880,11 +973,14 @@ export default function WatchmanBookingsPage() {
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
-                    {adminLocations.slice(0, 3).map((location) => (
+                    {locations.map((location) => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
                       </SelectItem>
                     ))}
+                    {locations.length === 0 && (
+                      <SelectItem value="none" disabled>No locations assigned</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -987,6 +1083,7 @@ export default function WatchmanBookingsPage() {
             </DialogHeader>
             {selectedRequest && (
               <div className="py-4 space-y-2 text-sm">
+                <p><span className="text-muted-foreground">Request ID:</span> {selectedRequest.id || "MISSING"}</p>
                 <p><span className="text-muted-foreground">Customer:</span> {selectedRequest.customerName}</p>
                 <p><span className="text-muted-foreground">Vehicle:</span> {selectedRequest.vehiclePlate}</p>
                 <p><span className="text-muted-foreground">Amount:</span> {formatCurrency(selectedRequest.estimatedAmount)}</p>
@@ -1041,6 +1138,6 @@ export default function WatchmanBookingsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </Suspense>
+    </Suspense >
   );
 }

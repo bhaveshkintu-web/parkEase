@@ -1,0 +1,550 @@
+[2026-01-30T09:49:26.838Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:412:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:49:44.955Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:412:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:53:25.937Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:417:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:53:34.639Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:417:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:53:38.654Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:417:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:53:52.996Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:417:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T09:54:00.982Z] POST /api/watchman/booking-requests ERROR: Cannot read properties of undefined (reading 'create')
+TypeError: Cannot read properties of undefined (reading 'create')
+    at POST (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__fcb60cdd._.js:417:175)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_cad621ba._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:12:34.800Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:12:44.023Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:12:47.190Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:12:49.669Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:13:18.529Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:13:26.683Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:13:55.913Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:14:05.834Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:24:46.524Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:24:57.538Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-30T13:25:19.938Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+PrismaClientKnownRequestError: 
+Invalid `prisma.$executeRawUnsafe()` invocation:
+
+
+Raw query failed. Code: `42804`. Message: `ERROR: column "status" is of type "BookingRequestStatus" but expression is of type text
+HINT: You will need to rewrite or cast the expression.`
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__be451b73._.js:363:17)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)

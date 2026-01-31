@@ -322,7 +322,14 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const taxes = basePrice * 0.0925; // 9.25% tax
   const fees = 2.99; // Service fee
   const totalPrice = basePrice + taxes + fees;
+<<<<<<< Updated upstream
   
+=======
+
+  const originalPrice = location.originalPrice || location.pricePerDay;
+  const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
+
+>>>>>>> Stashed changes
   return {
     days,
     basePrice,
@@ -340,27 +347,30 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }).format(d);
 }
 
-export function formatDateShort(date: Date): string {
+export function formatDateShort(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-  }).format(date);
+  }).format(d);
 }
 
-export function formatTime(date: Date): string {
+export function formatTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(date);
+  }).format(d);
 }
 
 export function generateConfirmationCode(): string {
@@ -374,7 +384,7 @@ export function generateConfirmationCode(): string {
 
 export function getAvailabilityStatus(location: ParkingLocation): { status: "available" | "limited" | "soldout"; message: string } {
   const percentAvailable = (location.availableSpots / location.totalSpots) * 100;
-  
+
   if (location.availableSpots === 0) {
     return { status: "soldout", message: "Sold Out" };
   }
@@ -386,7 +396,7 @@ export function getAvailabilityStatus(location: ParkingLocation): { status: "ava
 
 export function searchDestinations(query: string): Destination[] {
   if (!query || query.length < 2) return [];
-  
+
   const lowerQuery = query.toLowerCase();
   return destinations.filter(
     (dest) =>

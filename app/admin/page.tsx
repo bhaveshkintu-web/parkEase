@@ -196,6 +196,14 @@ export default function SystemAdminDashboard() {
             iconColor: "text-amber-600",
             iconBgColor: "bg-amber-100",
           },
+          {
+            label: "Booking Requests",
+            description: "Review walk-ins",
+            href: "/admin/booking-requests",
+            icon: FileText,
+            iconColor: "text-red-600",
+            iconBgColor: "bg-red-100",
+          },
         ]}
       />
 

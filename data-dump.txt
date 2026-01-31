@@ -1,0 +1,16 @@
+--- USERS ---
+cmkqpz0vj0001u1u8uoymsf5s | vmpatel9144@gmail.com | CUSTOMER
+cmkqqhysh0000u1ikxykoj1qd | mp5662598@gmail.com | CUSTOMER
+cmkqpdddl0000u1sk6ihp7d76 | vidhipatel5044@gmail.com | WATCHMAN
+cml0f0pnc0000u1xc9os9nsp0 | owner@parkease.com | OWNER
+cmkqpw5uv0000u1u8vy9mpy1q | vidhikumaripatel.it22@scet.ac.in | OWNER
+
+--- OWNERS ---
+cml0f0pnp0002u1xcd967r895 | Downtown Parking LLC | User: owner@parkease.com
+cml0lsmq60001u19wj3hxkw69 | Kintu Designs pvt.ltd | User: vidhikumaripatel.it22@scet.ac.in
+
+--- LOCATIONS ---
+cml0f0po10004u1xcywackbp8 | Downtown Parking Center | Owner: owner@parkease.com (cml0f0pnp0002u1xcd967r895)
+cml0lw0uo0005u19w6q3t1f4g | surat | Owner: vidhikumaripatel.it22@scet.ac.in (cml0lsmq60001u19wj3hxkw69)
+
+--- WATCHMEN ---

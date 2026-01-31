@@ -1,0 +1,114 @@
+[
+  {
+    "column_name": "status",
+    "data_type": "USER-DEFINED"
+  },
+  {
+    "column_name": "priority",
+    "data_type": "USER-DEFINED"
+  },
+  {
+    "column_name": "requestType",
+    "data_type": "USER-DEFINED"
+  },
+  {
+    "column_name": "requestedStart",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "requestedEnd",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "requestedAt",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "estimatedAmount",
+    "data_type": "double precision"
+  },
+  {
+    "column_name": "processedAt",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "createdAt",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "updatedAt",
+    "data_type": "timestamp without time zone"
+  },
+  {
+    "column_name": "parkingId",
+    "data_type": "text"
+  },
+  {
+    "column_name": "parkingName",
+    "data_type": "text"
+  },
+  {
+    "column_name": "spotNumber",
+    "data_type": "text"
+  },
+  {
+    "column_name": "id",
+    "data_type": "text"
+  },
+  {
+    "column_name": "notes",
+    "data_type": "text"
+  },
+  {
+    "column_name": "rejectionReason",
+    "data_type": "text"
+  },
+  {
+    "column_name": "requestedBy",
+    "data_type": "text"
+  },
+  {
+    "column_name": "processedBy",
+    "data_type": "text"
+  },
+  {
+    "column_name": "originalBookingId",
+    "data_type": "text"
+  },
+  {
+    "column_name": "customerId",
+    "data_type": "text"
+  },
+  {
+    "column_name": "customerName",
+    "data_type": "text"
+  },
+  {
+    "column_name": "customerEmail",
+    "data_type": "text"
+  },
+  {
+    "column_name": "customerPhone",
+    "data_type": "text"
+  },
+  {
+    "column_name": "vehiclePlate",
+    "data_type": "text"
+  },
+  {
+    "column_name": "vehicleType",
+    "data_type": "text"
+  },
+  {
+    "column_name": "vehicleMake",
+    "data_type": "text"
+  },
+  {
+    "column_name": "vehicleModel",
+    "data_type": "text"
+  },
+  {
+    "column_name": "vehicleColor",
+    "data_type": "text"
+  }
+]

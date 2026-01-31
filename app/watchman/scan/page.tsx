@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Keyboard,
 } from "lucide-react";
+import { QRScanner } from "@/components/qr-scanner";
 
 interface ScanResult {
   type: "check_in" | "check_out";
@@ -61,30 +62,30 @@ export default function WatchmanScanPage() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
-  const handleManualSearch = () => {
+  const processScanResult = (code: string) => {
     setError("");
+    console.log("Processing code:", code);
+
+    // Normalize code
+    const normalizedCode = code.trim().toLowerCase();
+
     const booking = reservations.find(
       (r) =>
-        r.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
-        r.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
+        r.confirmationCode.toLowerCase() === normalizedCode ||
+        r.vehicleInfo.licensePlate.toLowerCase() === normalizedCode
     );
 
     if (!booking) {
-      setError("No booking found with this code or license plate");
-      return;
+      setError(`No booking found for code: ${code}`);
+      return false;
     }
 
     // Determine if this is a check-in or check-out
-    const now = new Date();
-    const checkInDate = new Date(booking.checkIn);
-    const checkOutDate = new Date(booking.checkOut);
-
     // If within check-in window or hasn't checked in yet
-    const isCheckIn = now >= new Date(checkInDate.getTime() - 2 * 60 * 60 * 1000); // 2 hours before
-    const isCheckOut = now >= checkOutDate || booking.status === "confirmed";
+    const isCheckIn = booking.status === "pending"; // Simplified status check
 
     setScanResult({
-      type: isCheckIn && booking.status === "pending" ? "check_in" : "check_out",
+      type: isCheckIn ? "check_in" : "check_out",
       booking: {
         id: booking.id,
         confirmationCode: booking.confirmationCode,
@@ -105,44 +106,22 @@ export default function WatchmanScanPage() {
         },
       },
     });
+
+    setIsScanning(false);
+    return true;
   };
 
-  const handleSimulateScan = () => {
+  const handleManualSearch = () => {
+    processScanResult(manualCode);
+  };
+
+  const handleScanSuccess = (decodedText: string) => {
+    processScanResult(decodedText);
+  };
+
+  const handleStartScan = () => {
     setIsScanning(true);
     setError("");
-
-    // Simulate scanning delay
-    setTimeout(() => {
-      setIsScanning(false);
-      // Get a random booking for demo
-      const randomBooking = reservations[Math.floor(Math.random() * reservations.length)];
-      if (randomBooking) {
-        setScanResult({
-          type: randomBooking.status === "pending" ? "check_in" : "check_out",
-          booking: {
-            id: randomBooking.id,
-            confirmationCode: randomBooking.confirmationCode,
-            vehiclePlate: randomBooking.vehicleInfo.licensePlate,
-            vehicleInfo: {
-              make: randomBooking.vehicleInfo.make,
-              model: randomBooking.vehicleInfo.model,
-              color: randomBooking.vehicleInfo.color,
-            },
-            checkIn: randomBooking.checkIn,
-            checkOut: randomBooking.checkOut,
-            location: {
-              name: randomBooking.location.name,
-            },
-            guestInfo: {
-              firstName: randomBooking.guestInfo.firstName,
-              lastName: randomBooking.guestInfo.lastName,
-            },
-          },
-        });
-      } else {
-        setError("No active bookings found to scan");
-      }
-    }, 1500);
   };
 
   const handleConfirmAction = () => {
@@ -181,29 +160,36 @@ export default function WatchmanScanPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Camera View Placeholder */}
-            <div
-              className="relative aspect-square max-h-[300px] mx-auto bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
-              onClick={handleSimulateScan}
-            >
+            {/* Camera View Area */}
+            <div className="relative mx-auto bg-muted rounded-lg overflow-hidden min-h-[300px] flex flex-col justify-center">
               {isScanning ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-muted-foreground">Scanning...</p>
+                <div className="w-full">
+                  <QRScanner
+                    onScanSuccess={handleScanSuccess}
+                    onScanFailure={(err) => {
+                      // Suppress common 'no qr code found' errors
+                    }}
+                  />
+                  <div className="text-center p-2">
+                    <Button variant="ghost" size="sm" onClick={() => setIsScanning(false)}>
+                      Stop Scanning
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <>
-                  <div className="absolute inset-4 border-2 border-dashed border-primary/50 rounded-lg" />
-                  <div className="flex flex-col items-center gap-4 p-4 text-center">
-                    <QrCode className="w-16 h-16 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">Tap to simulate scan</p>
-                      <p className="text-sm text-muted-foreground">
-                        Camera access would be enabled in production
-                      </p>
-                    </div>
+                <div
+                  className="flex flex-col items-center justify-center gap-4 p-8 cursor-pointer hover:bg-muted/80 transition-colors h-full"
+                  onClick={handleStartScan}
+                >
+                  <div className="absolute inset-4 border-2 border-dashed border-primary/50 rounded-lg pointer-events-none" />
+                  <QrCode className="w-16 h-16 text-muted-foreground" />
+                  <div className="text-center">
+                    <p className="font-medium text-foreground">Tap to start camera</p>
+                    <p className="text-sm text-muted-foreground">
+                      Scan a booking QR code
+                    </p>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -422,11 +408,10 @@ export default function WatchmanScanPage() {
             </Button>
             <Button
               onClick={handleConfirmAction}
-              className={`w-full sm:w-auto ${
-                scanResult?.type === "check_in"
+              className={`w-full sm:w-auto ${scanResult?.type === "check_in"
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-blue-600 hover:bg-blue-700"
-              }`}
+                }`}
             >
               {scanResult?.type === "check_in" ? (
                 <>
