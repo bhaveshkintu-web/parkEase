@@ -31,6 +31,8 @@ model User {
   reviews          Review[]
   savedVehicles    SavedVehicle[]
   watchmanProfile  Watchman?
+  requestedBookings BookingRequest[] @relation("RequestedBy")
+  processedBookings BookingRequest[] @relation("ProcessedBy")
 }
 
 model OwnerProfile {
@@ -98,11 +100,12 @@ model ParkingLocation {
   reviews        Review[]
   watchmanShifts WatchmanShift[]
   watchmen       Watchman[]
+  bookingRequests BookingRequest[]
 }
 
 model Booking {
   id               String          @id @default(cuid())
-  userId           String
+  userId           String?
   locationId       String
   checkIn          DateTime
   checkOut         DateTime
@@ -123,22 +126,24 @@ model Booking {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   location         ParkingLocation @relation(fields: [locationId], references: [id])
-  user             User            @relation(fields: [userId], references: [id])
+  user             User?           @relation(fields: [userId], references: [id])
   parkingSession   ParkingSession?
   payment          Payment?
   refunds          RefundRequest[]
 }
 
 model Payment {
-  id            String   @id @default(cuid())
-  bookingId     String   @unique
-  amount        Float
-  currency      String   @default("USD")
-  provider      String
-  transactionId String
-  status        String
-  createdAt     DateTime @default(now())
-  booking       Booking  @relation(fields: [bookingId], references: [id])
+  id              String         @id @default(cuid())
+  bookingId       String         @unique
+  amount          Float
+  currency        String         @default("USD")
+  provider        String
+  transactionId   String
+  status          String
+  paymentMethodId String?
+  createdAt       DateTime       @default(now())
+  booking         Booking        @relation(fields: [bookingId], references: [id])
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 }
 
 model Wallet {
@@ -221,6 +226,7 @@ model ParkingSession {
   checkInTime  DateTime?
   checkOutTime DateTime?
   status       String
+  updatedAt    DateTime        @updatedAt
   booking      Booking         @relation(fields: [bookingId], references: [id])
   location     ParkingLocation @relation(fields: [locationId], references: [id])
 }
@@ -278,16 +284,18 @@ model SavedVehicle {
 }
 
 model PaymentMethod {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  last4       String
-  brand       String?
-  expiryMonth Int?
-  expiryYear  Int?
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  userId         String
+  type           String   @default("card")
+  last4          String
+  brand          String
+  expiryMonth    Int
+  expiryYear     Int
+  cardholderName String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+  payments       Payment[]
 }
 
 model OwnerDocument {
@@ -465,4 +473,71 @@ enum WatchmanShiftStatus {
   COMPLETED
   MISSED
   PARTIAL
+}
+
+model BookingRequest {
+  id               String               @id @default(cuid())
+  customerId       String?
+  customerName     String
+  customerPhone    String?
+  vehiclePlate     String
+  vehicleType      String
+  parkingId        String
+  parkingName      String
+  spotNumber       String?
+  requestType      RequestType
+  originalBookingId String?
+  requestedStart   DateTime
+  requestedEnd     DateTime
+  estimatedAmount  Float
+  status           BookingRequestStatus @default(PENDING)
+  priority         String               @default("normal")
+  notes            String?
+  requestedById    String
+  requestedBy      User                 @relation("RequestedBy", fields: [requestedById], references: [id])
+  requestedAt      DateTime             @default(now())
+  processedById    String?
+  processedBy      User?                @relation("ProcessedBy", fields: [processedById], references: [id])
+  processedAt      DateTime?
+  rejectionReason  String?
+  bookingId        String?              @unique
+  location         ParkingLocation      @relation(fields: [parkingId], references: [id])
+
+  @@index([parkingId])
+  @@index([requestedById])
+  @@index([status])
+}
+
+enum BookingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RequestType {
+  WALK_IN
+  EXTENSION
+  MODIFICATION
+  EARLY_CHECKOUT
+}
+
+model SupportTicket {
+  id        String       @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
 }

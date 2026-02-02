@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
+import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,25 +23,74 @@ import {
   AlertTriangle,
   Timer,
 } from "lucide-react";
+import { RequestDialog } from "@/components/watchman/request-dialog";
 
 export default function WatchmanSessionsPage() {
-  const { parkingSessions, reservations } = useDataStore();
+  const { fetchBookingRequests } = useDataStore();
+  const { toast } = useToast();
+  
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
+  
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<any>(null);
+  
   const searchParams = useSearchParams();
 
-  const filteredSessions =
-    activeTab === "all"
-      ? parkingSessions
-      : parkingSessions.filter((s) => s.status === activeTab);
+  const fetchSessions = useCallback(async () => {
+    try {
+      const statusParam = activeTab === "all" ? "" : `?status=${activeTab}`;
+      const res = await fetch(`/api/watchman/sessions${statusParam}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sessions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  const handleAction = async (sessionId: string, action: "check-in" | "check-out") => {
+    try {
+      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: `Vehicle ${action === "check-in" ? "checked in" : "checked out"} successfully.`,
+        });
+        fetchSessions();
+      } else {
+        throw new Error("Failed to update session");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update session status.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const searchedSessions = search
-    ? filteredSessions.filter(
+    ? sessions.filter(
         (s) =>
-          s.vehiclePlate.toLowerCase().includes(search.toLowerCase()) ||
+          s.booking.vehiclePlate.toLowerCase().includes(search.toLowerCase()) ||
           s.bookingId.toLowerCase().includes(search.toLowerCase())
       )
-    : filteredSessions;
+    : sessions;
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -96,14 +146,14 @@ export default function WatchmanSessionsPage() {
           <Card>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Total Sessions</p>
-              <p className="text-2xl font-bold text-foreground">{parkingSessions.length}</p>
+              <p className="text-2xl font-bold text-foreground">{sessions.length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Active</p>
               <p className="text-2xl font-bold text-green-600">
-                {parkingSessions.filter((s) => s.status === "checked_in").length}
+                {sessions.filter((s) => s.status === "checked_in").length}
               </p>
             </CardContent>
           </Card>
@@ -111,7 +161,7 @@ export default function WatchmanSessionsPage() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Pending</p>
               <p className="text-2xl font-bold text-amber-600">
-                {parkingSessions.filter((s) => s.status === "pending").length}
+                {sessions.filter((s) => s.status === "pending").length}
               </p>
             </CardContent>
           </Card>
@@ -119,7 +169,7 @@ export default function WatchmanSessionsPage() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Overstays</p>
               <p className="text-2xl font-bold text-red-600">
-                {parkingSessions.filter((s) => s.status === "overstay").length}
+                {sessions.filter((s) => s.status === "overstay").length}
               </p>
             </CardContent>
           </Card>
@@ -164,7 +214,7 @@ export default function WatchmanSessionsPage() {
                 </div>
               ) : (
                 searchedSessions.map((session) => {
-                  const booking = reservations.find((r) => r.id === session.bookingId);
+                  const booking = session.booking;
                   return (
                     <div
                       key={session.id}
@@ -189,14 +239,14 @@ export default function WatchmanSessionsPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-foreground">{session.vehiclePlate}</p>
+                              <p className="font-bold text-foreground">{session.booking.vehiclePlate}</p>
                               <StatusBadge
                                 status={session.status.replace("_", " ")}
                                 variant={getStatusVariant(session.status)}
                               />
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {session.vehicleType} - Booking #{session.bookingId.slice(-6)}
+                              {session.booking.vehicleType} - Booking #{session.bookingId.slice(-6)}
                             </p>
                           </div>
                         </div>
@@ -230,27 +280,42 @@ export default function WatchmanSessionsPage() {
                       {(session.status === "pending" || session.status === "checked_in" || session.status === "overstay") && (
                         <div className="flex gap-2 mt-3 pt-3 border-t">
                           {session.status === "pending" && (
-                            <Link href="/watchman/scan" className="flex-1 sm:flex-none">
-                              <Button size="sm" className="w-full bg-green-600 hover:bg-green-700">
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Check In
-                              </Button>
-                            </Link>
+                            <Button 
+                              size="sm" 
+                              className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                              onClick={() => handleAction(session.id, "check-in")}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Check In
+                            </Button>
                           )}
                           {(session.status === "checked_in" || session.status === "overstay") && (
-                            <Link href="/watchman/scan" className="flex-1 sm:flex-none">
+                            <div className="flex flex-1 gap-2">
                               <Button
                                 size="sm"
-                                className={`w-full ${
+                                className={`flex-1 sm:flex-none ${
                                   session.status === "overstay"
                                     ? "bg-red-600 hover:bg-red-700"
                                     : "bg-blue-600 hover:bg-blue-700"
                                 }`}
+                                onClick={() => handleAction(session.id, "check-out")}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Check Out
                               </Button>
-                            </Link>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 sm:flex-none"
+                                onClick={() => {
+                                   setSelectedSession(session);
+                                   setIsRequestOpen(true);
+                                }}
+                              >
+                                <Timer className="w-4 h-4 mr-2" />
+                                Extend
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -269,6 +334,21 @@ export default function WatchmanSessionsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {selectedSession && (
+          <RequestDialog
+            open={isRequestOpen}
+            onOpenChange={setIsRequestOpen}
+            initialData={{
+              customerName: "Current Customer",
+              vehiclePlate: selectedSession.booking.vehiclePlate,
+              vehicleType: selectedSession.booking.vehicleType,
+              parkingId: selectedSession.locationId,
+              requestType: "EXTENSION",
+              originalBookingId: selectedSession.bookingId
+            }}
+          />
+        )}
       </div>
     </Suspense>
   );

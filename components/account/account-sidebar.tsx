@@ -85,20 +85,7 @@ export function AccountSidebar() {
             );
           })}
           
-          {user?.role?.toLowerCase() === "customer" && (
-            <Link
-              href="/partner-with-us"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                pathname === "/partner-with-us"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <Building2 className="w-5 h-5" />
-              Partner With Us
-            </Link>
-          )}
+
         </div>
 
         {isAdmin && (

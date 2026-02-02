@@ -116,6 +116,17 @@ export default function ModifyReservationPage({
     );
   }
 
+  if (!reservation) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">Reservation not found</h2>
+        <Link href="/account/reservations">
+          <Button variant="outline">Back to Reservations</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
       <Link href={`/account/reservations/${id}`}>
