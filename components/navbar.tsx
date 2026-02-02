@@ -310,6 +310,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-    </header>
+    </header >
   );
 }

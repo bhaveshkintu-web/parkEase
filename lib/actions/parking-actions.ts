@@ -216,11 +216,11 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
 }
 
 /**
- * Retrieves all locations owned by a specific owner.
+/**
+ * Fetches all parking locations belonging to a specific owner.
  */
 export async function getOwnerLocations(userId: string) {
   try {
-    // 1. Find owner profile
     const ownerProfile = await prisma.ownerProfile.findUnique({
       where: { userId },
     });
@@ -229,43 +229,16 @@ export async function getOwnerLocations(userId: string) {
       return { success: false, error: "Owner profile not found" };
     }
 
-    // 2. Fetch locations
     const locations = await prisma.parkingLocation.findMany({
       where: { ownerId: ownerProfile.id },
+      orderBy: { createdAt: 'desc' },
       include: {
-        reviews: true,
         analytics: true,
-      },
-      orderBy: { createdAt: "desc" },
+        reviews: true,
+      }
     });
 
-    // 3. Map to UI-friendly format
-    const formattedLocations = locations.map((loc) => {
-      const reviewCount = loc.reviews.length;
-      const rating = reviewCount > 0
-        ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
-        : 0;
-
-      return {
-        id: loc.id,
-        name: loc.name,
-        address: loc.address,
-        city: loc.city,
-        airport: loc.airportCode || "Custom Location",
-        pricePerDay: loc.pricePerDay,
-        availableSpots: loc.availableSpots,
-        totalSpots: loc.totalSpots,
-        rating,
-        reviewCount,
-        status: loc.status.toLowerCase(),
-        analytics: {
-          revenue: loc.analytics?.revenue || 0,
-          bookings: loc.analytics?.totalBookings || 0,
-        },
-      };
-    });
-
-    return { success: true, data: formattedLocations };
+    return { success: true, data: locations };
   } catch (error) {
     console.error("Failed to fetch owner locations:", error);
     return { success: false, error: "Internal server error" };
@@ -277,9 +250,25 @@ export async function getOwnerLocations(userId: string) {
  */
 export async function updateLocationStatus(id: string, status: string) {
   try {
+    const currentLocation = await prisma.parkingLocation.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+
+    if (!currentLocation) {
+      return { success: false, error: "Location not found" };
+    }
+
+    const newStatus = status.toUpperCase();
+
+    // Prevent owners from activating a location that is still PENDING admin approval
+    if (currentLocation.status === "PENDING" && newStatus === "ACTIVE") {
+      return { success: false, error: "Cannot activate location until it is approved by an admin." };
+    }
+
     const updated = await prisma.parkingLocation.update({
       where: { id },
-      data: { status: status.toUpperCase() as any },
+      data: { status: newStatus as any },
     });
     return { success: true, data: updated };
   } catch (error) {

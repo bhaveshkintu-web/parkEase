@@ -12,42 +12,85 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch leads
-    const leads = await prisma.ownerLead.findMany({
+// <<<<<<< HEAD
+//     // Fetch leads
+//     const leads = await prisma.ownerLead.findMany({
+//       orderBy: { createdAt: "desc" },
+//     });
+
+//     // Fetch pending owner profiles (registered users waiting for approval)
+//     const pendingProfiles = await prisma.ownerProfile.findMany({
+//       where: { status: "pending" },
+//       include: { user: true },
+//       orderBy: { createdAt: "desc" },
+//     });
+
+//     // Map profiles to OwnerLead shape for unified UI
+//     const profileLeads = pendingProfiles.map(p => ({
+//       id: `profile:${p.id}`, // Prefix to distinguish
+//       fullName: `${p.user.firstName} ${p.user.lastName}`,
+//       email: p.user.email,
+//       phone: p.user.phone || "N/A",
+//       businessName: p.businessName,
+//       businessType: p.businessType,
+//       city: p.city,
+//       state: p.state,
+//       country: p.country,
+//       status: p.status, // "pending"
+//       createdAt: p.createdAt.toISOString(),
+//       isProfile: true, // Flag to identify origin
+//       profileId: p.id,
+//       userId: p.userId
+//     }));
+
+//     // Combine and sort by date
+//     const combined = [...profileLeads, ...leads].sort((a, b) =>
+//       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+//     );
+
+//     return NextResponse.json({ leads: combined });
+// =======
+    const leads = await (prisma as any).ownerLead.findMany({
       orderBy: { createdAt: "desc" },
     });
 
-    // Fetch pending owner profiles (registered users waiting for approval)
-    const pendingProfiles = await prisma.ownerProfile.findMany({
+    const pendingOwners = await prisma.ownerProfile.findMany({
       where: { status: "pending" },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    // Map profiles to OwnerLead shape for unified UI
-    const profileLeads = pendingProfiles.map(p => ({
-      id: `profile:${p.id}`, // Prefix to distinguish
-      fullName: `${p.user.firstName} ${p.user.lastName}`,
-      email: p.user.email,
-      phone: p.user.phone || "N/A",
-      businessName: p.businessName,
-      businessType: p.businessType,
-      city: p.city,
-      state: p.state,
-      country: p.country,
-      status: p.status, // "pending"
-      createdAt: p.createdAt.toISOString(),
-      isProfile: true, // Flag to identify origin
-      profileId: p.id,
-      userId: p.userId
+    // Transform pending owners to match lead shape if needed, 
+    // or keep them separate. The frontend currently expects 'leads' array.
+    const normalizedOwners = pendingOwners.map((owner) => ({
+      id: owner.id,
+      fullName: `${owner.user.firstName} ${owner.user.lastName}`,
+      email: owner.user.email,
+      phone: owner.user.phone || "N/A",
+      businessName: owner.businessName,
+      businessType: owner.businessType,
+      city: owner.city,
+      state: owner.state,
+      country: owner.country,
+      status: owner.status,
+      createdAt: owner.createdAt,
+      isAdminCreated: true, // Flag to distinguish from leads
     }));
 
-    // Combine and sort by date
-    const combined = [...profileLeads, ...leads].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    return NextResponse.json({ leads: combined });
+    return NextResponse.json({
+      leads: [...leads, ...normalizedOwners]
+    });
+// >>>>>>> main
   } catch (error) {
     console.error("Error fetching leads:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -68,6 +111,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+// <<<<<<< HEAD
     // Handle Profile Approval/Rejection
     if (String(leadId).startsWith("profile:")) {
       const profileId = leadId.split(":")[1];
@@ -101,28 +145,52 @@ export async function POST(req: Request) {
 
     // Handle Lead Approval (Original Logic)
     const lead = await prisma.ownerLead.findUnique({
+// =======
+    // let lead = await (prisma as any).ownerLead.findUnique({
+// >>>>>>> main
       where: { id: leadId },
     });
 
+    let ownerProfile = null;
     if (!lead) {
-      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+      ownerProfile = await prisma.ownerProfile.findUnique({
+        where: { id: leadId },
+        include: { user: true }
+      });
+    }
+
+    if (!lead && !ownerProfile) {
+      return NextResponse.json({ error: "Record not found" }, { status: 404 });
     }
 
     if (action === "reject") {
-      await prisma.ownerLead.update({
-        where: { id: leadId },
-        data: {
-          status: "rejected",
-          adminNotes: notes,
-        },
-      });
-      return NextResponse.json({ message: "Lead rejected successfully" });
+      if (lead) {
+        await (prisma as any).ownerLead.update({
+          where: { id: leadId },
+          data: { status: "rejected", adminNotes: notes },
+        });
+      } else {
+        await prisma.ownerProfile.update({
+          where: { id: leadId },
+          data: { status: "rejected" },
+        });
+      }
+      return NextResponse.json({ message: "Rejected successfully" });
     }
 
     if (action === "approve") {
+      if (ownerProfile) {
+        // Just update existing profile
+        await prisma.ownerProfile.update({
+          where: { id: leadId },
+          data: { status: "approved", verificationStatus: "verified" },
+        });
+        return NextResponse.json({ message: "Owner profile approved successfully" });
+      }
+
       // 1. Check if user already exists
       const existingUser = await prisma.user.findUnique({
-        where: { email: lead.email },
+        where: { email: lead!.email },
       });
 
       if (existingUser) {
@@ -136,16 +204,16 @@ export async function POST(req: Request) {
       const tempPassword = Math.random().toString(36).slice(-10);
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-      const [firstName, ...lastNameParts] = lead.fullName.split(" ");
+      const [firstName, ...lastNameParts] = lead!.fullName.split(" ");
       const lastName = lastNameParts.join(" ") || ".";
 
       await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: {
-            email: lead.email,
+            email: lead!.email,
             firstName,
             lastName,
-            phone: lead.phone,
+            phone: lead!.phone,
             password: hashedPassword,
             role: "OWNER",
             status: "ACTIVE",
@@ -155,33 +223,29 @@ export async function POST(req: Request) {
         await tx.ownerProfile.create({
           data: {
             userId: user.id,
-            businessName: lead.businessName,
-            businessType: lead.businessType,
-            city: lead.city,
-            state: lead.state,
-            country: lead.country,
-            street: "N/A", // Default to N/A as lead might not have full address
+            businessName: lead!.businessName,
+            businessType: lead!.businessType,
+            city: lead!.city,
+            state: lead!.state,
+            country: lead!.country,
+            street: "N/A",
             zipCode: "N/A",
-            status: "approved", // Auto-approve converted leads
+            status: "approved",
             verificationStatus: "verified",
           },
         });
 
-        await tx.ownerLead.update({
+        await (tx as any).ownerLead.update({
           where: { id: leadId },
-          data: {
-            status: "approved",
-            adminNotes: notes,
-          },
+          data: { status: "approved", adminNotes: notes },
         });
       });
 
-      // TODO: Send email with tempPassword or password reset link
-      console.log(`Approved owner: ${lead.email}. Temp password: ${tempPassword}`);
+      console.log(`Approved owner: ${lead!.email}. Temp password: ${tempPassword}`);
 
       return NextResponse.json({
         message: "Owner approved and account created successfully",
-        tempPassword, // In a real app, send via email only
+        tempPassword,
       });
     }
 

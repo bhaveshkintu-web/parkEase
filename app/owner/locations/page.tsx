@@ -60,7 +60,7 @@ export default function OwnerLocationsPage() {
   const filteredLocations =
     activeTab === "all"
       ? locations
-      : locations.filter((l) => l.status === activeTab);
+      : locations.filter((l) => l.status === activeTab.toUpperCase());
 
   const columns: Column<AdminParkingLocation>[] = [
     {
@@ -108,8 +108,8 @@ export default function OwnerLocationsPage() {
       render: (item) => (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-          <span>{item.rating.toFixed(1)}</span>
-          <span className="text-muted-foreground text-xs">({item.reviewCount})</span>
+          <span>{(item.rating || 0).toFixed(1)}</span>
+          <span className="text-muted-foreground text-xs">({item.reviewCount || 0})</span>
         </div>
       ),
     },
@@ -120,7 +120,7 @@ export default function OwnerLocationsPage() {
       hideOnMobile: true,
       render: (item) => (
         <span className="font-medium text-green-600">
-          {formatCurrency(item.analytics.revenue)}
+          {formatCurrency(item.analytics?.revenue || 0)}
         </span>
       ),
     },
@@ -131,9 +131,9 @@ export default function OwnerLocationsPage() {
         <StatusBadge
           status={item.status}
           variant={
-            item.status === "active"
+            item.status === "ACTIVE"
               ? "success"
-              : item.status === "maintenance"
+              : item.status === "MAINTENANCE"
                 ? "warning"
                 : "default"
           }
@@ -154,17 +154,18 @@ export default function OwnerLocationsPage() {
       onClick: (item) => router.push(`/owner/locations/${item.id}/edit`),
     },
     {
-      label: item.status === "active" ? "Deactivate" : "Activate",
-      icon: item.status === "active" ? (
+      label: item.status === "ACTIVE" ? "Deactivate" : (item.status === "PENDING" ? "Awaiting Approval" : "Activate"),
+      icon: item.status === "ACTIVE" ? (
         <ToggleLeft className="w-4 h-4 mr-2" />
       ) : (
         <ToggleRight className="w-4 h-4 mr-2" />
       ),
+      disabled: item.status === "PENDING",
       onClick: async (item) => {
-        const newStatus = item.status === "active" ? "inactive" : "active";
+        const newStatus = item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
         const result = await updateLocationStatus(item.id, newStatus);
         if (result.success) {
-          toast({ title: `Location ${newStatus === 'active' ? 'activated' : 'deactivated'}` });
+          toast({ title: `Location ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'}` });
           fetchLocations();
         } else {
           toast({ title: "Error", description: result.error, variant: "destructive" });
@@ -175,11 +176,11 @@ export default function OwnerLocationsPage() {
       label: "Maintenance",
       icon: <Wrench className="w-4 h-4 mr-2" />,
       // Show only if not already in maintenance
-      disabled: item.status === "maintenance",
+      disabled: item.status === "MAINTENANCE",
       onClick: async (item) => {
-        if (item.status === "maintenance") return;
+        if (item.status === "MAINTENANCE") return;
 
-        const result = await updateLocationStatus(item.id, "maintenance");
+        const result = await updateLocationStatus(item.id, "MAINTENANCE");
         if (result.success) {
           toast({ title: "Location set to maintenance" });
           fetchLocations();
@@ -235,7 +236,7 @@ export default function OwnerLocationsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Active</p>
             <p className="text-2xl font-bold text-green-600">
-              {locations.filter((l) => l.status === "active").length}
+              {locations.filter((l) => l.status === "ACTIVE").length}
             </p>
           </CardContent>
         </Card>
@@ -243,7 +244,7 @@ export default function OwnerLocationsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">In Maintenance</p>
             <p className="text-2xl font-bold text-amber-600">
-              {locations.filter((l) => l.status === "maintenance").length}
+              {locations.filter((l) => l.status === "MAINTENANCE").length}
             </p>
           </CardContent>
         </Card>
@@ -264,13 +265,13 @@ export default function OwnerLocationsPage() {
             <TabsList>
               <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
               <TabsTrigger value="active">
-                Active ({locations.filter((l) => l.status === "active").length})
+                Active ({locations.filter((l) => l.status === "ACTIVE").length})
               </TabsTrigger>
               <TabsTrigger value="inactive">
-                Inactive ({locations.filter((l) => l.status === "inactive").length})
+                Inactive ({locations.filter((l) => l.status === "INACTIVE").length})
               </TabsTrigger>
               <TabsTrigger value="maintenance">
-                Maintenance ({locations.filter((l) => l.status === "maintenance").length})
+                Maintenance ({locations.filter((l) => l.status === "MAINTENANCE").length})
               </TabsTrigger>
             </TabsList>
           </Tabs>

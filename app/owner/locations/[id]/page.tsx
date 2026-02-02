@@ -113,7 +113,12 @@ export default function OwnerLocationDetailsPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleStatusToggle}>
+          <Button
+            variant="outline"
+            onClick={handleStatusToggle}
+            disabled={location.status === "PENDING"}
+            title={location.status === "PENDING" ? "Awaiting admin approval" : ""}
+          >
             {location.status === "ACTIVE" ? (
               <>
                 <ToggleLeft className="w-4 h-4 mr-2" />
@@ -122,7 +127,7 @@ export default function OwnerLocationDetailsPage() {
             ) : (
               <>
                 <ToggleRight className="w-4 h-4 mr-2" />
-                Activate
+                {location.status === "PENDING" ? "Awaiting Approval" : "Activate"}
               </>
             )}
           </Button>

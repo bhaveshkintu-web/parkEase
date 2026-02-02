@@ -5,6 +5,8 @@ import React from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { useAuth } from "@/lib/auth-context";
+import { getOwnerLocations } from "@/lib/actions/parking-actions";
+import { getOwnerWatchmen } from "@/lib/actions/watchman-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { StatCard } from "@/components/admin/stat-card";
 import { QuickActions } from "@/components/admin/quick-actions";
@@ -27,6 +29,7 @@ import {
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
+  // <<<<<<< HEAD
   const { wallet, transactions, initializeForOwner } = useDataStore();
 
   const [stats, setStats] = React.useState({
@@ -54,10 +57,27 @@ export default function OwnerDashboard() {
 
   // Initialize owner data (keep for wallet/transactions for now if they are not moved yet)
   React.useEffect(() => {
-    if (user?.ownerId) {
-      initializeForOwner(user.ownerId);
-    }
-  }, [user?.ownerId, initializeForOwner]);
+    const fetchData = async () => {
+      if (user?.id) {
+        try {
+          const [locationsResult, watchmenResult] = await Promise.all([
+            getOwnerLocations(user.id),
+            getOwnerWatchmen(user.id)
+          ]);
+
+          if (locationsResult.success && locationsResult.data) {
+            setDashboardData(prev => ({ ...prev, locations: locationsResult.data }));
+          }
+          if (watchmenResult.success && watchmenResult.data) {
+            setDashboardData(prev => ({ ...prev, watchmen: watchmenResult.data }));
+          }
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error);
+        }
+      }
+    };
+    fetchData();
+  }, [user?.id]);
 
   // Fetch real stats
   React.useEffect(() => {
@@ -96,6 +116,7 @@ export default function OwnerDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
+          {/* ... */}
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Owner Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Welcome back, {user?.firstName}! Here&apos;s your parking overview.
@@ -375,9 +396,9 @@ export default function OwnerDashboard() {
                     <StatusBadge
                       status={location.status}
                       variant={
-                        location.status === "active"
+                        location.status === "ACTIVE"
                           ? "success"
-                          : location.status === "maintenance"
+                          : location.status === "MAINTENANCE"
                             ? "warning"
                             : "default"
                       }
@@ -416,7 +437,7 @@ export default function OwnerDashboard() {
                     <span className="text-sm font-medium text-foreground">
                       {watchman.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")}
                     </span>
                   </div>
