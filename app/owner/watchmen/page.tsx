@@ -61,7 +61,6 @@ export default function OwnerWatchmenPage() {
     email: "",
     shift: "morning" as "morning" | "evening" | "night" | "all",
     assignedParkingIds: [] as string[],
-    password: "",
   });
   const [allAvailableWatchmen, setAllAvailableWatchmen] = useState<any[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
@@ -109,7 +108,6 @@ export default function OwnerWatchmenPage() {
       email: "",
       shift: "morning",
       assignedParkingIds: [],
-      password: "",
     });
     setEditingWatchman(null);
   };
@@ -151,7 +149,6 @@ export default function OwnerWatchmenPage() {
       email: watchman.email,
       shift: watchman.shift,
       assignedParkingIds: watchman.assignedParkingIds,
-      password: "", // Keep empty when editing
     });
     setIsAddDialogOpen(true);
   };
@@ -403,18 +400,6 @@ export default function OwnerWatchmenPage() {
                   disabled={(!!editingWatchman) || (!isManualEntry && !editingWatchman)}
                 />
               </div>
-              {!editingWatchman && isManualEntry && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password (Optional)</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Leave blank for default: Watchman@123"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="shift">Shift</Label>
                 <Select
