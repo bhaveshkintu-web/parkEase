@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import { Navbar } from "@/components/navbar";
-import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
+import { StripePaymentForm } from "@/components/stripe-payment-form";
+import { useBooking } from "@/lib/booking-context";
+import { formatCurrency, formatDate, formatTime, calculateQuote } from "@/lib/data";
 import { createBooking } from "@/lib/actions/booking-actions";
-import { getParkingLocationById } from "@/lib/actions/parking-actions";
 import { useToast } from "@/hooks/use-toast";
+import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +19,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -39,12 +41,18 @@ import {
   Lock,
   Tag,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
+
+// Load Stripe outside of component to avoid recreating on every render
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const isStripeConfigured = stripePublishableKey && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
+const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : null;
 
 function CheckoutContent() {
   const router = useRouter();
   const { toast } = useToast();
-  const { location: contextLocation, checkIn, checkOut, setGuestInfo, setVehicleInfo } = useBooking();
+  const { location: contextLocation, checkIn, checkOut } = useBooking();
   
   const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
   const [isLoading, setIsLoading] = useState(!contextLocation);
@@ -52,6 +60,10 @@ function CheckoutContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+
+  // Stripe state
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
   // Guest Info
   const [firstName, setFirstName] = useState("");
@@ -65,37 +77,71 @@ function CheckoutContent() {
   const [color, setColor] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
 
-  // Payment Info
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [nameOnCard, setNameOnCard] = useState("");
-
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
-    async function fetchLocation() {
-      if (!contextLocation) {
-        // In a real app, you'd get the ID from search params if not in context
-        // For now, if no location is selected, redirect back
-        toast({
-          title: "No location selected",
-          description: "Please select a parking location first.",
-          variant: "destructive",
-        });
-        router.push("/parking");
-        return;
-      }
-      setIsLoading(false);
+    if (!contextLocation) {
+      toast({
+        title: "No location selected",
+        description: "Please select a parking location first.",
+        variant: "destructive",
+      });
+      router.push("/parking");
+      return;
     }
-    fetchLocation();
+    setIsLoading(false);
   }, [contextLocation, router, toast]);
 
   const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut) : null;
+  const finalPrice = quote ? (promoApplied ? quote.totalPrice * 0.9 : quote.totalPrice) : 0;
+
+  // Create PaymentIntent when user reaches payment step
+  const createPaymentIntentForCheckout = async () => {
+    if (!bookingLocation || !quote) return;
+
+    try {
+      const result = await createPaymentIntentAction({
+        amount: finalPrice,
+        locationId: bookingLocation.id,
+        locationName: bookingLocation.name,
+        checkIn: checkIn.toISOString(),
+        checkOut: checkOut.toISOString(),
+        guestEmail: email,
+      });
+      
+      if (result.success) {
+        setClientSecret(result.clientSecret);
+        setPaymentIntentId(result.paymentIntentId);
+      } else {
+        console.error("Payment setup error:", result.error);
+        toast({
+          title: "Payment Setup Failed",
+          description: result.error || "Could not initialize payment. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Payment setup action error:", error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to set up payment. Please check your connection or log in again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create PaymentIntent when moving to payment step
+  useEffect(() => {
+    if (step === 3 && !clientSecret && isGuestInfoComplete && isVehicleInfoComplete) {
+      createPaymentIntentForCheckout();
+    }
+  }, [step]);
   
   const handleApplyPromo = () => {
     if (promoCode.toLowerCase() === "save10") {
       setPromoApplied(true);
+      // Reset clientSecret to regenerate with new amount
+      setClientSecret(null);
       toast({
         title: "Promo Applied",
         description: "10% discount has been applied to your total.",
@@ -109,14 +155,8 @@ function CheckoutContent() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-
-    setIsSubmitting(true);
+  const handlePaymentSuccess = async (paymentId: string) => {
     try {
-      const { days, basePrice, taxes, fees, totalPrice } = quote!;
-      const finalPrice = promoApplied ? totalPrice * 0.9 : totalPrice;
-
       const bookingData = {
         locationId: bookingLocation.id,
         checkIn: new Date(checkIn),
@@ -130,9 +170,9 @@ function CheckoutContent() {
         vehicleColor: color,
         vehiclePlate: licensePlate,
         totalPrice: finalPrice,
-        taxes: taxes,
-        fees: fees,
-        // We'll let the server action handle userId and confirmationCode
+        taxes: quote!.taxes,
+        fees: quote!.fees,
+        paymentIntentId: paymentId,
       };
 
       const response = await createBooking(bookingData);
@@ -149,12 +189,19 @@ function CheckoutContent() {
     } catch (error: any) {
       toast({
         title: "Booking Failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: error.message || "Payment succeeded but booking failed. Please contact support.",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive",
+    });
   };
 
   if (isLoading) {
@@ -170,8 +217,7 @@ function CheckoutContent() {
 
   const isGuestInfoComplete = firstName && lastName && email && phone;
   const isVehicleInfoComplete = make && model && licensePlate;
-  const isPaymentInfoComplete = cardNumber && expiry && cvv && nameOnCard;
-  const canSubmit = isGuestInfoComplete && isVehicleInfoComplete && isPaymentInfoComplete && agreedToTerms;
+  const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -339,79 +385,96 @@ function CheckoutContent() {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Step 3: Payment Information */}
+                {/* Step 3: Payment via Stripe */}
                 <AccordionItem value="step-3" className="rounded-xl border border-border bg-card">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        isPaymentInfoComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        clientSecret ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                       }`}>
-                        {isPaymentInfoComplete ? <CheckCircle className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
+                        <CreditCard className="h-4 w-4" />
                       </div>
                       <div className="text-left">
-                        <p className="font-semibold text-foreground">Payment Information</p>
+                        <p className="font-semibold text-foreground">
+                          Payment {!isStripeConfigured && "(Demo Mode)"}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {isPaymentInfoComplete ? `Card ending in ${cardNumber.slice(-4)}` : "Enter your payment details"}
+                          {isStripeConfigured ? "Secure payment via Stripe" : "Configure Stripe keys for real payments"}
                         </p>
                       </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pb-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nameOnCard">Name on Card</Label>
-                        <Input
-                          id="nameOnCard"
-                          placeholder="John Doe"
-                          value={nameOnCard}
-                          onChange={(e) => setNameOnCard(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="expiry">Expiry Date</Label>
-                          <Input
-                            id="expiry"
-                            placeholder="MM/YY"
-                            value={expiry}
-                            onChange={(e) => setExpiry(e.target.value)}
-                          />
+                    {!isStripeConfigured ? (
+                      <div className="space-y-4">
+                        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
+                          <p className="font-semibold flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Stripe Demo Mode
+                          </p>
+                          <p className="mt-1">
+                            Stripe keys are not configured in your <code>.env</code> file. 
+                            You can still test the booking flow using this simulation.
+                          </p>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cvv">CVV</Label>
-                          <Input
-                            id="cvv"
-                            placeholder="123"
-                            value={cvv}
-                            onChange={(e) => setCvv(e.target.value)}
-                          />
-                        </div>
+                        <Button 
+                          className="w-full" 
+                          size="lg"
+                          onClick={() => {
+                            setIsSubmitting(true);
+                            // Simulate a short delay then proceed
+                            setTimeout(() => {
+                              handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
+                            }, 1500);
+                          }}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Simulating Demo Payment...
+                            </>
+                          ) : (
+                            "Simulate Demo Payment - Proceed to Confirmation"
+                          )}
+                        </Button>
                       </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 p-3">
-                      <Lock className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">
-                        Your payment information is encrypted and secure
-                      </span>
-                    </div>
+                    ) : clientSecret ? (
+                      <Elements 
+                        stripe={stripePromise} 
+                        options={{ 
+                          clientSecret,
+                          appearance: {
+                            theme: 'stripe',
+                            variables: {
+                              colorPrimary: '#10b981',
+                            },
+                          },
+                        }}
+                      >
+                        <StripePaymentForm
+                          clientSecret={clientSecret}
+                          amount={finalPrice}
+                          onPaymentSuccess={handlePaymentSuccess}
+                          onPaymentError={handlePaymentError}
+                          isSubmitting={isSubmitting}
+                          setIsSubmitting={setIsSubmitting}
+                        />
+                      </Elements>
+                    ) : (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="ml-2 text-muted-foreground">Loading payment form...</span>
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
 
-              {/* Terms & Submit */}
+              {/* Terms Checkbox */}
               <Card>
                 <CardContent className="pt-6">
-                  <div className="mb-4 flex items-start gap-3">
+                  <div className="flex items-start gap-3">
                     <Checkbox
                       id="terms"
                       checked={agreedToTerms}
@@ -429,24 +492,6 @@ function CheckoutContent() {
                       . I understand that my reservation is subject to availability.
                     </Label>
                   </div>
-
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleSubmit}
-                    disabled={!canSubmit || isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Complete Reservation - {formatCurrency(promoApplied ? totalPrice * 0.9 : totalPrice)}
-                      </>
-                    )}
-                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -482,14 +527,14 @@ function CheckoutContent() {
                         <Calendar className="h-4 w-4" />
                         Check-in
                       </div>
-                      <span className="font-medium text-foreground">{formatDate(checkIn)}</span>
+                      <span className="font-medium text-foreground">{formatDate(checkIn)} {formatTime(checkIn)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         Check-out
                       </div>
-                      <span className="font-medium text-foreground">{formatDate(checkOut)}</span>
+                      <span className="font-medium text-foreground">{formatDate(checkOut)} {formatTime(checkOut)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
@@ -556,7 +601,7 @@ function CheckoutContent() {
                     <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
                       <span className="text-foreground">Total</span>
                       <span className="text-foreground">
-                        {formatCurrency(promoApplied ? totalPrice * 0.9 : totalPrice)}
+                        {formatCurrency(finalPrice)}
                       </span>
                     </div>
                   </div>
@@ -577,7 +622,7 @@ function CheckoutContent() {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Lock className="h-4 w-4 text-primary" />
-                      <span className="text-muted-foreground">Secure payment</span>
+                      <span className="text-muted-foreground">Secure payment via Stripe</span>
                     </div>
                   </div>
                 </CardContent>

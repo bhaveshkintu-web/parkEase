@@ -57,104 +57,19 @@ import {
 } from "lucide-react";
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-
-// Mock booking requests data
-const mockBookingRequests: WatchmanBookingRequest[] = [
-  {
-    id: "req_1",
-    customerId: "cust_1",
-    customerName: "John Smith",
-    customerPhone: "+1 555-1234",
-    vehiclePlate: "ABC-1234",
-    vehicleType: "sedan",
-    parkingId: "park_1",
-    parkingName: "Downtown Parking",
-    spotNumber: "A-15",
-    requestType: "walk_in",
-    requestedStart: new Date(),
-    requestedEnd: new Date(Date.now() + 3600000 * 4),
-    estimatedAmount: 20.00,
-    status: "pending",
-    priority: "normal",
-    requestedBy: "watchman_1",
-    requestedAt: new Date(Date.now() - 600000),
-  },
-  {
-    id: "req_2",
-    customerId: "cust_2",
-    customerName: "Sarah Johnson",
-    customerPhone: "+1 555-5678",
-    vehiclePlate: "XYZ-9876",
-    vehicleType: "suv",
-    parkingId: "park_1",
-    parkingName: "Downtown Parking",
-    requestType: "extension",
-    originalBookingId: "book_123",
-    requestedStart: new Date(Date.now() + 3600000 * 2),
-    requestedEnd: new Date(Date.now() + 3600000 * 6),
-    estimatedAmount: 15.00,
-    status: "pending",
-    priority: "urgent",
-    notes: "Customer needs to extend for a meeting",
-    requestedBy: "watchman_1",
-    requestedAt: new Date(Date.now() - 300000),
-  },
-  {
-    id: "req_3",
-    customerId: "cust_3",
-    customerName: "Mike Chen",
-    customerPhone: "+1 555-9012",
-    vehiclePlate: "DEF-4567",
-    vehicleType: "compact",
-    parkingId: "park_2",
-    parkingName: "Airport Parking",
-    requestType: "walk_in",
-    requestedStart: new Date(Date.now() - 3600000),
-    requestedEnd: new Date(Date.now() + 3600000 * 8),
-    estimatedAmount: 45.00,
-    status: "approved",
-    priority: "normal",
-    requestedBy: "watchman_1",
-    requestedAt: new Date(Date.now() - 3600000),
-    processedBy: "admin_1",
-    processedAt: new Date(Date.now() - 1800000),
-  },
-  {
-    id: "req_4",
-    customerId: "cust_4",
-    customerName: "Lisa Park",
-    customerPhone: "+1 555-3456",
-    vehiclePlate: "GHI-7890",
-    vehicleType: "motorcycle",
-    parkingId: "park_1",
-    parkingName: "Downtown Parking",
-    requestType: "early_checkout",
-    originalBookingId: "book_456",
-    requestedStart: new Date(Date.now() - 7200000),
-    requestedEnd: new Date(),
-    estimatedAmount: -5.00,
-    status: "rejected",
-    priority: "normal",
-    notes: "Customer wants early checkout",
-    rejectionReason: "Booking is non-refundable within 2 hours of check-in",
-    requestedBy: "watchman_1",
-    requestedAt: new Date(Date.now() - 7200000),
-    processedBy: "admin_1",
-    processedAt: new Date(Date.now() - 5400000),
-  },
-];
+import { Suspense, useEffect } from "react";
+import { RequestDialog } from "@/components/watchman/request-dialog";
 
 const Loading = () => null;
 
 export default function WatchmanBookingsPage() {
   const { user } = useAuth();
-  const { reservations, adminLocations } = useDataStore();
+  const { reservations, adminLocations, bookingRequests, addBookingRequest, updateBookingRequestStatus, fetchBookingRequests } = useDataStore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   
   const [activeTab, setActiveTab] = useState("today");
-  const [requestTab, setRequestTab] = useState("pending");
+  const [requestTab, setRequestTab] = useState("PENDING");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -165,21 +80,27 @@ export default function WatchmanBookingsPage() {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
-  const [bookingRequests, setBookingRequests] = useState(mockBookingRequests);
   const [isLoading, setIsLoading] = useState(false);
   
-  // New request form
-  const [newRequest, setNewRequest] = useState({
-    customerName: "",
-    customerPhone: "",
-    vehiclePlate: "",
-    vehicleType: "sedan",
-    parkingId: "",
-    requestType: "walk_in" as WatchmanBookingRequest["requestType"],
-    duration: "2",
-    notes: "",
-  });
   const [rejectionReason, setRejectionReason] = useState("");
+
+  useEffect(() => {
+    fetchBookingRequests();
+    
+    // Polling every 30 seconds for live updates (Way.com Style)
+    const interval = setInterval(() => {
+      fetchBookingRequests();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchBookingRequests]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "today" || tab === "requests") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Filter today's bookings
   const today = new Date();
@@ -231,104 +152,53 @@ export default function WatchmanBookingsPage() {
   }, [bookingRequests, requestTab]);
 
   const getStatusBadge = (status: string) => {
+    const s = status.toUpperCase();
     const config: Record<string, { variant: "success" | "warning" | "error" | "info" | "default"; label: string }> = {
-      pending: { variant: "warning", label: "Pending" },
-      confirmed: { variant: "success", label: "Confirmed" },
-      cancelled: { variant: "error", label: "Cancelled" },
-      completed: { variant: "info", label: "Completed" },
-      approved: { variant: "success", label: "Approved" },
-      rejected: { variant: "error", label: "Rejected" },
+      PENDING: { variant: "warning", label: "Pending" },
+      CONFIRMED: { variant: "success", label: "Confirmed" },
+      CANCELLED: { variant: "error", label: "Cancelled" },
+      COMPLETED: { variant: "info", label: "Completed" },
+      APPROVED: { variant: "success", label: "Approved" },
+      REJECTED: { variant: "error", label: "Rejected" },
     };
-    const item = config[status] || { variant: "default" as const, label: status };
+    const item = config[s] || { variant: "default" as const, label: status };
     return <StatusBadge status={item.label} variant={item.variant} />;
   };
 
   const getRequestTypeBadge = (type: WatchmanBookingRequest["requestType"]) => {
     const config: Record<WatchmanBookingRequest["requestType"], { className: string; label: string }> = {
-      walk_in: { className: "bg-blue-100 text-blue-700", label: "Walk-in" },
-      extension: { className: "bg-purple-100 text-purple-700", label: "Extension" },
-      modification: { className: "bg-amber-100 text-amber-700", label: "Modification" },
-      early_checkout: { className: "bg-slate-100 text-slate-700", label: "Early Checkout" },
+      WALK_IN: { className: "bg-blue-100 text-blue-700", label: "Walk-in" },
+      EXTENSION: { className: "bg-purple-100 text-purple-700", label: "Extension" },
+      MODIFICATION: { className: "bg-amber-100 text-amber-700", label: "Modification" },
+      EARLY_CHECKOUT: { className: "bg-slate-100 text-slate-700", label: "Early Checkout" },
     };
     const item = config[type] || { className: "bg-slate-100 text-slate-700", label: type };
     return <Badge className={item.className}>{item.label}</Badge>;
   };
 
-  const handleCreateRequest = async () => {
-    if (!newRequest.customerName || !newRequest.vehiclePlate || !newRequest.parkingId) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-
-    const parking = adminLocations.find((l) => l.id === newRequest.parkingId);
-    const newReq: WatchmanBookingRequest = {
-      id: `req_${Date.now()}`,
-      customerId: `cust_${Date.now()}`,
-      customerName: newRequest.customerName,
-      customerPhone: newRequest.customerPhone,
-      vehiclePlate: newRequest.vehiclePlate.toUpperCase(),
-      vehicleType: newRequest.vehicleType,
-      parkingId: newRequest.parkingId,
-      parkingName: parking?.name || "Unknown",
-      requestType: newRequest.requestType,
-      requestedStart: new Date(),
-      requestedEnd: new Date(Date.now() + parseInt(newRequest.duration) * 3600000),
-      estimatedAmount: parseInt(newRequest.duration) * 5,
-      status: "pending",
-      priority: "normal",
-      notes: newRequest.notes,
-      requestedBy: user?.id || "watchman_1",
-      requestedAt: new Date(),
-    };
-
-    setBookingRequests((prev) => [newReq, ...prev]);
-    setIsNewRequestOpen(false);
-    setNewRequest({
-      customerName: "",
-      customerPhone: "",
-      vehiclePlate: "",
-      vehicleType: "sedan",
-      parkingId: "",
-      requestType: "walk_in",
-      duration: "2",
-      notes: "",
-    });
-    setIsLoading(false);
-
-    toast({
-      title: "Request Created",
-      description: "Booking request submitted for approval",
-    });
-  };
+  // handleCreateRequest logic moved to RequestDialog component
 
   const handleApproveRequest = async () => {
     if (!selectedRequest) return;
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequest.id
-          ? { ...r, status: "approved", processedBy: user?.id, processedAt: new Date() }
-          : r
-      )
-    );
-    setIsApproveDialogOpen(false);
-    setSelectedRequest(null);
-    setIsLoading(false);
-
-    toast({
-      title: "Request Approved",
-      description: "The booking request has been approved",
-    });
+    try {
+      await updateBookingRequestStatus(selectedRequest.id, "APPROVED");
+      setIsApproveDialogOpen(false);
+      setSelectedRequest(null);
+      toast({
+        title: "Request Approved",
+        description: "A real booking and active session have been created automatically.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRejectRequest = async () => {
@@ -342,49 +212,46 @@ export default function WatchmanBookingsPage() {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequest.id
-          ? {
-              ...r,
-              status: "rejected",
-              processedBy: user?.id,
-              processedAt: new Date(),
-              rejectionReason,
-            }
-          : r
-      )
-    );
-    setIsRejectDialogOpen(false);
-    setSelectedRequest(null);
-    setRejectionReason("");
-    setIsLoading(false);
-
-    toast({
-      title: "Request Rejected",
-      description: "The booking request has been rejected",
-    });
+    try {
+      await updateBookingRequestStatus(selectedRequest.id, "REJECTED", rejectionReason);
+      setIsRejectDialogOpen(false);
+      setSelectedRequest(null);
+      setRejectionReason("");
+      toast({
+        title: "Request Rejected",
+        description: "The booking request has been rejected",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelRequest = async (request: WatchmanBookingRequest) => {
     if (!confirm("Are you sure you want to cancel this request?")) return;
 
-    setBookingRequests((prev) =>
-      prev.map((r) =>
-        r.id === request.id ? { ...r, status: "cancelled" } : r
-      )
-    );
-
-    toast({
-      title: "Request Cancelled",
-      description: "The booking request has been cancelled",
-    });
+    try {
+      await updateBookingRequestStatus(request.id, "CANCELLED");
+      toast({
+        title: "Request Cancelled",
+        description: "The booking request has been cancelled",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel request",
+        variant: "destructive",
+      });
+    }
   };
 
-  const pendingCount = bookingRequests.filter((r) => r.status === "pending").length;
-  const urgentCount = bookingRequests.filter((r) => r.status === "pending" && r.priority === "urgent").length;
+  const pendingCount = bookingRequests.filter((r) => r.status === "PENDING").length;
+  const urgentCount = bookingRequests.filter((r) => r.status === "PENDING" && r.priority === "urgent").length;
 
   return (
     <Suspense fallback={<Loading />}>
@@ -560,19 +427,19 @@ export default function WatchmanBookingsPage() {
                               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {formatTime(booking.checkIn)} - {formatTime(booking.checkOut)}
+                                  {formatTime(new Date(booking.checkIn))} - {formatTime(new Date(booking.checkOut))}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />
-                                  {booking.locationName}
+                                  {booking.location.name}
                                 </span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 sm:gap-4">
                             <div className="text-right">
-                              <p className="font-semibold text-foreground">{formatCurrency(booking.total)}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(booking.checkIn)}</p>
+                              <p className="font-semibold text-foreground">{formatCurrency(booking.totalPrice)}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(new Date(booking.checkIn))}</p>
                             </div>
                             <Link href="/watchman/scan">
                               <Button size="sm" variant={isCheckIn ? "default" : "secondary"}>
@@ -610,7 +477,7 @@ export default function WatchmanBookingsPage() {
                   </div>
                   <Tabs value={requestTab} onValueChange={setRequestTab}>
                     <TabsList>
-                      <TabsTrigger value="pending" className="text-xs sm:text-sm">
+                      <TabsTrigger value="PENDING" className="text-xs sm:text-sm">
                         Pending
                         {pendingCount > 0 && (
                           <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
@@ -618,8 +485,8 @@ export default function WatchmanBookingsPage() {
                           </Badge>
                         )}
                       </TabsTrigger>
-                      <TabsTrigger value="approved" className="text-xs sm:text-sm">Approved</TabsTrigger>
-                      <TabsTrigger value="rejected" className="text-xs sm:text-sm">Rejected</TabsTrigger>
+                      <TabsTrigger value="APPROVED" className="text-xs sm:text-sm">Approved</TabsTrigger>
+                      <TabsTrigger value="REJECTED" className="text-xs sm:text-sm">Rejected</TabsTrigger>
                       <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -645,7 +512,7 @@ export default function WatchmanBookingsPage() {
                       <div
                         key={request.id}
                         className={`p-4 border rounded-lg ${
-                          request.priority === "urgent" && request.status === "pending"
+                          request.priority === "urgent" && request.status === "PENDING"
                             ? "border-red-200 bg-red-50/50"
                             : ""
                         }`}
@@ -672,10 +539,12 @@ export default function WatchmanBookingsPage() {
                                   <Car className="w-3 h-3" />
                                   {request.vehiclePlate}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <Phone className="w-3 h-3" />
-                                  {request.customerPhone}
-                                </span>
+                                {request.customerPhone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="w-3 h-3" />
+                                    {request.customerPhone}
+                                  </span>
+                                )}
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />
                                   {request.parkingName}
@@ -684,12 +553,18 @@ export default function WatchmanBookingsPage() {
                               <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {formatTime(request.requestedStart)} - {formatTime(request.requestedEnd)}
+                                  {formatTime(new Date(request.requestedStart))} - {formatTime(new Date(request.requestedEnd))}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Timer className="w-3 h-3" />
-                                  Requested {formatDate(request.requestedAt)}
+                                  Requested {formatDate(new Date(request.requestedAt))}
                                 </span>
+                                {request.requestedBy && (
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    By {request.requestedBy.firstName}
+                                  </span>
+                                )}
                               </div>
                               {request.notes && (
                                 <p className="mt-2 text-sm text-muted-foreground italic">
@@ -710,7 +585,7 @@ export default function WatchmanBookingsPage() {
                               </p>
                               <p className="text-xs text-muted-foreground">Est. Amount</p>
                             </div>
-                            {request.status === "pending" ? (
+                            {request.status === "PENDING" ? (
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
@@ -760,6 +635,14 @@ export default function WatchmanBookingsPage() {
                                     <Eye className="w-4 h-4 mr-2" />
                                     View Details
                                   </DropdownMenuItem>
+                                  {request.bookingId && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/watchman/sessions?search=${request.vehiclePlate}`}>
+                                        <Timer className="w-4 h-4 mr-2" />
+                                        View Active Session
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -774,141 +657,8 @@ export default function WatchmanBookingsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* New Request Dialog */}
-        <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>New Booking Request</DialogTitle>
-              <DialogDescription>
-                Create a walk-in booking or modification request
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customerName">Customer Name *</Label>
-                  <Input
-                    id="customerName"
-                    placeholder="John Smith"
-                    value={newRequest.customerName}
-                    onChange={(e) => setNewRequest((prev) => ({ ...prev, customerName: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customerPhone">Phone</Label>
-                  <Input
-                    id="customerPhone"
-                    placeholder="+1 555-1234"
-                    value={newRequest.customerPhone}
-                    onChange={(e) => setNewRequest((prev) => ({ ...prev, customerPhone: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vehiclePlate">License Plate *</Label>
-                  <Input
-                    id="vehiclePlate"
-                    placeholder="ABC-1234"
-                    value={newRequest.vehiclePlate}
-                    onChange={(e) => setNewRequest((prev) => ({ ...prev, vehiclePlate: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleType">Vehicle Type</Label>
-                  <Select
-                    value={newRequest.vehicleType}
-                    onValueChange={(v) => setNewRequest((prev) => ({ ...prev, vehicleType: v }))}
-                  >
-                    <SelectTrigger id="vehicleType">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sedan">Sedan</SelectItem>
-                      <SelectItem value="suv">SUV</SelectItem>
-                      <SelectItem value="compact">Compact</SelectItem>
-                      <SelectItem value="truck">Truck</SelectItem>
-                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="requestType">Request Type</Label>
-                  <Select
-                    value={newRequest.requestType}
-                    onValueChange={(v) => setNewRequest((prev) => ({ ...prev, requestType: v as WatchmanBookingRequest["requestType"] }))}
-                  >
-                    <SelectTrigger id="requestType">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="walk_in">Walk-in</SelectItem>
-                      <SelectItem value="extension">Extension</SelectItem>
-                      <SelectItem value="modification">Modification</SelectItem>
-                      <SelectItem value="early_checkout">Early Checkout</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (hours)</Label>
-                  <Select
-                    value={newRequest.duration}
-                    onValueChange={(v) => setNewRequest((prev) => ({ ...prev, duration: v }))}
-                  >
-                    <SelectTrigger id="duration">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 hour</SelectItem>
-                      <SelectItem value="2">2 hours</SelectItem>
-                      <SelectItem value="4">4 hours</SelectItem>
-                      <SelectItem value="8">8 hours</SelectItem>
-                      <SelectItem value="24">24 hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parkingId">Parking Location *</Label>
-                <Select
-                  value={newRequest.parkingId}
-                  onValueChange={(v) => setNewRequest((prev) => ({ ...prev, parkingId: v }))}
-                >
-                  <SelectTrigger id="parkingId">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {adminLocations.slice(0, 3).map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes..."
-                  value={newRequest.notes}
-                  onChange={(e) => setNewRequest((prev) => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewRequestOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateRequest} disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create Request"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Request Dialog */}
+        <RequestDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} />
 
         {/* View Request Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -946,7 +696,7 @@ export default function WatchmanBookingsPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time</span>
                     <span className="font-medium">
-                      {formatTime(selectedRequest.requestedStart)} - {formatTime(selectedRequest.requestedEnd)}
+                      {formatTime(new Date(selectedRequest.requestedStart))} - {formatTime(new Date(selectedRequest.requestedEnd))}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -982,7 +732,7 @@ export default function WatchmanBookingsPage() {
             <DialogHeader>
               <DialogTitle>Approve Request</DialogTitle>
               <DialogDescription>
-                Are you sure you want to approve this booking request?
+                Approving this will automatically create a live booking and start an active parking session for this vehicle.
               </DialogDescription>
             </DialogHeader>
             {selectedRequest && (

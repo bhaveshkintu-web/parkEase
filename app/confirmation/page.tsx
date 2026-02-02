@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
+import { formatCurrency, formatDate, formatTime, calculateQuote } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,6 +26,7 @@ import {
   Smartphone,
   Loader2,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Suspense, useState, useEffect } from "react";
 import Loading from "./loading";
 
@@ -106,7 +107,7 @@ function ConfirmationContent() {
   const code = searchParams.get("code");
   const { location: contextLocation, checkIn: contextCheckIn, checkOut: contextCheckOut } = useBooking();
   
-  const { toast } = require("@/hooks/use-toast");
+  const { toast } = useToast();
   const [booking, setBooking] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -156,8 +157,8 @@ Address: ${bookingLocation.address}
 
 RESERVATION DETAILS
 -------------------
-Drop-off: ${formatDate(checkIn)} 12:00 PM
-Pick-up: ${formatDate(checkOut)} 12:00 PM
+Drop-off: ${formatDate(checkIn)} ${formatTime(checkIn)}
+Pick-up: ${formatDate(checkOut)} ${formatTime(checkOut)}
 Duration: ${quote.days} day(s)
 
 GUEST INFORMATION
@@ -409,7 +410,7 @@ Visit our website at parkease.com for help.
                     <div>
                       <p className="text-sm text-muted-foreground">Drop-off</p>
                       <p className="font-medium text-foreground">{formatDate(checkIn)}</p>
-                      <p className="text-sm text-muted-foreground">12:00 PM</p>
+                      <p className="text-sm text-muted-foreground">{formatTime(checkIn)}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -419,7 +420,7 @@ Visit our website at parkease.com for help.
                     <div>
                       <p className="text-sm text-muted-foreground">Pick-up</p>
                       <p className="font-medium text-foreground">{formatDate(checkOut)}</p>
-                      <p className="text-sm text-muted-foreground">12:00 PM</p>
+                      <p className="text-sm text-muted-foreground">{formatTime(checkOut)}</p>
                     </div>
                   </div>
                 </div>
@@ -613,13 +614,16 @@ Visit our website at parkease.com for help.
                 variant="outline" 
                 className="gap-2 bg-transparent"
                 onClick={() => {
+                  const SUPPORT_PHONE = "(800) 555-0199";
                   const facilityPhone = bookingLocation.shuttleInfo?.phone || bookingLocation.owner?.user?.phone;
-                  if (facilityPhone) {
-                    window.location.href = `tel:${facilityPhone}`;
+                  const phoneToCall = facilityPhone || SUPPORT_PHONE;
+                  
+                  if (phoneToCall) {
+                    window.location.href = `tel:${phoneToCall.replace(/[^\d+]/g, '')}`;
                   } else {
                     toast({
                       title: "Contact Info",
-                      description: "Facility contact information not available.",
+                      description: "Contact information not available.",
                     });
                   }
                 }}

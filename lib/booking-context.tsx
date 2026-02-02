@@ -28,14 +28,14 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 const getDefaultCheckIn = () => {
   const date = new Date();
-  date.setHours(12, 0, 0, 0);
+  date.setHours(date.getHours() + 1, 0, 0, 0);
   return date;
 };
 
 const getDefaultCheckOut = () => {
   const date = new Date();
   date.setDate(date.getDate() + 3);
-  date.setHours(12, 0, 0, 0);
+  date.setHours(date.getHours() + 1, 0, 0, 0);
   return date;
 };
 

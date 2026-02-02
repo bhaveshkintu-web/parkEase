@@ -83,6 +83,7 @@ export interface VehicleInfo {
   model: string;
   color: string;
   licensePlate: string;
+  type?: string;
 }
 
 export interface Quote {
@@ -247,27 +248,29 @@ export interface ParkingSession {
 // Watchman Booking Request Types
 export interface WatchmanBookingRequest {
   id: string;
-  customerId: string;
+  customerId?: string;
   customerName: string;
-  customerPhone: string;
+  customerPhone?: string;
   vehiclePlate: string;
   vehicleType: string;
   parkingId: string;
   parkingName: string;
   spotNumber?: string;
-  requestType: "walk_in" | "extension" | "modification" | "early_checkout";
+  requestType: "WALK_IN" | "EXTENSION" | "MODIFICATION" | "EARLY_CHECKOUT";
   originalBookingId?: string;
-  requestedStart: Date;
-  requestedEnd: Date;
+  requestedStart: string | Date;
+  requestedEnd: string | Date;
   estimatedAmount: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  priority: "normal" | "urgent";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  priority: string;
   notes?: string;
-  requestedBy: string;
-  requestedAt: Date;
-  processedBy?: string;
-  processedAt?: Date;
+  requestedById: string;
+  requestedAt: string | Date;
+  processedById?: string;
+  processedAt?: string | Date;
   rejectionReason?: string;
+  requestedBy?: { firstName: string, lastName: string };
+  bookingId?: string;
 }
 
 // Watchman Activity Types

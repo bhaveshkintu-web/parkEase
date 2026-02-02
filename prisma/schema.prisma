@@ -31,6 +31,8 @@ model User {
   reviews          Review[]
   savedVehicles    SavedVehicle[]
   watchmanProfile  Watchman?
+  requestedBookings BookingRequest[] @relation("RequestedBy")
+  processedBookings BookingRequest[] @relation("ProcessedBy")
 }
 
 model OwnerProfile {
@@ -96,11 +98,12 @@ model ParkingLocation {
   reviews        Review[]
   watchmanShifts WatchmanShift[]
   watchmen       Watchman[]
+  bookingRequests BookingRequest[]
 }
 
 model Booking {
   id               String          @id @default(cuid())
-  userId           String
+  userId           String?
   locationId       String
   checkIn          DateTime
   checkOut         DateTime
@@ -121,7 +124,7 @@ model Booking {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   location         ParkingLocation @relation(fields: [locationId], references: [id])
-  user             User            @relation(fields: [userId], references: [id])
+  user             User?           @relation(fields: [userId], references: [id])
   parkingSession   ParkingSession?
   payment          Payment?
   refunds          RefundRequest[]
@@ -219,6 +222,7 @@ model ParkingSession {
   checkInTime  DateTime?
   checkOutTime DateTime?
   status       String
+  updatedAt    DateTime        @updatedAt
   booking      Booking         @relation(fields: [bookingId], references: [id])
   location     ParkingLocation @relation(fields: [locationId], references: [id])
 }
@@ -463,4 +467,71 @@ enum WatchmanShiftStatus {
   COMPLETED
   MISSED
   PARTIAL
+}
+
+model BookingRequest {
+  id               String               @id @default(cuid())
+  customerId       String?
+  customerName     String
+  customerPhone    String?
+  vehiclePlate     String
+  vehicleType      String
+  parkingId        String
+  parkingName      String
+  spotNumber       String?
+  requestType      RequestType
+  originalBookingId String?
+  requestedStart   DateTime
+  requestedEnd     DateTime
+  estimatedAmount  Float
+  status           BookingRequestStatus @default(PENDING)
+  priority         String               @default("normal")
+  notes            String?
+  requestedById    String
+  requestedBy      User                 @relation("RequestedBy", fields: [requestedById], references: [id])
+  requestedAt      DateTime             @default(now())
+  processedById    String?
+  processedBy      User?                @relation("ProcessedBy", fields: [processedById], references: [id])
+  processedAt      DateTime?
+  rejectionReason  String?
+  bookingId        String?              @unique
+  location         ParkingLocation      @relation(fields: [parkingId], references: [id])
+
+  @@index([parkingId])
+  @@index([requestedById])
+  @@index([status])
+}
+
+enum BookingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum RequestType {
+  WALK_IN
+  EXTENSION
+  MODIFICATION
+  EARLY_CHECKOUT
+}
+
+model SupportTicket {
+  id        String       @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
 }
