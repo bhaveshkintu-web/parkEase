@@ -37,6 +37,7 @@ const navLinks = [
   { href: "#", label: "Car Wash", icon: Droplets },
   { href: "#", label: "Gas", icon: Fuel },
   { href: "#", label: "EV Chargers", icon: Zap },
+  { href: "/partner-with-us", label: "Partner With Us", icon: Building2 },
 ];
 
 export function Navbar() {
@@ -160,17 +161,6 @@ export function Navbar() {
                       )}
                     </>
                   )}
-                {user.role.toLowerCase() === "customer" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/partner-with-us">
-                        <Building2 className="mr-2 h-4 w-4" />
-                        Partner With Us
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
