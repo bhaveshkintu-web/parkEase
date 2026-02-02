@@ -22,6 +22,7 @@ import type {
   Promotion,
   CMSPage,
   OwnerProfile,
+  WatchmanBookingRequest,
 } from "./types";
 import { parkingLocations, reviews as baseReviews } from "./data";
 
@@ -798,6 +799,12 @@ interface DataStoreContextType {
   // Admin: Refunds
   refundRequests: RefundRequest[];
   processRefund: (id: string, action: "approve" | "partial" | "reject", amount?: number) => Promise<void>;
+  
+  // Watchman: Booking Requests
+  bookingRequests: WatchmanBookingRequest[];
+  fetchBookingRequests: (parkingId?: string) => Promise<void>;
+  addBookingRequest: (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => Promise<WatchmanBookingRequest>;
+  updateBookingRequestStatus: (id: string, status: WatchmanBookingRequest["status"], rejectionReason?: string) => Promise<void>;
 
   // Admin: Commissions
   commissionRules: CommissionRule[];
@@ -867,6 +874,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>(generateMockUsers());
   const [ownerProfiles, setOwnerProfiles] = useState<OwnerProfile[]>(generateMockOwnerProfiles());
   const [currentOwnerProfile, setCurrentOwnerProfile] = useState<OwnerProfile | null>(null);
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -891,6 +899,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const initializeForWatchman = useCallback((_watchmanId: string) => {
     setIsLoading(true);
     setParkingSessions(generateMockParkingSessions());
+    fetchBookingRequests();
     setIsLoading(false);
   }, []);
 
@@ -1398,6 +1407,42 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const fetchBookingRequests = useCallback(async (parkingId?: string) => {
+    try {
+      let url = "/api/watchman/requests";
+      if (parkingId) url += `?parkingId=${parkingId}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch requests");
+      const data = await res.json();
+      setBookingRequests(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  const addBookingRequest = useCallback(async (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => {
+    const res = await fetch("/api/watchman/requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) throw new Error("Failed to create request");
+    const newRequest = await res.json();
+    setBookingRequests((prev) => [newRequest, ...prev]);
+    return newRequest;
+  }, []);
+
+  const updateBookingRequestStatus = useCallback(async (id: string, status: WatchmanBookingRequest["status"], rejectionReason?: string) => {
+    const res = await fetch(`/api/watchman/requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, rejectionReason }),
+    });
+    if (!res.ok) throw new Error("Failed to update status");
+    const updatedRequest = await res.json();
+    setBookingRequests((prev) => prev.map((r) => (r.id === id ? updatedRequest : r)));
+  }, []);
+
   return (
     <DataStoreContext.Provider
       value={{
@@ -1473,6 +1518,10 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         initializeForOwner,
         initializeForWatchman,
         currentOwnerProfile,
+        bookingRequests,
+        fetchBookingRequests,
+        addBookingRequest,
+        updateBookingRequestStatus,
       }}
     >
       {children}

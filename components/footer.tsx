@@ -15,12 +15,12 @@ const footerLinks = {
     { label: "Careers", href: "#" },
     { label: "Press", href: "#" },
     { label: "Blog", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Contact", href: "/support" },
   ],
   Support: [
-    { label: "Help Center", href: "#" },
-    { label: "FAQs", href: "#" },
-    { label: "Cancellation Policy", href: "#" },
+    { label: "Help Center", href: "/support" },
+    { label: "FAQs", href: "/support#faqs" },
+    { label: "Cancellation Policy", href: "/cancellation-policy" },
     { label: "Report an Issue", href: "#" },
   ],
   Legal: [

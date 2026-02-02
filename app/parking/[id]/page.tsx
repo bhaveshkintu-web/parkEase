@@ -487,14 +487,14 @@ function LocationDetailsContent({ id }: { id: string }) {
               />
 
               {/* Nearby Options */}
-              {nearbyLocations.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Need more options?</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {nearbyLocations.map((nearby) => (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Need more options?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {nearbyLocations.length > 0 ? (
+                      nearbyLocations.map((nearby) => (
                         <Link
                           key={nearby.id}
                           href={`/parking/${nearby.id}`}
@@ -505,8 +505,6 @@ function LocationDetailsContent({ id }: { id: string }) {
                             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                               <Star className="h-3 w-3 fill-accent text-accent" />
                               <span>{nearby.rating}</span>
-                              <span>·</span>
-                              <span>{nearby.distance}</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -516,16 +514,20 @@ function LocationDetailsContent({ id }: { id: string }) {
                             <p className="text-xs text-muted-foreground">per day</p>
                           </div>
                         </Link>
-                      ))}
-                    </div>
-                    <Button variant="outline" className="mt-4 w-full bg-transparent" asChild>
-                      <Link href={`/parking?q=${location.airportCode}`}>
-                        View all {location.airportCode} parking
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No other parking options available at this location.
+                      </p>
+                    )}
+                  </div>
+                  <Button variant="outline" className="mt-4 w-full bg-transparent" asChild>
+                    <Link href="/parking">
+                      View all parking
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Booking Widget - Desktop */}

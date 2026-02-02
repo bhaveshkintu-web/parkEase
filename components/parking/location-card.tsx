@@ -133,23 +133,32 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
               )}
             </div>
 
-            {/* Availability Status */}
-            <div className={cn(
-              "flex items-center gap-1 text-sm font-medium",
-              availability.status === "soldout" 
-                ? "text-destructive" 
-                : availability.status === "limited" 
-                ? "text-amber-600 dark:text-amber-400" 
-                : "text-primary"
-            )}>
-              {availability.status === "soldout" ? (
-                <AlertCircle className="h-4 w-4" />
-              ) : availability.status === "limited" ? (
-                <AlertCircle className="h-4 w-4" />
-              ) : (
-                <CheckCircle className="h-4 w-4" />
+            {/* Availability Status & Trust Badge */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className={cn(
+                "flex items-center gap-1 text-sm font-medium",
+                availability.status === "soldout" 
+                  ? "text-destructive" 
+                  : availability.status === "limited" 
+                  ? "text-amber-600 dark:text-amber-400" 
+                  : "text-primary"
+              )}>
+                {availability.status === "soldout" ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : availability.status === "limited" ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                {availability.message}
+              </div>
+
+              {availability.status !== "soldout" && (
+                <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                  <Shield className="h-3 w-3" />
+                  Safety Assured
+                </div>
               )}
-              {availability.message}
             </div>
           </div>
 
@@ -172,15 +181,6 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/parking/${location.id}`}>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="hidden bg-transparent sm:flex"
-                >
-                  More Info
-                </Button>
-              </Link>
               <Link href={`/parking/${location.id}`}>
                 <Button disabled={availability.status === "soldout"}>
                   {availability.status === "soldout" ? "Sold Out" : "Select"}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
@@ -21,41 +22,64 @@ import {
   AlertTriangle,
   Timer,
   Calendar,
-  Activity, // Added import for Activity
+  Activity,
+  FileText,
 } from "lucide-react";
 
 export default function WatchmanDashboard() {
   const { user } = useAuth();
-  const { reservations, parkingSessions, adminLocations } = useDataStore();
+  const { fetchBookingRequests } = useDataStore();
+  
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get today's bookings
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/dashboard");
+      if (res.ok) {
+        const data = await res.json();
+        setDashboardData(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    fetchBookingRequests(); // Poll for notifications too
+
+    const interval = setInterval(() => {
+      fetchDashboardData();
+      fetchBookingRequests();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchDashboardData, fetchBookingRequests]);
+
+  if (isLoading && !dashboardData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  const { stats, occupancy, schedule, recentActivity } = dashboardData || {
+    stats: { todayCheckIns: 0, todayCheckOuts: 0, pendingArrivals: 0, overstays: 0, pendingRequestsCount: 0 },
+    occupancy: { totalCapacity: 0, totalOccupied: 0, locations: [] },
+    schedule: [],
+    recentActivity: []
+  };
+
+  const occupancyRate = occupancy.totalCapacity > 0 
+    ? Math.round((occupancy.totalOccupied / occupancy.totalCapacity) * 100) 
+    : 0;
+
   const today = new Date();
-  const todayBookings = reservations.filter(
-    (r) =>
-      new Date(r.checkIn).toDateString() === today.toDateString() ||
-      new Date(r.checkOut).toDateString() === today.toDateString()
-  );
-
-  // Get current watchman stats
-  const todayCheckIns = parkingSessions.filter(
-    (s) => s.checkInTime && new Date(s.checkInTime).toDateString() === today.toDateString()
-  ).length;
-
-  const todayCheckOuts = parkingSessions.filter(
-    (s) => s.checkOutTime && new Date(s.checkOutTime).toDateString() === today.toDateString()
-  ).length;
-
-  const pendingSessions = parkingSessions.filter((s) => s.status === "pending");
-  const activeOversays = parkingSessions.filter((s) => s.status === "overstay");
-
-  // Assigned locations (demo: first 2 locations)
-  const assignedLocations = adminLocations.slice(0, 2);
-  const totalCapacity = assignedLocations.reduce((sum, l) => sum + l.totalSpots, 0);
-  const totalOccupied = assignedLocations.reduce(
-    (sum, l) => sum + (l.totalSpots - l.availableSpots),
-    0
-  );
-  const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
@@ -79,32 +103,32 @@ export default function WatchmanDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Check-ins Today"
-          value={todayCheckIns}
+          value={stats.todayCheckIns}
           icon={CheckCircle}
           iconColor="text-green-600"
           iconBgColor="bg-green-100"
         />
         <StatCard
           title="Check-outs Today"
-          value={todayCheckOuts}
+          value={stats.todayCheckOuts}
           icon={XCircle}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
         />
         <StatCard
           title="Pending Arrivals"
-          value={pendingSessions.length}
+          value={stats.pendingArrivals}
           icon={Clock}
           iconColor="text-amber-600"
           iconBgColor="bg-amber-100"
         />
         <StatCard
           title="Overstays"
-          value={activeOversays.length}
+          value={stats.overstays}
           icon={AlertTriangle}
           iconColor="text-red-600"
           iconBgColor="bg-red-100"
-          subtitle={activeOversays.length > 0 ? "Action required" : "None"}
+          subtitle={stats.overstays > 0 ? "Action required" : "None"}
         />
       </div>
 
@@ -124,11 +148,19 @@ export default function WatchmanDashboard() {
           },
           {
             label: "Today's Bookings",
-            description: `${todayBookings.length} reservations`,
-            href: "/watchman/bookings",
+            description: `${schedule.length} reservations`,
+            href: "/watchman/bookings?tab=today",
             icon: Calendar,
             iconColor: "text-blue-600",
             iconBgColor: "bg-blue-100",
+          },
+          {
+            label: "Booking Requests",
+            description: `${stats.pendingRequestsCount} pending`,
+            href: "/watchman/bookings?tab=requests",
+            icon: FileText,
+            iconColor: "text-amber-600",
+            iconBgColor: "bg-amber-100",
           },
           {
             label: "Active Sessions",
@@ -168,17 +200,17 @@ export default function WatchmanDashboard() {
               <Progress value={occupancyRate} className="h-3" />
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{totalCapacity}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{occupancy.totalCapacity}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
                 <div className="p-2 sm:p-3 rounded-lg bg-green-50">
                   <p className="text-xl sm:text-2xl font-bold text-green-600">
-                    {totalCapacity - totalOccupied}
+                    {occupancy.totalCapacity - occupancy.totalOccupied}
                   </p>
                   <p className="text-xs text-muted-foreground">Available</p>
                 </div>
                 <div className="p-2 sm:p-3 rounded-lg bg-primary/10">
-                  <p className="text-xl sm:text-2xl font-bold text-primary">{totalOccupied}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-primary">{occupancy.totalOccupied}</p>
                   <p className="text-xs text-muted-foreground">Occupied</p>
                 </div>
               </div>
@@ -186,7 +218,7 @@ export default function WatchmanDashboard() {
               {/* Assigned Locations */}
               <div className="pt-4 border-t space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Assigned Locations</p>
-                {assignedLocations.map((location) => (
+                {occupancy.locations.map((location: any) => (
                   <div
                     key={location.id}
                     className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
@@ -196,7 +228,7 @@ export default function WatchmanDashboard() {
                       <span className="text-sm font-medium">{location.name}</span>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {location.availableSpots}/{location.totalSpots}
+                      {location.available}/{location.total}
                     </span>
                   </div>
                 ))}
@@ -221,12 +253,12 @@ export default function WatchmanDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {todayBookings.length === 0 ? (
+              {schedule.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No bookings scheduled for today
                 </div>
               ) : (
-                todayBookings.slice(0, 5).map((booking) => {
+                schedule.map((booking: any) => {
                   const isCheckIn =
                     new Date(booking.checkIn).toDateString() === today.toDateString();
                   return (
@@ -248,14 +280,14 @@ export default function WatchmanDashboard() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-foreground text-sm truncate">
-                            {booking.vehicleInfo.licensePlate}
+                            {booking.vehiclePlate}
                           </p>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             <span>
                               {isCheckIn
-                                ? `Check-in: ${formatTime(booking.checkIn)}`
-                                : `Check-out: ${formatTime(booking.checkOut)}`}
+                                ? `Check-in: ${formatTime(new Date(booking.checkIn))}`
+                                : `Check-out: ${formatTime(new Date(booking.checkOut))}`}
                             </span>
                           </div>
                         </div>
@@ -274,7 +306,7 @@ export default function WatchmanDashboard() {
       </div>
 
       {/* Overstays Alert */}
-      {activeOversays.length > 0 && (
+      {stats.overstays > 0 && (
         <Card className="border-red-200 bg-red-50/50">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -287,31 +319,15 @@ export default function WatchmanDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {activeOversays.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <Car className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground text-sm">
-                        {session.vehiclePlate}
-                      </p>
-                      <p className="text-xs text-red-600">
-                        Overstay since {formatTime(session.checkInTime!)}
-                      </p>
-                    </div>
-                  </div>
-                  <Link href={`/watchman/sessions/${session.id}`}>
-                    <Button variant="destructive" size="sm">
-                      Handle
-                    </Button>
-                  </Link>
-                </div>
-              ))}
+              {/* Note: In a real system, you'd fetch specific overstay sessions */}
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Review overstaying vehicles in the Sessions tab
+              </p>
+              <Link href="/watchman/sessions?status=overstay">
+                <Button variant="destructive" className="w-full">
+                  View Overstays
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -333,10 +349,7 @@ export default function WatchmanDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {parkingSessions
-              .filter((s) => s.checkInTime || s.checkOutTime)
-              .slice(0, 4)
-              .map((session) => (
+            {recentActivity.map((session: any) => (
                 <div
                   key={session.id}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
@@ -359,8 +372,8 @@ export default function WatchmanDashboard() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {session.status === "checked_in"
-                          ? `Checked in ${formatTime(session.checkInTime!)}`
-                          : `Checked out ${formatTime(session.checkOutTime!)}`}
+                          ? `Checked in ${formatTime(new Date(session.time))}`
+                          : `Checked out ${formatTime(new Date(session.time))}`}
                       </p>
                     </div>
                   </div>
@@ -378,7 +391,7 @@ export default function WatchmanDashboard() {
                   />
                 </div>
               ))}
-            {parkingSessions.filter((s) => s.checkInTime || s.checkOutTime).length === 0 && (
+            {recentActivity.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 No recent activity
               </div>

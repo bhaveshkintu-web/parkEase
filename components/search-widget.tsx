@@ -10,7 +10,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useBooking } from "@/lib/booking-context";
-import { destinations, formatDate } from "@/lib/data";
+import { destinations, formatDate, formatTime } from "@/lib/data";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Destination } from "@/lib/types";
 import {
   Search,
@@ -353,30 +360,68 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Drop-off</span>
-                <span className="text-sm">{formatDate(checkIn)}</span>
+                <span className="text-sm">{formatDate(checkIn)} {formatTime(checkIn)}</span>
               </div>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={checkIn}
-              onSelect={(date) => {
-                if (date) {
-                  const newDate = new Date(date);
-                  newDate.setHours(12, 0, 0, 0);
-                  setCheckIn(newDate);
-                  if (newDate >= checkOut) {
-                    const newCheckOut = new Date(newDate);
-                    newCheckOut.setDate(newCheckOut.getDate() + 1);
-                    setCheckOut(newCheckOut);
+          <PopoverContent className="w-auto p-4" align="start">
+            <div className="space-y-4">
+              <Calendar
+                mode="single"
+                selected={checkIn}
+                onSelect={(date) => {
+                  if (date) {
+                    const newDate = new Date(date);
+                    newDate.setHours(checkIn.getHours(), checkIn.getMinutes());
+                    setCheckIn(newDate);
+                    if (newDate >= checkOut) {
+                      const newCheckOut = new Date(newDate);
+                      newCheckOut.setHours(newCheckOut.getHours() + 2);
+                      setCheckOut(newCheckOut);
+                    }
                   }
-                  setCheckInOpen(false);
-                }
-              }}
-              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-              initialFocus
-            />
+                }}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                initialFocus
+              />
+              <div className="border-t border-border pt-3">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Drop-off Time</label>
+                <Select
+                  value={`${checkIn.getHours().toString().padStart(2, '0')}:${checkIn.getMinutes().toString().padStart(2, '0')}`}
+                  onValueChange={(value) => {
+                    const [hours, minutes] = value.split(':').map(Number);
+                    const newDate = new Date(checkIn);
+                    newDate.setHours(hours, minutes);
+                    setCheckIn(newDate);
+                    if (newDate >= checkOut) {
+                      const newCheckOut = new Date(newDate);
+                      newCheckOut.setHours(newCheckOut.getHours() + 2);
+                      setCheckOut(newCheckOut);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 48 }).map((_, i) => {
+                      const hour = Math.floor(i / 2);
+                      const minute = (i % 2) * 30;
+                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                      const displayHour = hour % 12 || 12;
+                      const displayMinute = minute.toString().padStart(2, '0');
+                      const ampm = hour < 12 ? 'AM' : 'PM';
+                      return (
+                        <SelectItem key={timeString} value={timeString}>
+                          {displayHour}:{displayMinute} {ampm}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full" size="sm" onClick={() => setCheckInOpen(false)}>Done</Button>
+            </div>
           </PopoverContent>
         </Popover>
 
@@ -393,25 +438,58 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Pick-up</span>
-                <span className="text-sm">{formatDate(checkOut)}</span>
+                <span className="text-sm">{formatDate(checkOut)} {formatTime(checkOut)}</span>
               </div>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={checkOut}
-              onSelect={(date) => {
-                if (date) {
-                  const newDate = new Date(date);
-                  newDate.setHours(12, 0, 0, 0);
-                  setCheckOut(newDate);
-                  setCheckOutOpen(false);
-                }
-              }}
-              disabled={(date) => date <= checkIn}
-              initialFocus
-            />
+          <PopoverContent className="w-auto p-4" align="start">
+            <div className="space-y-4">
+              <Calendar
+                mode="single"
+                selected={checkOut}
+                onSelect={(date) => {
+                  if (date) {
+                    const newDate = new Date(date);
+                    newDate.setHours(checkOut.getHours(), checkOut.getMinutes());
+                    setCheckOut(newDate);
+                  }
+                }}
+                disabled={(date) => date <= checkIn}
+                initialFocus
+              />
+              <div className="border-t border-border pt-3">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Pick-up Time</label>
+                <Select
+                  value={`${checkOut.getHours().toString().padStart(2, '0')}:${checkOut.getMinutes().toString().padStart(2, '0')}`}
+                  onValueChange={(value) => {
+                    const [hours, minutes] = value.split(':').map(Number);
+                    const newDate = new Date(checkOut);
+                    newDate.setHours(hours, minutes);
+                    setCheckOut(newDate);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 48 }).map((_, i) => {
+                      const hour = Math.floor(i / 2);
+                      const minute = (i % 2) * 30;
+                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                      const displayHour = hour % 12 || 12;
+                      const displayMinute = minute.toString().padStart(2, '0');
+                      const ampm = hour < 12 ? 'AM' : 'PM';
+                      return (
+                        <SelectItem key={timeString} value={timeString}>
+                          {displayHour}:{displayMinute} {ampm}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full" size="sm" onClick={() => setCheckOutOpen(false)}>Done</Button>
+            </div>
           </PopoverContent>
         </Popover>
 

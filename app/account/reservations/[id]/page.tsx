@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { getBookingDetails, cancelBooking, submitReview } from "@/lib/actions/booking-actions";
+import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -78,6 +78,10 @@ export default function ReservationDetailPage({
   const [reviewContent, setReviewContent] = React.useState("");
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = React.useState(false);
+
+  // Email state
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
+  const [shareEmail, setShareEmail] = React.useState("");
 
   React.useEffect(() => {
     async function loadBooking() {
@@ -208,6 +212,91 @@ export default function ReservationDetailPage({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleEmailReceipt = async () => {
+    setIsSendingEmail(true);
+    try {
+      const response = await sendEmailReceipt(id);
+      if (response.success) {
+        toast({
+          title: "Email Sent!",
+          description: `A copy of your receipt has been sent to ${reservation.guestEmail}.`,
+        });
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleShareEmail = async () => {
+    if (!shareEmail || !shareEmail.includes("@")) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const response = await sendEmailReceipt(id, shareEmail);
+      if (response.success) {
+        toast({
+          title: "Reservation Shared!",
+          description: `Details have been sent to ${shareEmail}.`,
+        });
+        setShowShareDialog(false);
+        setShareEmail("");
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to share",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleCallLocation = () => {
+    const SUPPORT_PHONE = "(800) 555-0199";
+    const phone = reservation?.location?.owner?.user?.phone || reservation?.location?.phone || reservation?.location?.shuttleInfo?.phone;
+    const phoneToCall = phone || SUPPORT_PHONE;
+
+    if (phoneToCall) {
+      window.location.href = `tel:${phoneToCall.replace(/[^\d+]/g, '')}`;
+    } else {
+      toast({
+        title: "Phone number not available",
+        description: "We couldn't find a contact number for this location.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenMaps = () => {
+    const { address, city, state, zipCode } = reservation.location;
+    const fullAddress = `${address}, ${city}, ${state || ""} ${zipCode || ""}`;
+    const query = encodeURIComponent(fullAddress);
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(googleMapsUrl, "_blank");
+  };
+
+  const handleContactSupport = () => {
+    window.location.href = "/support";
   };
 
   const getStatusConfig = () => {
@@ -393,8 +482,18 @@ export default function ReservationDetailPage({
                           <Download className="w-4 h-4 mr-2" />
                           Add to Wallet
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
-                          <Mail className="w-4 h-4 mr-2" />
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-transparent"
+                          onClick={handleEmailReceipt}
+                          disabled={isSendingEmail}
+                        >
+                          {isSendingEmail ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
                           Email Receipt
                         </Button>
                       </div>
@@ -709,11 +808,19 @@ export default function ReservationDetailPage({
                   <CardTitle>Need Help?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start bg-transparent"
+                    onClick={handleCallLocation}
+                  >
                     <Phone className="w-4 h-4 mr-3" />
                     Call Location
                   </Button>
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start bg-transparent"
+                    onClick={handleContactSupport}
+                  >
                     <MessageSquare className="w-4 h-4 mr-3" />
                     Contact Support
                   </Button>
@@ -733,19 +840,23 @@ export default function ReservationDetailPage({
               <CardDescription>{reservation.location.address}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">Interactive map</p>
-                </div>
+              <div className="h-64 bg-muted rounded-lg overflow-hidden">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{ border: 0 }}
+                  src={`https://www.google.com/maps?q=${reservation.location.latitude},${reservation.location.longitude}&z=15&output=embed`}
+                  allowFullScreen
+                ></iframe>
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1">
+                <Button className="flex-1" onClick={handleOpenMaps}>
                   <Navigation className="w-4 h-4 mr-2" />
                   Open in Maps
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleCallLocation}>
                   <Phone className="w-4 h-4" />
                 </Button>
               </div>
@@ -765,7 +876,7 @@ export default function ReservationDetailPage({
           </Card>
         </TabsContent>
 
-        {reservation.modificationHistory.length > 0 && (
+        {(reservation.modificationHistory || []).length > 0 && (
           <TabsContent value="history" className="mt-6">
             <Card>
               <CardHeader>
@@ -783,7 +894,7 @@ export default function ReservationDetailPage({
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                           <RefreshCw className="w-4 h-4 text-muted-foreground" />
                         </div>
-                        {index < reservation.modificationHistory.length - 1 && (
+                        {index < (reservation.modificationHistory || []).length - 1 && (
                           <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
                         )}
                       </div>
@@ -975,14 +1086,31 @@ export default function ReservationDetailPage({
               <p className="text-sm text-muted-foreground">Confirmation Code</p>
               <p className="font-mono font-bold text-lg">{reservation.confirmationCode}</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" className="bg-transparent" onClick={handleCopyConfirmation}>
+            <div className="space-y-2">
+              <Label htmlFor="share-email">Email Address</Label>
+              <div className="flex gap-2">
+                <Input 
+                  id="share-email" 
+                  placeholder="friend@example.com" 
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                />
+                <Button 
+                  onClick={handleShareEmail} 
+                  disabled={isSendingEmail || !shareEmail}
+                >
+                  {isSendingEmail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Send"
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <Button variant="outline" className="w-full bg-transparent" onClick={handleCopyConfirmation}>
                 <Copy className="w-4 h-4 mr-2" />
-                Copy Code
-              </Button>
-              <Button variant="outline" className="bg-transparent">
-                <Mail className="w-4 h-4 mr-2" />
-                Send Email
+                Copy Confirmation Code
               </Button>
             </div>
           </div>

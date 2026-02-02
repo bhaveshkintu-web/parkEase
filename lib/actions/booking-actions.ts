@@ -41,7 +41,20 @@ export async function getBookingDetails(bookingId: string) {
         id: bookingId,
       },
       include: {
-        location: true,
+        location: {
+          include: {
+            owner: {
+              include: {
+                user: {
+                  select: {
+                    phone: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         payment: true,
         parkingSession: true,
         refunds: true,
@@ -153,8 +166,8 @@ export async function createBooking(data: any) {
           bookingId: booking.id,
           amount: totalPrice,
           currency: "USD",
-          provider: "STRIPE_MOCK", // Placeholder for real payment provider
-          transactionId: `txn_${Math.random().toString(36).substring(2, 15)}`,
+          provider: "STRIPE",
+          transactionId: data.paymentIntentId || `txn_backup_${Math.random().toString(36).substring(2, 15)}`,
           status: "SUCCESS",
         }
       });
@@ -414,5 +427,18 @@ export async function getBookingByConfirmationCode(code: string) {
   } catch (error) {
     console.error("Failed to fetch booking by code:", error);
     return { success: false, error: "Failed to fetch reservation details" };
+  }
+}
+
+/**
+ * Sends an email receipt for a booking.
+ */
+export async function sendEmailReceipt(bookingId: string, customEmail?: string) {
+  try {
+    const { sendReservationReceipt } = await import("@/lib/notifications");
+    return await sendReservationReceipt(bookingId, customEmail);
+  } catch (error) {
+    console.error("Failed to trigger email receipt:", error);
+    return { success: false, error: "Failed to send email" };
   }
 }
