@@ -11,7 +11,6 @@ const footerLinks = {
   ],
   Company: [
     { label: "About Us", href: "#" },
-    { label: "Partner With Us", href: "/partner-with-us" },
     { label: "Careers", href: "#" },
     { label: "Press", href: "#" },
     { label: "Blog", href: "#" },

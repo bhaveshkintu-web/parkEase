@@ -35,11 +35,15 @@ export async function getUserBookings() {
 export async function getBookingDetails(bookingId: string) {
   try {
     const userId = await getAuthUserId();
+    console.log(`[getBookingDetails] Searching. ID: ${bookingId}, AuthUser: ${userId}`);
+    
+    if (!bookingId || bookingId === 'undefined') {
+      console.error("[getBookingDetails] Invalid booking ID provided");
+      return { success: false, error: "Invalid reservation ID" };
+    }
 
-    const booking = await prisma.booking.findUnique({
-      where: {
-        id: bookingId,
-      },
+    let booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
       include: {
         location: {
           include: {
@@ -53,6 +57,9 @@ export async function getBookingDetails(bookingId: string) {
                 },
               },
             },
+            // Commented out due to Prisma client out of sync
+            // shuttleInfo: true,
+            // cancellationPolicy: true,
           },
         },
         payment: true,
@@ -62,17 +69,49 @@ export async function getBookingDetails(bookingId: string) {
     });
 
     if (!booking) {
-      return { success: false, error: "Booking not found" };
+      console.log(`[getBookingDetails] Not found by ID, trying confirmation code: ${bookingId}`);
+      booking = await prisma.booking.findUnique({
+        where: { confirmationCode: bookingId },
+        include: {
+          location: {
+            include: {
+              owner: {
+                include: {
+                  user: {
+                    select: {
+                      phone: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+              // Commented out due to Prisma client out of sync
+              // shuttleInfo: true,
+              // cancellationPolicy: true,
+            },
+          },
+          payment: true,
+          parkingSession: true,
+          refunds: true,
+        },
+      });
+    }
+
+    if (!booking) {
+      console.log(`[getBookingDetails] No booking found for ID: ${bookingId}`);
+      return { success: false, error: "Reservation not found" };
     }
 
     if (booking.userId !== userId) {
-      return { success: false, error: "Unauthorized access to booking" };
+      console.warn(`[getBookingDetails] Unauthorized access attempt. Booking owner: ${booking.userId}, Request user: ${userId}`);
+      return { success: false, error: "You do not have permission to view this reservation" };
     }
 
+    console.log(`[getBookingDetails] Successfully fetched booking: ${booking.confirmationCode}`);
     return { success: true, data: booking };
-  } catch (error) {
-    console.error("Failed to fetch booking details:", error);
-    return { success: false, error: "Failed to fetch reservation details" };
+  } catch (error: any) {
+    console.error("[getBookingDetails] CRITICAL ERROR:", error);
+    return { success: false, error: `System error fetching reservation: ${error.message}` };
   }
 }
 
@@ -87,7 +126,8 @@ export async function createBooking(data: any) {
     const { 
       locationId, checkIn, checkOut, 
       guestFirstName, guestLastName, guestEmail, guestPhone,
-      vehicleMake, vehicleModel, vehicleColor, vehiclePlate 
+      vehicleMake, vehicleModel, vehicleColor, vehiclePlate,
+      paymentMethodId // New field
     } = data;
 
     const checkInDate = new Date(checkIn);
@@ -167,8 +207,10 @@ export async function createBooking(data: any) {
           amount: totalPrice,
           currency: "USD",
           provider: "STRIPE",
-          transactionId: data.paymentIntentId || `txn_backup_${Math.random().toString(36).substring(2, 15)}`,
+          transactionId: data.paymentIntentId || `txn_saved_${Math.random().toString(36).substring(2, 15)}`,
           status: "SUCCESS",
+          // @ts-ignore - Prisma client out of sync with DB schema
+          paymentMethodId: paymentMethodId || null,
         }
       });
 

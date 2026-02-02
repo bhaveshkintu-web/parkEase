@@ -131,15 +131,17 @@ model Booking {
 }
 
 model Payment {
-  id            String   @id @default(cuid())
-  bookingId     String   @unique
-  amount        Float
-  currency      String   @default("USD")
-  provider      String
-  transactionId String
-  status        String
-  createdAt     DateTime @default(now())
-  booking       Booking  @relation(fields: [bookingId], references: [id])
+  id              String         @id @default(cuid())
+  bookingId       String         @unique
+  amount          Float
+  currency        String         @default("USD")
+  provider        String
+  transactionId   String
+  status          String
+  paymentMethodId String?
+  createdAt       DateTime       @default(now())
+  booking         Booking        @relation(fields: [bookingId], references: [id])
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 }
 
 model Wallet {
@@ -280,16 +282,18 @@ model SavedVehicle {
 }
 
 model PaymentMethod {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  last4       String
-  brand       String?
-  expiryMonth Int?
-  expiryYear  Int?
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  userId         String
+  type           String   @default("card")
+  last4          String
+  brand          String
+  expiryMonth    Int
+  expiryYear     Int
+  cardholderName String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+  payments       Payment[]
 }
 
 model OwnerDocument {
