@@ -59,23 +59,48 @@ import {
   CalendarDays,
   TrendingUp,
   Loader2,
+  FileText,
+  RotateCw,
 } from "lucide-react";
 import type { Reservation, AdminReview } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import Loading from "./loading"; // Import the loading component
+import { Suspense, useEffect, useCallback } from "react";
+import Loading from "./loading";
+import { useToast } from "@/hooks/use-toast";
+import type { WatchmanBookingRequest } from "@/lib/types";
 
 export default function OwnerBookingsPage() {
   const { user } = useAuth();
   const { reservations, adminLocations, adminReviews, initializeForOwner } = useDataStore();
   const searchParams = useSearchParams(); // Use search params
 
-  // Initialize data
-  React.useEffect(() => {
-    if (user?.ownerId) {
-      initializeForOwner(user.ownerId);
+  // Fetch booking requests
+  const fetchBookingRequests = useCallback(async () => {
+    setIsLoadingRequests(true);
+    try {
+      const response = await fetch("/api/owner/booking-requests");
+      const data = await response.json();
+      if (data.success) {
+        setBookingRequests(data.requests);
+      }
+    } catch (error) {
+      console.error("Error fetching booking requests:", error);
+    } finally {
+      setIsLoadingRequests(false);
     }
-  }, [user?.ownerId, initializeForOwner]);
+  }, []);
+
+  // Initialize data
+  useEffect(() => {
+    if (user) {
+      if (user.role === "owner" || user.role === "OWNER" || user.role === "ADMIN") {
+        fetchBookingRequests();
+        if (user.ownerId) {
+          initializeForOwner(user.ownerId);
+        }
+      }
+    }
+  }, [user, initializeForOwner, fetchBookingRequests]);
 
   // State
   const [activeTab, setActiveTab] = useState("bookings");
@@ -87,6 +112,13 @@ export default function OwnerBookingsPage() {
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const { toast } = useToast();
 
   // Safe data access
   const safeReservations = reservations || [];
@@ -159,8 +191,9 @@ export default function OwnerBookingsPage() {
       revenue: safeReservations
         .filter((b) => b.status === "confirmed")
         .reduce((sum, b) => sum + b.totalPrice, 0),
+      pendingRequests: bookingRequests.filter(r => r.status === "pending").length,
     };
-  }, [safeReservations]);
+  }, [safeReservations, bookingRequests]);
 
   // Status badge component
   const getStatusBadge = (status: Reservation["status"]) => {
@@ -194,7 +227,6 @@ export default function OwnerBookingsPage() {
     );
   };
 
-  // Handle reply submission
   const handleReplySubmit = async () => {
     if (!selectedReview || !replyText.trim()) return;
     setIsReplying(true);
@@ -203,6 +235,80 @@ export default function OwnerBookingsPage() {
     setIsReplying(false);
     setReplyText("");
     setSelectedReview(null);
+  };
+
+  const handleApproveRequest = async () => {
+    if (!selectedRequest) return;
+    setIsLoadingRequests(true);
+    try {
+      const response = await fetch(`/api/watchman/booking-requests/${selectedRequest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Request Approved",
+          description: "The booking has been successfully created.",
+        });
+        setIsApproveDialogOpen(false);
+        setSelectedRequest(null);
+        fetchBookingRequests();
+        if (user?.ownerId) initializeForOwner(user.ownerId); // Refresh bookings
+      } else {
+        toast({
+          title: "Approval Failed",
+          description: data.error || "Failed to approve request",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred during approval",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    if (!selectedRequest || !rejectionReason.trim()) return;
+    setIsLoadingRequests(true);
+    try {
+      const response = await fetch(`/api/watchman/booking-requests/${selectedRequest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", rejectionReason }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Request Rejected",
+          description: "The request has been rejected.",
+        });
+        setIsRejectDialogOpen(false);
+        setSelectedRequest(null);
+        setRejectionReason("");
+        fetchBookingRequests();
+      } else {
+        toast({
+          title: "Rejection Failed",
+          description: data.error || "Failed to reject request",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred during rejection",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRequests(false);
+    }
   };
 
   return (
@@ -276,13 +382,22 @@ export default function OwnerBookingsPage() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="bookings" className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4" />
               <span>Bookings</span>
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                 {stats.total}
               </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span>Requests</span>
+              {stats.pendingRequests > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 px-1.5">
+                  {stats.pendingRequests}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="reviews" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
@@ -510,6 +625,132 @@ export default function OwnerBookingsPage() {
             </Card>
           </TabsContent>
 
+          {/* Requests Tab */}
+          <TabsContent value="requests" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Booking Requests</CardTitle>
+                    <CardDescription>
+                      Review and respond to walk-in and extension requests from your watchmen
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchBookingRequests} disabled={isLoadingRequests}>
+                    <RotateCw className={`w-4 h-4 mr-2 ${isLoadingRequests ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Requested By</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingRequests ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto mr-2" />
+                            Loading requests...
+                          </TableCell>
+                        </TableRow>
+                      ) : bookingRequests.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No booking requests found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        bookingRequests.map((request) => (
+                          <TableRow key={request.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                                  <User className="w-4 h-4 text-primary" />
+                                </div>
+                                <span className="text-sm font-medium">Watchman</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium">{request.customerName}</p>
+                                <p className="text-xs text-muted-foreground">{request.customerPhone}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium">{request.vehiclePlate}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{request.vehicleType}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs">
+                                <p>{formatDate(new Date(request.requestedStart))}</p>
+                                <p className="text-muted-foreground">
+                                  to {formatDate(new Date(request.requestedEnd))}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium">{formatCurrency(request.estimatedAmount)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={request.status === "pending" ? "outline" : "secondary"}>
+                                {request.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {request.status === "pending" ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setIsApproveDialogOpen(true);
+                                    }}
+                                  >
+                                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setIsRejectDialogOpen(true);
+                                    }}
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Processed</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Reviews Tab */}
           <TabsContent value="reviews" className="space-y-4">
             <Card>
@@ -551,11 +792,10 @@ export default function OwnerBookingsPage() {
                                 {[...Array(5)].map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating
-                                        ? "text-amber-500 fill-amber-500"
-                                        : "text-muted-foreground"
-                                    }`}
+                                    className={`w-4 h-4 ${i < review.rating
+                                      ? "text-amber-500 fill-amber-500"
+                                      : "text-muted-foreground"
+                                      }`}
                                   />
                                 ))}
                               </div>
@@ -746,11 +986,10 @@ export default function OwnerBookingsPage() {
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-3 h-3 ${
-                              i < selectedReview.rating
-                                ? "text-amber-500 fill-amber-500"
-                                : "text-muted-foreground"
-                            }`}
+                            className={`w-3 h-3 ${i < selectedReview.rating
+                              ? "text-amber-500 fill-amber-500"
+                              : "text-muted-foreground"
+                              }`}
                           />
                         ))}
                       </div>
@@ -790,6 +1029,70 @@ export default function OwnerBookingsPage() {
                     Send Reply
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Approve Request Dialog */}
+        <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Booking Request</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this request for {selectedRequest?.customerName}?
+                This will create a confirmed booking and occupy one parking spot.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Vehicle:</span>
+                <span className="font-medium">{selectedRequest?.vehiclePlate}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Amount:</span>
+                <span className="font-medium">{formatCurrency(selectedRequest?.estimatedAmount || 0)}</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleApproveRequest} disabled={isLoadingRequests}>
+                {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Approve Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject Request Dialog */}
+        <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Booking Request</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this request.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Rejection Reason</Label>
+                <Textarea
+                  id="reason"
+                  placeholder="e.g., No spots available, invalid vehicle info..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectRequest}
+                disabled={!rejectionReason.trim() || isLoadingRequests}
+              >
+                {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Reject Request
               </Button>
             </DialogFooter>
           </DialogContent>

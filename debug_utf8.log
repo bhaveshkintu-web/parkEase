@@ -1,0 +1,12 @@
+﻿Found 2 owners.
+Owner: owner@parkease.com, Profile: YES, Locations: 1
+Owner: vidhikumaripatel.it22@scet.ac.in, Profile: YES, Locations: 1
+
+Found 7 booking requests.
+Request: ID=cml0p11uc0001u12ofp8we7r4, Customer=Test Customer, ParkingId=cml0f0po10004u1xcywackbp8, Status=PENDING
+Request: ID=fallback_t808e82u6, Customer=Smit, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING
+Request: ID=fallback_07054dj3r, Customer=Smit, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING
+Request: ID=fallback_x1u4g43ez, Customer=Smit, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING
+Request: ID=cml0rwl630001u1w03mbgo1f9, Customer=AP, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING
+Request: ID=cml1z311c0009u16ox2r4vg0p, Customer=ankit, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING
+Request: ID=cml4qy42m0004u1jgwyyiwm1g, Customer=Anish, ParkingId=cml0lw0uo0005u19w6q3t1f4g, Status=PENDING

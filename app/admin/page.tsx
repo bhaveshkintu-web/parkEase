@@ -25,6 +25,11 @@ import {
   Tag,
   Settings,
   BarChart3,
+<<<<<<< Updated upstream
+=======
+  Loader2,
+  FileText,
+>>>>>>> Stashed changes
 } from "lucide-react";
 
 export default function SystemAdminDashboard() {

@@ -720,27 +720,8 @@ export default function WatchmanBookingsPage() {
                                     setIsViewDialogOpen(true);
                                   }}
                                 >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsApproveDialogOpen(true);
-                                  }}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsRejectDialogOpen(true);
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4" />
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
                                 </Button>
                               </div>
                             ) : (
@@ -976,6 +957,7 @@ export default function WatchmanBookingsPage() {
           </DialogContent>
         </Dialog>
 
+<<<<<<< Updated upstream
         {/* Approve Dialog */}
         <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
           <DialogContent>
@@ -1040,6 +1022,8 @@ export default function WatchmanBookingsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+=======
+>>>>>>> Stashed changes
       </div>
     </Suspense>
   );

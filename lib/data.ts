@@ -322,7 +322,12 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const taxes = basePrice * 0.0925; // 9.25% tax
   const fees = 2.99; // Service fee
   const totalPrice = basePrice + taxes + fees;
+<<<<<<< Updated upstream
   
+=======
+  const originalPrice = location.originalPrice || location.pricePerDay;
+  const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
+>>>>>>> Stashed changes
   return {
     days,
     basePrice,
