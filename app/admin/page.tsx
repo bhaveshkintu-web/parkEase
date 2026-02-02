@@ -1,19 +1,16 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
 import { formatCurrency } from "@/lib/data";
 import { StatCard } from "@/components/admin/stat-card";
 import { QuickActions } from "@/components/admin/quick-actions";
-import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   DollarSign,
   Users,
   MapPin,
-  MessageSquare,
   TrendingUp,
   ChevronRight,
   AlertTriangle,
@@ -25,25 +22,61 @@ import {
   Tag,
   Settings,
   BarChart3,
+  Loader2,
 } from "lucide-react";
 
+interface DashboardStats {
+  totalUsers: number;
+  totalOwners: number;
+  totalLocations: number;
+  totalBookings: number;
+  activeLocations: number;
+  pendingOwners: number;
+  totalRevenue: number;
+}
+
 export default function SystemAdminDashboard() {
-  const { adminLocations, adminReviews, reservations, watchmen, disputes, users } = useDataStore();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Calculate stats
-  const activeLocations = adminLocations.filter((l) => l.status === "active").length;
-  const totalRevenue = adminLocations.reduce((sum, l) => sum + l.analytics.revenue, 0);
-  const totalBookings = adminLocations.reduce((sum, l) => sum + l.analytics.totalBookings, 0);
-  const pendingReviews = adminReviews.filter((r) => r.status === "pending").length;
-  const flaggedReviews = adminReviews.filter((r) => r.status === "flagged").length;
-  const openDisputes = disputes.filter((d) => d.status === "open" || d.status === "in_progress").length;
-  const totalUsers = users.length;
-  const activeWatchmen = watchmen.filter((w) => w.status === "active").length;
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  // Calculate occupancy
-  const totalCapacity = adminLocations.reduce((sum, l) => sum + l.totalSpots, 0);
-  const totalOccupied = adminLocations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);
-  const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/admin/analytics/dashboard");
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground">Failed to load dashboard data</p>
+        <Button onClick={fetchDashboardData} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
@@ -75,7 +108,7 @@ export default function SystemAdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Total Revenue"
-          value={formatCurrency(totalRevenue)}
+          value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
           iconColor="text-green-600"
           iconBgColor="bg-green-100"
@@ -83,7 +116,7 @@ export default function SystemAdminDashboard() {
         />
         <StatCard
           title="Total Bookings"
-          value={totalBookings}
+          value={stats.totalBookings}
           icon={Car}
           iconColor="text-primary"
           iconBgColor="bg-primary/10"
@@ -91,7 +124,7 @@ export default function SystemAdminDashboard() {
         />
         <StatCard
           title="Total Users"
-          value={totalUsers}
+          value={stats.totalUsers}
           icon={Users}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
@@ -99,62 +132,29 @@ export default function SystemAdminDashboard() {
         />
         <StatCard
           title="Active Locations"
-          value={`${activeLocations}/${adminLocations.length}`}
+          value={`${stats.activeLocations}/${stats.totalLocations}`}
           icon={MapPin}
           iconColor="text-purple-600"
           iconBgColor="bg-purple-100"
-          subtitle={`${totalCapacity} total spots`}
         />
       </div>
 
       {/* Alerts Row */}
-      {(pendingReviews > 0 || flaggedReviews > 0 || openDisputes > 0) && (
+      {stats.pendingOwners > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {pendingReviews > 0 && (
-            <Link href="/admin/reviews?status=pending">
-              <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-amber-900">{pendingReviews} Pending Reviews</p>
-                    <p className="text-xs text-amber-700">Require moderation</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-          {flaggedReviews > 0 && (
-            <Link href="/admin/reviews?status=flagged">
-              <Card className="border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-red-900">{flaggedReviews} Flagged Reviews</p>
-                    <p className="text-xs text-red-700">Urgent attention needed</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-          {openDisputes > 0 && (
-            <Link href="/admin/disputes">
-              <Card className="border-orange-200 bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-orange-900">{openDisputes} Open Disputes</p>
-                    <p className="text-xs text-orange-700">Need resolution</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          <Link href="/admin/owners?status=pending">
+            <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-amber-900">{stats.pendingOwners} Pending Owners</p>
+                  <p className="text-xs text-amber-700">Require approval</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       )}
 
@@ -181,18 +181,18 @@ export default function SystemAdminDashboard() {
             iconBgColor: "bg-green-100",
           },
           {
-            label: "Commissions",
-            description: "Set rates",
-            href: "/admin/commissions",
-            icon: Percent,
+            label: "Owner Approvals",
+            description: "Review owners",
+            href: "/admin/owners",
+            icon: Shield,
             iconColor: "text-purple-600",
             iconBgColor: "bg-purple-100",
           },
           {
-            label: "Promotions",
-            description: "Manage coupons",
-            href: "/admin/promotions",
-            icon: Tag,
+            label: "Parking Approvals",
+            description: "Review locations",
+            href: "/admin/approvals",
+            icon: CheckCircle,
             iconColor: "text-amber-600",
             iconBgColor: "bg-amber-100",
           },
@@ -207,172 +207,59 @@ export default function SystemAdminDashboard() {
         ]}
       />
 
-      {/* Occupancy & Performance Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Platform Occupancy */}
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Platform Occupancy</CardTitle>
-            <CardDescription>Overall parking utilization</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl sm:text-4xl font-bold text-foreground">{occupancyRate}%</span>
-              <span className="text-sm text-muted-foreground">occupied</span>
-            </div>
-            <Progress value={occupancyRate} className="h-3 mb-4" />
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-foreground">{totalCapacity}</p>
-                <p className="text-xs text-muted-foreground">Total Spots</p>
-              </div>
-              <div className="p-3 rounded-lg bg-green-50">
-                <p className="text-2xl font-bold text-green-600">{totalCapacity - totalOccupied}</p>
-                <p className="text-xs text-muted-foreground">Available</p>
-              </div>
-              <div className="p-3 rounded-lg bg-primary/10">
-                <p className="text-2xl font-bold text-primary">{totalOccupied}</p>
-                <p className="text-xs text-muted-foreground">Occupied</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Watchman Overview */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Workforce Overview</CardTitle>
-              <CardDescription>Watchmen across all locations</CardDescription>
-            </div>
-            <Link href="/admin/users?role=watchman">
-              <Button variant="ghost" size="sm">
-                View All
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="p-4 rounded-lg bg-green-50 text-center">
-                <Shield className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-green-600">{activeWatchmen}</p>
-                <p className="text-xs text-muted-foreground">Active Watchmen</p>
-              </div>
-              <div className="p-4 rounded-lg bg-muted/50 text-center">
-                <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-2xl font-bold text-foreground">{watchmen.length}</p>
-                <p className="text-xs text-muted-foreground">Total Watchmen</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Today&apos;s Activity</p>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                <span className="text-sm">Total Check-ins</span>
-                <span className="font-bold text-green-600">
-                  {watchmen.reduce((sum, w) => sum + w.todayCheckIns, 0)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                <span className="text-sm">Total Check-outs</span>
-                <span className="font-bold text-blue-600">
-                  {watchmen.reduce((sum, w) => sum + w.todayCheckOuts, 0)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Locations & Reviews */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Top Locations */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Top Locations</CardTitle>
-              <CardDescription>By revenue this month</CardDescription>
-            </div>
-            <Link href="/admin/locations">
-              <Button variant="ghost" size="sm">
-                View All
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            <CardTitle className="text-lg">Platform Overview</CardTitle>
+            <CardDescription>Key metrics</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {adminLocations
-                .sort((a, b) => b.analytics.revenue - a.analytics.revenue)
-                .slice(0, 5)
-                .map((location, index) => (
-                  <div key={location.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-primary">{index + 1}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground text-sm truncate">{location.name}</p>
-                        <p className="text-xs text-muted-foreground">{location.airport}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-semibold text-green-600">
-                        {formatCurrency(location.analytics.revenue)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {location.analytics.totalBookings} bookings
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm">Total Owners</span>
+                <span className="font-bold text-foreground">{stats.totalOwners}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm">Total Locations</span>
+                <span className="font-bold text-foreground">{stats.totalLocations}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm">Active Locations</span>
+                <span className="font-bold text-green-600">{stats.activeLocations}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Reviews */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Recent Reviews</CardTitle>
-              <CardDescription>Reviews requiring attention</CardDescription>
+          <CardHeader>
+            <CardTitle className="text-lg">Revenue</CardTitle>
+            <CardDescription>Total earnings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <p className="text-4xl font-bold text-green-600">
+                {formatCurrency(stats.totalRevenue)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">All-time revenue</p>
             </div>
-            <Link href="/admin/reviews">
-              <Button variant="ghost" size="sm">
-                View All
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pending Actions</CardTitle>
+            <CardDescription>Requires attention</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {adminReviews
-                .filter((r) => r.status === "pending" || r.status === "flagged")
-                .slice(0, 5)
-                .map((review) => (
-                  <div key={review.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground text-sm truncate">{review.author}</p>
-                        <StatusBadge
-                          status={review.status}
-                          variant={review.status === "flagged" ? "error" : "warning"}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 truncate">{review.content}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-amber-500 ml-2 flex-shrink-0">
-                      {"★".repeat(review.rating)}
-                      {"☆".repeat(5 - review.rating)}
-                    </div>
-                  </div>
-                ))}
-              {adminReviews.filter((r) => r.status === "pending" || r.status === "flagged").length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                  <p>All reviews are moderated</p>
+              <Link href="/admin/owners?status=pending">
+                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
+                  <span className="text-sm">Pending Owners</span>
+                  <span className="font-bold text-amber-600">{stats.pendingOwners}</span>
                 </div>
-              )}
+              </Link>
             </div>
           </CardContent>
         </Card>

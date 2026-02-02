@@ -50,7 +50,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
                 Save {formatCurrency(quote.savings)}
               </Badge>
             )}
-            {location.cancellationPolicy.type === "free" && (
+            {location.cancellationPolicy?.type === "free" && (
               <Badge variant="secondary" className="bg-card/90 text-foreground backdrop-blur-sm">
                 <CheckCircle className="mr-1 h-3 w-3 text-primary" />
                 Free Cancellation
@@ -104,9 +104,9 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
               {/* Rating */}
               <div className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1">
                 <Star className="h-4 w-4 fill-accent text-accent" />
-                <span className="font-semibold text-foreground">{location.rating}</span>
+                <span className="font-semibold text-foreground">{location.rating || "0.0"}</span>
                 <span className="hidden text-xs text-muted-foreground sm:inline">
-                  ({location.reviewCount.toLocaleString()})
+                  ({(location.reviewCount || 0).toLocaleString()})
                 </span>
               </div>
             </div>

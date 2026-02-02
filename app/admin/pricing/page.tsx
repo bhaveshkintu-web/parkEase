@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
+import {
+  getPricingRules,
+  addPricingRule as createRule,
+  updatePricingRule as updateRule,
+  deletePricingRule as removeRule
+} from "@/lib/actions/pricing-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -53,11 +57,23 @@ const DAYS_OF_WEEK = [
 ];
 
 export default function PricingRulesPage() {
-  const { pricingRules, addPricingRule, updatePricingRule, deletePricingRule } = useDataStore();
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchRules = async () => {
+    setIsLoading(true);
+    const data = await getPricingRules();
+    setPricingRules(data as unknown as PricingRule[]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -98,32 +114,47 @@ export default function PricingRulesPage() {
 
   const handleSubmit = async () => {
     setIsProcessing(true);
-    const data: Omit<PricingRule, "id"> = {
-      name: formData.name,
-      type: formData.type,
-      multiplier: formData.multiplier,
-      startDate: formData.startDate ? new Date(formData.startDate) : undefined,
-      endDate: formData.endDate ? new Date(formData.endDate) : undefined,
-      daysOfWeek: formData.daysOfWeek.length > 0 ? formData.daysOfWeek : undefined,
-      isActive: formData.isActive,
+    let result;
+    const ruleData = {
+      ...formData,
+      startDate: formData.startDate || null,
+      endDate: formData.endDate || null,
     };
 
     if (editingRule) {
-      await updatePricingRule(editingRule.id, data);
+      result = await updateRule(editingRule.id, ruleData);
     } else {
-      await addPricingRule(data);
+      result = await createRule(ruleData);
     }
-    setIsDialogOpen(false);
-    resetForm();
+
+    if (result.success) {
+      await fetchRules();
+      setIsDialogOpen(false);
+      resetForm();
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setIsProcessing(true);
-    await deletePricingRule(deleteId);
-    setDeleteId(null);
+    const result = await removeRule(deleteId);
+    if (result.success) {
+      await fetchRules();
+      setDeleteId(null);
+    } else {
+      alert(result.error);
+    }
     setIsProcessing(false);
+  };
+
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    const result = await updateRule(id, { isActive });
+    if (result.success) {
+      await fetchRules();
+    }
   };
 
   const toggleDay = (day: number) => {
@@ -155,7 +186,6 @@ export default function PricingRulesPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/admin">
@@ -226,11 +256,11 @@ export default function PricingRulesPage() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {formData.multiplier > 1 
-                      ? `+${((formData.multiplier - 1) * 100).toFixed(0)}% increase` 
-                      : formData.multiplier < 1 
-                      ? `${((1 - formData.multiplier) * 100).toFixed(0)}% discount`
-                      : "No change"}
+                    {formData.multiplier > 1
+                      ? `+${((formData.multiplier - 1) * 100).toFixed(0)}% increase`
+                      : formData.multiplier < 1
+                        ? `${((1 - formData.multiplier) * 100).toFixed(0)}% discount`
+                        : "No change"}
                   </p>
                 </div>
               </div>
@@ -297,7 +327,6 @@ export default function PricingRulesPage() {
         </Dialog>
       </div>
 
-      {/* Pricing Rules Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {pricingRules.map((rule) => (
           <Card key={rule.id} className={`${!rule.isActive ? "opacity-60" : ""}`}>
@@ -316,11 +345,11 @@ export default function PricingRulesPage() {
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="text-3xl font-bold text-foreground">{rule.multiplier}x</span>
                 <span className="text-muted-foreground text-sm">
-                  {rule.multiplier > 1 
-                    ? `(+${((rule.multiplier - 1) * 100).toFixed(0)}%)` 
-                    : rule.multiplier < 1 
-                    ? `(-${((1 - rule.multiplier) * 100).toFixed(0)}%)`
-                    : ""}
+                  {rule.multiplier > 1
+                    ? `(+${((rule.multiplier - 1) * 100).toFixed(0)}%)`
+                    : rule.multiplier < 1
+                      ? `(-${((1 - rule.multiplier) * 100).toFixed(0)}%)`
+                      : ""}
                 </span>
               </div>
 
@@ -348,7 +377,7 @@ export default function PricingRulesPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={rule.isActive}
-                    onCheckedChange={(checked) => updatePricingRule(rule.id, { isActive: checked })}
+                    onCheckedChange={(checked) => handleToggleActive(rule.id, checked)}
                   />
                   <span className="text-sm text-muted-foreground">
                     {rule.isActive ? "Enabled" : "Disabled"}
@@ -368,7 +397,7 @@ export default function PricingRulesPage() {
         ))}
       </div>
 
-      {pricingRules.length === 0 && (
+      {(isLoading || pricingRules.length === 0) && !isLoading && (
         <Card>
           <CardContent className="p-12 text-center">
             <TrendingUp className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -378,7 +407,10 @@ export default function PricingRulesPage() {
         </Card>
       )}
 
-      {/* Delete Confirmation */}
+      {isLoading && (
+        <div className="text-center py-12 text-muted-foreground">Loading pricing rules...</div>
+      )}
+
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

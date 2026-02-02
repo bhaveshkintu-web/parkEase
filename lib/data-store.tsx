@@ -87,6 +87,7 @@ function generateMockPayments(userId: string): PaymentMethod[] {
 }
 
 function generateMockReservations(userId: string): Reservation[] {
+  if (parkingLocations.length === 0) return [];
   const now = new Date();
   const upcoming = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const past = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -188,6 +189,7 @@ function generateAdminLocations(): AdminParkingLocation[] {
 }
 
 function generateMockWatchmen(ownerId: string): Watchman[] {
+  if (parkingLocations.length === 0) return [];
   return [
     {
       id: "wm_1",
@@ -686,6 +688,7 @@ function generateMockOwnerProfiles(): OwnerProfile[] {
 }
 
 function generateMockParkingSessions(): ParkingSession[] {
+  if (parkingLocations.length === 0) return [];
   const now = new Date();
   return [
     {
@@ -839,6 +842,7 @@ interface DataStoreContextType {
   initializeForUser: (userId: string) => void;
   initializeForOwner: (ownerId: string) => void;
   initializeForWatchman: (watchmanId: string) => void;
+  currentOwnerProfile: OwnerProfile | null;
 }
 
 const DataStoreContext = createContext<DataStoreContextType | undefined>(undefined);
@@ -862,6 +866,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const [cmsPages, setCmsPages] = useState<CMSPage[]>(generateMockCMSPages());
   const [users, setUsers] = useState<User[]>(generateMockUsers());
   const [ownerProfiles, setOwnerProfiles] = useState<OwnerProfile[]>(generateMockOwnerProfiles());
+  const [currentOwnerProfile, setCurrentOwnerProfile] = useState<OwnerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -1491,6 +1496,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         initializeForUser,
         initializeForOwner,
         initializeForWatchman,
+        currentOwnerProfile,
       }}
     >
       {children}

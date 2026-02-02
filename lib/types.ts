@@ -23,6 +23,8 @@ export interface ParkingLocation {
   id: string;
   name: string;
   address: string;
+  city: string;
+  zipCode: string;
   airport: string;
   airportCode: string;
   coordinates: { lat: number; lng: number };
@@ -42,11 +44,12 @@ export interface ParkingLocation {
   availableSpots: number;
   totalSpots: number;
   description: string;
-  redeemSteps: RedeemStep[];
+  redeemSteps?: RedeemStep[];
   specialInstructions?: string[];
-  cancellationPolicy: CancellationPolicy;
+  cancellationPolicy?: CancellationPolicy;
   heightLimit?: string;
   securityFeatures: string[];
+  ownerId?: string;
 }
 
 export interface Destination {
@@ -166,6 +169,7 @@ export interface User {
   preferences: UserPreferences;
   // Owner specific
   ownerId?: string;
+  ownerProfile?: OwnerProfile;
   assignedParkingIds?: string[];
 }
 
@@ -178,7 +182,7 @@ export interface Watchman {
   phone: string;
   email: string;
   assignedParkingIds: string[];
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "archived";
   shift: "morning" | "evening" | "night" | "all";
   createdAt: Date;
   lastActive?: Date;
@@ -286,15 +290,9 @@ export interface WatchmanActivityLog {
 export interface ShiftBreak {
   id: string;
   startTime: Date;
-  endTime: Date;
-  duration: number; // in minutes
-}
-
-export interface ShiftBreak {
-  id: string;
-  startTime: Date;
   endTime?: Date;
-  type: "lunch" | "short" | "emergency";
+  duration?: number; // in minutes
+  type?: "lunch" | "short" | "emergency";
 }
 
 export interface WatchmanShift {
@@ -496,7 +494,7 @@ export interface AdminReview extends Review {
 
 // Admin Location Types
 export interface AdminParkingLocation extends ParkingLocation {
-  status: "active" | "inactive" | "maintenance";
+  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "PENDING";
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

@@ -9,6 +9,8 @@ interface RedeemStepsProps {
 }
 
 export function RedeemStepsCard({ steps }: RedeemStepsProps) {
+  if (!steps || !Array.isArray(steps) || steps.length === 0) return null;
+  
   return (
     <Card>
       <CardHeader>
@@ -48,7 +50,7 @@ interface SpecialInstructionsProps {
 }
 
 export function SpecialInstructionsCard({ instructions }: SpecialInstructionsProps) {
-  if (!instructions || instructions.length === 0) return null;
+  if (!instructions || !Array.isArray(instructions) || instructions.length === 0) return null;
 
   return (
     <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20">
