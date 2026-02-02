@@ -12,44 +12,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-// <<<<<<< HEAD
-//     // Fetch leads
-//     const leads = await prisma.ownerLead.findMany({
-//       orderBy: { createdAt: "desc" },
-//     });
-
-//     // Fetch pending owner profiles (registered users waiting for approval)
-//     const pendingProfiles = await prisma.ownerProfile.findMany({
-//       where: { status: "pending" },
-//       include: { user: true },
-//       orderBy: { createdAt: "desc" },
-//     });
-
-//     // Map profiles to OwnerLead shape for unified UI
-//     const profileLeads = pendingProfiles.map(p => ({
-//       id: `profile:${p.id}`, // Prefix to distinguish
-//       fullName: `${p.user.firstName} ${p.user.lastName}`,
-//       email: p.user.email,
-//       phone: p.user.phone || "N/A",
-//       businessName: p.businessName,
-//       businessType: p.businessType,
-//       city: p.city,
-//       state: p.state,
-//       country: p.country,
-//       status: p.status, // "pending"
-//       createdAt: p.createdAt.toISOString(),
-//       isProfile: true, // Flag to identify origin
-//       profileId: p.id,
-//       userId: p.userId
-//     }));
-
-//     // Combine and sort by date
-//     const combined = [...profileLeads, ...leads].sort((a, b) =>
-//       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-//     );
-
-//     return NextResponse.json({ leads: combined });
-// =======
     const leads = await (prisma as any).ownerLead.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -90,7 +52,6 @@ export async function GET() {
     return NextResponse.json({
       leads: [...leads, ...normalizedOwners]
     });
-// >>>>>>> main
   } catch (error) {
     console.error("Error fetching leads:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -111,7 +72,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-// <<<<<<< HEAD
     // Handle Profile Approval/Rejection
     if (String(leadId).startsWith("profile:")) {
       const profileId = leadId.split(":")[1];
@@ -145,9 +105,6 @@ export async function POST(req: Request) {
 
     // Handle Lead Approval (Original Logic)
     const lead = await prisma.ownerLead.findUnique({
-// =======
-    // let lead = await (prisma as any).ownerLead.findUnique({
-// >>>>>>> main
       where: { id: leadId },
     });
 

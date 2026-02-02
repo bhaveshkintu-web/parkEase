@@ -216,7 +216,7 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
 }
 
 /**
-/**
+
  * Fetches all parking locations belonging to a specific owner.
  */
 export async function getOwnerLocations(userId: string) {
@@ -244,6 +244,7 @@ export async function getOwnerLocations(userId: string) {
     return { success: false, error: "Internal server error" };
   }
 }
+
 
 /**
  * Updates the status of a parking location.
@@ -341,3 +342,4 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
     };
   }
 }
+

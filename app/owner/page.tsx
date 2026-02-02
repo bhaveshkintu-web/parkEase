@@ -25,11 +25,11 @@ import {
   Wallet,
   Calendar,
   Clock,
+  Loader2,
 } from "lucide-react";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  // <<<<<<< HEAD
   const { wallet, transactions, initializeForOwner } = useDataStore();
 
   const [stats, setStats] = React.useState({
@@ -57,32 +57,18 @@ export default function OwnerDashboard() {
 
   // Initialize owner data (keep for wallet/transactions for now if they are not moved yet)
   React.useEffect(() => {
-    const fetchData = async () => {
-      if (user?.id) {
-        try {
-          const [locationsResult, watchmenResult] = await Promise.all([
-            getOwnerLocations(user.id),
-            getOwnerWatchmen(user.id)
-          ]);
+    if (user?.id && typeof initializeForOwner === "function") {
+      initializeForOwner(user.id);
+    }
+  }, [user?.id, initializeForOwner]);
 
-          if (locationsResult.success && locationsResult.data) {
-            setDashboardData(prev => ({ ...prev, locations: locationsResult.data }));
-          }
-          if (watchmenResult.success && watchmenResult.data) {
-            setDashboardData(prev => ({ ...prev, watchmen: watchmenResult.data }));
-          }
-        } catch (error) {
-          console.error("Failed to fetch dashboard data:", error);
-        }
-      }
-    };
-    fetchData();
-  }, [user?.id]);
-
-  // Fetch real stats
+  // Fetch real stats and dashboard data
   React.useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardStats = async () => {
+      if (!user?.id) return;
+
       try {
+        setIsLoading(true);
         const response = await fetch("/api/owner/analytics");
         if (response.ok) {
           const data = await response.json();
@@ -100,8 +86,16 @@ export default function OwnerDashboard() {
       }
     };
 
-    fetchStats();
-  }, []);
+    fetchDashboardStats();
+  }, [user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const occupancyRate = stats.totalCapacity > 0
     ? Math.round((stats.totalOccupied / stats.totalCapacity) * 100)
