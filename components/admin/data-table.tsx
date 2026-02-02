@@ -36,6 +36,7 @@ export interface Action<T> {
   icon?: React.ReactNode;
   onClick: (item: T) => void;
   variant?: "default" | "destructive";
+  disabled?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -196,6 +197,7 @@ export function DataTable<T>({
                               <DropdownMenuItem
                                 key={i}
                                 onClick={() => action.onClick(item)}
+                                disabled={action.disabled}
                                 className={cn(
                                   action.variant === "destructive" &&
                                   "text-destructive focus:text-destructive"
@@ -265,6 +267,7 @@ export function DataTable<T>({
                         variant={action.variant === "destructive" ? "destructive" : "outline"}
                         size="sm"
                         className="flex-1"
+                        disabled={action.disabled}
                         onClick={() => action.onClick(item)}
                       >
                         {action.icon}

@@ -27,30 +27,69 @@ import {
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  const { adminLocations, reservations, watchmen, wallet, transactions, initializeForOwner } = useDataStore();
-  const walletTransactions = transactions; // Declare walletTransactions variable
+  const { wallet, transactions, initializeForOwner } = useDataStore();
 
-  // Initialize owner data
+  const [stats, setStats] = React.useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    activeLocations: 0,
+    totalLocations: 0,
+    activeWatchmen: 0,
+    totalWatchmen: 0,
+    totalCapacity: 0,
+    totalOccupied: 0
+  });
+
+  const [dashboardData, setDashboardData] = React.useState<{
+    recentBookings: any[];
+    locations: any[];
+    watchmen: any[];
+  }>({
+    recentBookings: [],
+    locations: [],
+    watchmen: []
+  });
+
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Initialize owner data (keep for wallet/transactions for now if they are not moved yet)
   React.useEffect(() => {
     if (user?.ownerId) {
       initializeForOwner(user.ownerId);
     }
   }, [user?.ownerId, initializeForOwner]);
 
-  // Calculate stats
-  const myLocations = adminLocations.filter((l) => l.ownerId === user?.id || l.ownerId === user?.ownerProfile?.id || true); // Demo: still show all but prioritizing real ownerId
-  const activeLocations = myLocations.filter((l) => l.status === "active").length;
-  const totalCapacity = myLocations.reduce((sum, l) => sum + l.totalSpots, 0);
-  const totalOccupied = myLocations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);
-  const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+  // Fetch real stats
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/owner/analytics");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.stats) {
+            setStats(data.stats);
+          }
+          if (data.data) {
+            setDashboardData(data.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const todayBookings = reservations.filter(
-    (r) => new Date(r.checkIn).toDateString() === new Date().toDateString()
-  );
-  const totalRevenue = myLocations.reduce((sum, l) => sum + l.analytics.revenue, 0);
-  const totalBookings = myLocations.reduce((sum, l) => sum + l.analytics.totalBookings, 0);
+    fetchStats();
+  }, []);
 
-  const activeWatchmen = watchmen.filter((w) => w.status === "active").length;
+  const occupancyRate = stats.totalCapacity > 0
+    ? Math.round((stats.totalOccupied / stats.totalCapacity) * 100)
+    : 0;
+
+  const { recentBookings, locations: myLocations, watchmen } = dashboardData;
+  const todayBookings = recentBookings;
+  const { totalRevenue, totalBookings, activeLocations, totalCapacity, activeWatchmen, totalOccupied } = stats;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">

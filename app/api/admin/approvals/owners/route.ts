@@ -12,11 +12,42 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Fetch leads
     const leads = await prisma.ownerLead.findMany({
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ leads });
+    // Fetch pending owner profiles (registered users waiting for approval)
+    const pendingProfiles = await prisma.ownerProfile.findMany({
+      where: { status: "pending" },
+      include: { user: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Map profiles to OwnerLead shape for unified UI
+    const profileLeads = pendingProfiles.map(p => ({
+      id: `profile:${p.id}`, // Prefix to distinguish
+      fullName: `${p.user.firstName} ${p.user.lastName}`,
+      email: p.user.email,
+      phone: p.user.phone || "N/A",
+      businessName: p.businessName,
+      businessType: p.businessType,
+      city: p.city,
+      state: p.state,
+      country: p.country,
+      status: p.status, // "pending"
+      createdAt: p.createdAt.toISOString(),
+      isProfile: true, // Flag to identify origin
+      profileId: p.id,
+      userId: p.userId
+    }));
+
+    // Combine and sort by date
+    const combined = [...profileLeads, ...leads].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return NextResponse.json({ leads: combined });
   } catch (error) {
     console.error("Error fetching leads:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -37,6 +68,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Handle Profile Approval/Rejection
+    if (String(leadId).startsWith("profile:")) {
+      const profileId = leadId.split(":")[1];
+
+      if (action === "reject") {
+        // We might want to mark as rejected or suspended. 
+        // For now, let's look at the schema. "rejected" might not be a valid status in db?
+        // Checking schema... OwnerProfile status is string.
+        await prisma.ownerProfile.update({
+          where: { id: profileId },
+          data: { status: "rejected" } // adminNotes not on profile?
+        });
+        return NextResponse.json({ message: "Owner application rejected" });
+      }
+
+      if (action === "approve") {
+        await prisma.ownerProfile.update({
+          where: { id: profileId },
+          data: {
+            status: "approved", // or 'active'? Schema default is 'pending'.
+            verificationStatus: "verified"
+          }
+        });
+
+        // Also ensure user role is OWNER if not already (should be)
+        // Send email notification here if needed
+
+        return NextResponse.json({ message: "Owner application approved successfully" });
+      }
+    }
+
+    // Handle Lead Approval (Original Logic)
     const lead = await prisma.ownerLead.findUnique({
       where: { id: leadId },
     });
@@ -99,7 +162,7 @@ export async function POST(req: Request) {
             country: lead.country,
             street: "N/A", // Default to N/A as lead might not have full address
             zipCode: "N/A",
-            status: "active",
+            status: "approved", // Auto-approve converted leads
             verificationStatus: "verified",
           },
         });

@@ -26,6 +26,7 @@ import {
   Eye,
   ToggleLeft,
   ToggleRight,
+  Wrench,
 } from "lucide-react";
 
 export default function OwnerLocationsPage() {
@@ -164,6 +165,23 @@ export default function OwnerLocationsPage() {
         const result = await updateLocationStatus(item.id, newStatus);
         if (result.success) {
           toast({ title: `Location ${newStatus === 'active' ? 'activated' : 'deactivated'}` });
+          fetchLocations();
+        } else {
+          toast({ title: "Error", description: result.error, variant: "destructive" });
+        }
+      },
+    },
+    {
+      label: "Maintenance",
+      icon: <Wrench className="w-4 h-4 mr-2" />,
+      // Show only if not already in maintenance
+      disabled: item.status === "maintenance",
+      onClick: async (item) => {
+        if (item.status === "maintenance") return;
+
+        const result = await updateLocationStatus(item.id, "maintenance");
+        if (result.success) {
+          toast({ title: "Location set to maintenance" });
           fetchLocations();
         } else {
           toast({ title: "Error", description: result.error, variant: "destructive" });

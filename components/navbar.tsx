@@ -137,7 +137,7 @@ export function Navbar() {
                             user.role.toLowerCase() === "admin"
                               ? "/admin"
                               : user.role.toLowerCase() === "owner"
-                                ? "/owner/dashboard"
+                                ? "/owner"
                                 : "/watchman"
                           }
                         >
@@ -244,26 +244,26 @@ export function Navbar() {
                       {(user.role.toLowerCase() === "admin" ||
                         user.role.toLowerCase() === "owner" ||
                         user.role.toLowerCase() === "watchman") && (
-                        <Link
-                          href={
-                            user.role.toLowerCase() === "admin"
-                              ? "/admin"
+                          <Link
+                            href={
+                              user.role.toLowerCase() === "admin"
+                                ? "/admin"
+                                : user.role.toLowerCase() === "owner"
+                                  ? "/owner"
+                                  : "/watchman"
+                            }
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <LayoutDashboard className="h-5 w-5" />
+                            {user.role.toLowerCase() === "admin"
+                              ? "Admin"
                               : user.role.toLowerCase() === "owner"
-                                ? "/owner"
-                                : "/watchman"
-                          }
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <LayoutDashboard className="h-5 w-5" />
-                          {user.role.toLowerCase() === "admin"
-                            ? "Admin"
-                            : user.role.toLowerCase() === "owner"
-                              ? "Owner"
-                              : "Watchman"}{" "}
-                          Dashboard
-                        </Link>
-                      )}
+                                ? "Owner"
+                                : "Watchman"}{" "}
+                            Dashboard
+                          </Link>
+                        )}
                       <Button
                         variant="outline"
                         className="w-full gap-2 mt-2 bg-transparent"

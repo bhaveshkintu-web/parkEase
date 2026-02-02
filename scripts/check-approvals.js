@@ -1,29 +1,30 @@
-
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function checkApprovals() {
-  try {
-    const approvals = await prisma.parkingApproval.findMany({
-      include: {
-        owner: {
-          include: {
-            user: true
-          }
-        }
-      }
+async function main() {
+  console.log("Checking for pending records...");
+
+  const pendingProfiles = await prisma.ownerProfile.count({
+    where: { status: 'pending' }
+  });
+  console.log(`Pending OwnerProfiles (Dashboard uses this): ${pendingProfiles}`);
+
+  const totalLeads = await prisma.ownerLead.count();
+  console.log(`Total OwnerLeads (Approvals page uses this): ${totalLeads}`);
+
+  const pendingLeads = await prisma.ownerLead.count({
+    where: { status: 'pending' }
+  });
+  console.log(`Pending OwnerLeads: ${pendingLeads}`);
+
+  if (pendingProfiles > 0) {
+    console.log("\nSample Pending Profile:");
+    const profile = await prisma.ownerProfile.findFirst({
+      where: { status: 'pending' },
+      include: { user: true }
     });
-    console.log('--- PARKING APPROVALS ---');
-    console.table(approvals.map(a => ({
-      id: a.id,
-      owner: a.owner.businessName,
-      status: a.status
-    })));
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
-    await prisma.$disconnect();
+    console.log(JSON.stringify(profile, null, 2));
   }
 }
 
-checkApprovals();
+main().finally(() => prisma.$disconnect());
