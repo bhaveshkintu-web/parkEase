@@ -189,17 +189,17 @@ export async function PATCH(
             if (action === "approve") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3 WHERE id = $4`,
-                    "APPROVED", sessionUser.id, new Date(), requestId
+                    "APPROVED", sessionUser.id, new Date(), existingRequest.id
                 );
             } else if (action === "reject") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3, "rejectionReason" = $4 WHERE id = $5`,
-                    "REJECTED", sessionUser.id, new Date(), rejectionReason, requestId
+                    "REJECTED", sessionUser.id, new Date(), rejectionReason, existingRequest.id
                 );
             } else if (action === "cancel") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3 WHERE id = $4`,
-                    "CANCELLED", sessionUser.id, new Date(), requestId
+                    "CANCELLED", sessionUser.id, new Date(), existingRequest.id
                 );
             }
             updatedRequest = { ...existingRequest, ...updateData };

@@ -217,10 +217,10 @@ export default function WatchmanBookingsPage() {
 
   const updateRequestStatus = async (id: string, status: string, reason?: string) => {
     try {
-      const response = await fetch("/api/watchman/booking-requests", {
+      const response = await fetch(`/api/watchman/booking-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status, rejectionReason: reason }),
+        body: JSON.stringify({ action: status === "APPROVED" ? "approve" : status === "REJECTED" ? "reject" : "cancel", rejectionReason: reason }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {

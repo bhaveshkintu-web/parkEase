@@ -113,12 +113,6 @@ export async function GET(request: NextRequest) {
             status: { not: "CANCELLED" } as any
         };
 
-        // Debug logging
-        try {
-            const fs = require('fs');
-            fs.appendFileSync('api-watchman-debug.log', `[${new Date().toISOString()}] FETCH_BOOKINGS: User ${sessionUser.email} (Role: ${role}) LocationIds: [${locationIds.join(', ')}] DateFilter: ${dateFilter} Results Found: `);
-        } catch (e) { }
-
         const bookings = await prisma.booking.findMany({
             where: whereClause,
             include: {
@@ -129,11 +123,6 @@ export async function GET(request: NextRequest) {
                 checkIn: "asc"
             }
         });
-
-        try {
-            const fs = require('fs');
-            fs.appendFileSync('api-watchman-debug.log', `${bookings.length}\n`);
-        } catch (e) { }
 
         return NextResponse.json({
             success: true,
