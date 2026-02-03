@@ -1,0 +1,196 @@
+﻿node.exe : 
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+At C:\Program 
+Files\nodejs\npx.ps1:29 
+char:3
++   & $NODE_EXE $NPX_CLI_JS 
+$args
++   ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([base  
+  line-brows...ping@lates   
+ t -D`:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+   Γû▓ Next.js 16.0.10 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+ Γ£ô Compiled successfully in 11.9s
+   Skipping validation of types
+   Collecting page data using 11 workers ...
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+   Generating static pages using 11 workers (0/59) ...
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+   Generating static pages using 11 workers (14/59) 
+   Generating static pages using 11 workers (29/59) 
+ Γ¿» useSearchParams() 
+should be wrapped in a 
+suspense boundary at page 
+"/auth/verify-email". Read 
+more: https://nextjs.org/doc
+s/messages/missing-suspense-
+with-csr-bailout
+    at S (C:\parkEase\.next\
+server\chunks\ssr\node_modul
+es_next_cf02c53c._.js:2:2111
+)
+    at p (C:\parkEase\.next\
+server\chunks\ssr\node_modul
+es_next_cf02c53c._.js:4:4847
+)
+    at j (C:\parkEase\.next\
+server\chunks\ssr\_2be79e5b.
+_.js:1:3123)
+    at ar (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:84366)
+    at aa (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:86185)
+    at as (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:107952)
+    at ao (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:105374)
+    at an (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:84718)
+    at aa (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:86234)
+    at aa (C:\parkEase\node_
+modules\next\dist\compiled\n
+ext-server\app-page-turbo.ru
+ntime.prod.js:2:104714)
+Error occurred prerendering 
+page "/auth/verify-email". 
+Read more: https://nextjs.or
+g/docs/messages/prerender-er
+ror
+Export encountered an error 
+on /auth/verify-email/page: 
+/auth/verify-email, exiting 
+the build.
+ Γ¿» Next.js build worker 
+exited with code: 1 and 
+signal: null

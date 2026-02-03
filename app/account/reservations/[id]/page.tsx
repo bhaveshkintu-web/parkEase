@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import QRCodeGenerator from "react-qr-code";
 import { useDataStore } from "@/lib/data-store";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,7 @@ export default function ReservationDetailPage({
   const now = new Date();
   const checkInDate = new Date(reservation.checkIn);
   const checkOutDate = new Date(reservation.checkOut);
-  
+
   const isUpcoming = reservation.status === "confirmed" && checkInDate > now;
   const isActive = reservation.status === "confirmed" && checkInDate <= now && checkOutDate >= now;
   const isPast = reservation.status === "confirmed" && checkOutDate < now;
@@ -283,11 +284,13 @@ export default function ReservationDetailPage({
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-center gap-6">
                     {/* QR Code */}
-                    <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm">
-                      <div className="text-center p-4">
-                        <QrCode className="w-20 h-20 mx-auto text-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground">Scan at entrance</p>
-                      </div>
+                    <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm overflow-hidden p-3">
+                      <QRCodeGenerator
+                        value={reservation.confirmationCode}
+                        size={150}
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        viewBox={`0 0 256 256`}
+                      />
                     </div>
 
                     {/* Confirmation details */}
@@ -482,7 +485,7 @@ export default function ReservationDetailPage({
                       <div>
                         <p className="font-medium text-blue-900">Check-in Process</p>
                         <p className="text-sm text-blue-700">
-                          Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk. 
+                          Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk.
                           The gate will open automatically.
                         </p>
                       </div>
@@ -492,7 +495,7 @@ export default function ReservationDetailPage({
                       <div>
                         <p className="font-medium text-amber-900">Vehicle Requirements</p>
                         <p className="text-sm text-amber-700">
-                          Ensure your vehicle matches the registered license plate. Different vehicles may be 
+                          Ensure your vehicle matches the registered license plate. Different vehicles may be
                           denied entry or charged additional fees.
                         </p>
                       </div>
@@ -592,15 +595,15 @@ export default function ReservationDetailPage({
                         reservation.location.cancellationPolicy.type === "free"
                           ? "bg-green-50 text-green-700 border-green-200"
                           : reservation.location.cancellationPolicy.type === "partial"
-                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          : "bg-red-50 text-red-700 border-red-200"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                       }
                     >
                       {reservation.location.cancellationPolicy.type === "free"
                         ? "Free Cancellation"
                         : reservation.location.cancellationPolicy.type === "partial"
-                        ? "Partial Refund"
-                        : "Non-refundable"}
+                          ? "Partial Refund"
+                          : "Non-refundable"}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
                       {reservation.location.cancellationPolicy.description}

@@ -78,10 +78,21 @@ export default function OwnerBookingsPage() {
   const fetchBookingRequests = useCallback(async () => {
     setIsLoadingRequests(true);
     try {
-      const response = await fetch("/api/owner/booking-requests");
+      console.log("Fetching booking requests from API...");
+      const response = await fetch("/api/owner/booking-requests", {
+        cache: 'no-store', // Prevent caching
+      });
       const data = await response.json();
       if (data.success) {
-        setBookingRequests(data.requests);
+        setBookingRequests(data.requests || []);
+        console.log(`Fetched ${data.requests?.length} booking requests`);
+      } else {
+        console.error("Failed to fetch booking requests:", data.error);
+        toast({
+          title: "Fetch Failed",
+          description: data.error || "Could not retrieve booking requests",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error fetching booking requests:", error);

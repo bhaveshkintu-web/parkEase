@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useDataStore } from "@/lib/data-store";
 import { Navbar } from "@/components/navbar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Loader2 } from "lucide-react";
@@ -11,15 +12,19 @@ export default function WatchmanLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const { user, isLoading, isAuthenticated } = useAuth();
 
+  const { initializeForWatchman } = useDataStore();
+
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push("/auth/login?redirect=/watchman");
       } else if (user?.role !== "watchman" && user?.role !== "admin") {
         router.push("/account");
+      } else if (user) {
+        initializeForWatchman(user.id);
       }
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, user, router, initializeForWatchman]);
 
   if (isLoading) {
     return (

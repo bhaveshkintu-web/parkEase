@@ -29,6 +29,34 @@ export async function sendVerificationEmail(email: string, token: string) {
   }
 }
 
+export async function sendBookingNotification(email: string, status: string, details: any) {
+  try {
+    const isApproved = status.toUpperCase() === "APPROVED";
+    await resend.emails.send({
+      from: "ParkEase <onboarding@resend.dev>",
+      to: "bhavesh.kintu@gmail.com", // Keeping same as verification for demo
+      subject: `Booking Request ${isApproved ? "Approved" : "Rejected"}`,
+      html: `
+        <h2>Booking Request Update</h2>
+        <p>Dear ${details.customerName},</p>
+        <p>Your booking request for <strong>${details.parkingName}</strong> has been <strong>${status}</strong>.</p>
+        ${isApproved ? `
+          <p>Your confirmation code is: <strong>${details.confirmationCode}</strong></p>
+          <p>Vehicle: ${details.vehiclePlate}</p>
+          <p>Time: ${details.requestedStart} - ${details.requestedEnd}</p>
+        ` : `
+          <p>Reason: ${details.rejectionReason || "No specific reason provided."}</p>
+        `}
+        <p>Thank you for using ParkEase!</p>
+      `,
+    });
+    console.log(`✅ Booking ${status} notification sent to:`, email);
+  } catch (error) {
+    console.error(`❌ NOTIFICATION_SEND_FAILED:`, error);
+    // Don't throw error to avoid breaking the main flow
+  }
+}
+
 // import nodemailer from "nodemailer";
 
 // export async function sendVerificationEmail(email: string, token: string) {

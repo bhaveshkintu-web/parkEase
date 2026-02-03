@@ -322,19 +322,16 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const taxes = basePrice * 0.0925; // 9.25% tax
   const fees = 2.99; // Service fee
   const totalPrice = basePrice + taxes + fees;
-<<<<<<< Updated upstream
-  
-=======
   const originalPrice = location.originalPrice || location.pricePerDay;
   const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
->>>>>>> Stashed changes
+
   return {
     days,
     basePrice,
     taxes,
     fees,
     totalPrice,
-    savings: (location.originalPrice - location.pricePerDay) * days,
+    savings,
   };
 }
 
@@ -345,27 +342,45 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+export function formatDate(date: Date | string | number): string {
+  try {
+    const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Date";
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "Invalid Date";
+  }
 }
 
-export function formatDateShort(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
+export function formatDateShort(date: Date | string | number): string {
+  try {
+    const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Date";
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "Invalid Date";
+  }
 }
 
-export function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+export function formatTime(date: Date | string | number): string {
+  try {
+    const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Time";
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(d);
+  } catch (e) {
+    return "Invalid Time";
+  }
 }
 
 export function generateConfirmationCode(): string {
@@ -379,7 +394,7 @@ export function generateConfirmationCode(): string {
 
 export function getAvailabilityStatus(location: ParkingLocation): { status: "available" | "limited" | "soldout"; message: string } {
   const percentAvailable = (location.availableSpots / location.totalSpots) * 100;
-  
+
   if (location.availableSpots === 0) {
     return { status: "soldout", message: "Sold Out" };
   }
@@ -391,7 +406,7 @@ export function getAvailabilityStatus(location: ParkingLocation): { status: "ava
 
 export function searchDestinations(query: string): Destination[] {
   if (!query || query.length < 2) return [];
-  
+
   const lowerQuery = query.toLowerCase();
   return destinations.filter(
     (dest) =>

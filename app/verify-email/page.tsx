@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -31,7 +31,7 @@ export default function VerifyEmailPage() {
         const result = await res.json();
         console.log("verifyEmail-------------------", result);
 
-        if (!result.ok) {
+        if (!res.ok) {
           throw new Error(result.error || "Verification failed");
         }
 
@@ -52,12 +52,20 @@ export default function VerifyEmailPage() {
   }, [token, router]);
 
   return (
+    <div className="max-w-md w-full p-6 text-center border rounded-lg">
+      {status === "loading" && <p>{message}</p>}
+      {status === "success" && <p className="text-green-600">{message}</p>}
+      {status === "error" && <p className="text-red-600">{message}</p>}
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full p-6 text-center border rounded-lg">
-        {status === "loading" && <p>{message}</p>}
-        {status === "success" && <p className="text-green-600">{message}</p>}
-        {status === "error" && <p className="text-red-600">{message}</p>}
-      </div>
+      <Suspense fallback={<div className="text-center">Loading...</div>}>
+        <VerifyEmailContent />
+      </Suspense>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { useAuth } from "@/lib/auth-context";
@@ -152,22 +152,60 @@ export default function WatchmanBookingsPage() {
   const { reservations, adminLocations } = useDataStore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  
+
   const [activeTab, setActiveTab] = useState("today");
   const [requestTab, setRequestTab] = useState("pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Dialog states
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
-  const [bookingRequests, setBookingRequests] = useState(mockBookingRequests);
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // Fetch bookings
+  const fetchBookings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/watchman/bookings?date=${dateFilter}`);
+      const data = await response.json();
+      if (data.success) {
+        setBookings(data.bookings || []);
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dateFilter]);
+
+  // Fetch booking requests
+  const fetchBookingRequests = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/watchman/booking-requests");
+      const data = await response.json();
+      if (data.success) {
+        setBookingRequests(data.requests || []);
+      }
+    } catch (error) {
+      console.error("Error fetching booking requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookingRequests();
+    fetchBookings();
+  }, [fetchBookingRequests, fetchBookings]);
+
   // New request form
   const [newRequest, setNewRequest] = useState({
     customerName: "",
@@ -184,13 +222,17 @@ export default function WatchmanBookingsPage() {
   // Filter today's bookings
   const today = new Date();
   const todayBookings = useMemo(() => {
+    // If we have actual bookings from API, use them
+    if (bookings.length > 0) return bookings;
+
+    // Fallback/Legacy filter for data-store reservations
     return reservations.filter((r) => {
       const checkInDate = new Date(r.checkIn);
       const checkOutDate = new Date(r.checkOut);
-      const isToday = 
+      const isToday =
         checkInDate.toDateString() === today.toDateString() ||
         checkOutDate.toDateString() === today.toDateString();
-      
+
       if (dateFilter === "today") return isToday;
       if (dateFilter === "tomorrow") {
         const tomorrow = new Date(today);
@@ -204,15 +246,15 @@ export default function WatchmanBookingsPage() {
       }
       return true;
     });
-  }, [reservations, dateFilter, today]);
+  }, [reservations, bookings, dateFilter, today]);
 
   const filteredBookings = useMemo(() => {
     let filtered = todayBookings;
-    
+
     if (statusFilter !== "all") {
       filtered = filtered.filter((b) => b.status === statusFilter);
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
@@ -221,7 +263,7 @@ export default function WatchmanBookingsPage() {
           b.id.toLowerCase().includes(searchLower)
       );
     }
-    
+
     return filtered;
   }, [todayBookings, statusFilter, search]);
 
@@ -265,47 +307,59 @@ export default function WatchmanBookingsPage() {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const parking = adminLocations.find((l) => l.id === newRequest.parkingId);
+      const reqBody = {
+        customerName: newRequest.customerName,
+        customerPhone: newRequest.customerPhone,
+        vehiclePlate: newRequest.vehiclePlate.toUpperCase(),
+        vehicleType: newRequest.vehicleType,
+        parkingId: newRequest.parkingId,
+        parkingName: parking?.name || "Unknown",
+        requestType: newRequest.requestType,
+        requestedStart: new Date(),
+        requestedEnd: new Date(Date.now() + parseInt(newRequest.duration) * 3600000),
+        estimatedAmount: parseInt(newRequest.duration) * 5,
+        notes: newRequest.notes,
+      };
 
-    const parking = adminLocations.find((l) => l.id === newRequest.parkingId);
-    const newReq: WatchmanBookingRequest = {
-      id: `req_${Date.now()}`,
-      customerId: `cust_${Date.now()}`,
-      customerName: newRequest.customerName,
-      customerPhone: newRequest.customerPhone,
-      vehiclePlate: newRequest.vehiclePlate.toUpperCase(),
-      vehicleType: newRequest.vehicleType,
-      parkingId: newRequest.parkingId,
-      parkingName: parking?.name || "Unknown",
-      requestType: newRequest.requestType,
-      requestedStart: new Date(),
-      requestedEnd: new Date(Date.now() + parseInt(newRequest.duration) * 3600000),
-      estimatedAmount: parseInt(newRequest.duration) * 5,
-      status: "pending",
-      priority: "normal",
-      notes: newRequest.notes,
-      requestedBy: user?.id || "watchman_1",
-      requestedAt: new Date(),
-    };
+      const response = await fetch("/api/watchman/booking-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reqBody),
+      });
 
-    setBookingRequests((prev) => [newReq, ...prev]);
-    setIsNewRequestOpen(false);
-    setNewRequest({
-      customerName: "",
-      customerPhone: "",
-      vehiclePlate: "",
-      vehicleType: "sedan",
-      parkingId: "",
-      requestType: "walk_in",
-      duration: "2",
-      notes: "",
-    });
-    setIsLoading(false);
+      const data = await response.json();
 
-    toast({
-      title: "Request Created",
-      description: "Booking request submitted for approval",
-    });
+      if (data.success) {
+        toast({
+          title: "Request Created",
+          description: "Booking request submitted for approval",
+        });
+        setIsNewRequestOpen(false);
+        setNewRequest({
+          customerName: "",
+          customerPhone: "",
+          vehiclePlate: "",
+          vehicleType: "sedan",
+          parkingId: "",
+          requestType: "walk_in",
+          duration: "2",
+          notes: "",
+        });
+        fetchBookingRequests();
+      } else {
+        throw new Error(data.error || "Failed to create request");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleApproveRequest = async () => {
@@ -348,12 +402,12 @@ export default function WatchmanBookingsPage() {
       prev.map((r) =>
         r.id === selectedRequest.id
           ? {
-              ...r,
-              status: "rejected",
-              processedBy: user?.id,
-              processedAt: new Date(),
-              rejectionReason,
-            }
+            ...r,
+            status: "rejected",
+            processedBy: user?.id,
+            processedAt: new Date(),
+            rejectionReason,
+          }
           : r
       )
     );
@@ -540,9 +594,8 @@ export default function WatchmanBookingsPage() {
                         >
                           <div className="flex items-start gap-4">
                             <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-                                isCheckIn ? "bg-green-100" : "bg-blue-100"
-                              }`}
+                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${isCheckIn ? "bg-green-100" : "bg-blue-100"
+                                }`}
                             >
                               <Car className={`w-6 h-6 ${isCheckIn ? "text-green-600" : "text-blue-600"}`} />
                             </div>
@@ -555,7 +608,7 @@ export default function WatchmanBookingsPage() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
-                                {booking.vehicleInfo.type} - Booking #{booking.id.slice(-8)}
+                                {booking.vehicleInfo.make} {booking.vehicleInfo.model} - Code: {booking.confirmationCode}
                               </p>
                               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
@@ -644,11 +697,10 @@ export default function WatchmanBookingsPage() {
                     filteredRequests.map((request) => (
                       <div
                         key={request.id}
-                        className={`p-4 border rounded-lg ${
-                          request.priority === "urgent" && request.status === "pending"
-                            ? "border-red-200 bg-red-50/50"
-                            : ""
-                        }`}
+                        className={`p-4 border rounded-lg ${request.priority === "urgent" && request.status === "pending"
+                          ? "border-red-200 bg-red-50/50"
+                          : ""
+                          }`}
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -957,7 +1009,6 @@ export default function WatchmanBookingsPage() {
           </DialogContent>
         </Dialog>
 
-<<<<<<< Updated upstream
         {/* Approve Dialog */}
         <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
           <DialogContent>
@@ -1022,8 +1073,6 @@ export default function WatchmanBookingsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-=======
->>>>>>> Stashed changes
       </div>
     </Suspense>
   );

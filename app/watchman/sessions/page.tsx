@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
@@ -28,18 +28,41 @@ export default function WatchmanSessionsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const searchParams = useSearchParams();
+  const [dbSessions, setDbSessions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchSessions = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/watchman/sessions");
+      const data = await response.json();
+      if (data.success) {
+        setDbSessions(data.sessions || []);
+      }
+    } catch (e) {
+      console.error("Error fetching sessions:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const displaySessions = dbSessions.length > 0 ? dbSessions : parkingSessions;
 
   const filteredSessions =
     activeTab === "all"
-      ? parkingSessions
-      : parkingSessions.filter((s) => s.status === activeTab);
+      ? displaySessions
+      : displaySessions.filter((s) => s.status === activeTab);
 
   const searchedSessions = search
     ? filteredSessions.filter(
-        (s) =>
-          s.vehiclePlate.toLowerCase().includes(search.toLowerCase()) ||
-          s.bookingId.toLowerCase().includes(search.toLowerCase())
-      )
+      (s) =>
+        s.vehiclePlate.toLowerCase().includes(search.toLowerCase()) ||
+        s.bookingId.toLowerCase().includes(search.toLowerCase())
+    )
     : filteredSessions;
 
   const getStatusVariant = (status: string) => {
@@ -164,26 +187,27 @@ export default function WatchmanSessionsPage() {
                 </div>
               ) : (
                 searchedSessions.map((session) => {
-                  const booking = reservations.find((r) => r.id === session.bookingId);
+                  const booking = reservations.find((r) => r.id === session.bookingId) || {
+                    checkIn: session.expectedCheckIn,
+                    checkOut: session.expectedCheckOut
+                  };
                   return (
                     <div
                       key={session.id}
-                      className={`p-4 border rounded-lg ${
-                        session.status === "overstay" ? "border-red-200 bg-red-50/50" : ""
-                      }`}
+                      className={`p-4 border rounded-lg ${session.status === "overstay" ? "border-red-200 bg-red-50/50" : ""
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              session.status === "checked_in"
-                                ? "bg-green-100"
-                                : session.status === "overstay"
+                            className={`w-12 h-12 rounded-full flex items-center justify-center ${session.status === "checked_in"
+                              ? "bg-green-100"
+                              : session.status === "overstay"
                                 ? "bg-red-100"
                                 : session.status === "pending"
-                                ? "bg-amber-100"
-                                : "bg-blue-100"
-                            }`}
+                                  ? "bg-amber-100"
+                                  : "bg-blue-100"
+                              }`}
                           >
                             {getStatusIcon(session.status)}
                           </div>
@@ -241,11 +265,10 @@ export default function WatchmanSessionsPage() {
                             <Link href="/watchman/scan" className="flex-1 sm:flex-none">
                               <Button
                                 size="sm"
-                                className={`w-full ${
-                                  session.status === "overstay"
-                                    ? "bg-red-600 hover:bg-red-700"
-                                    : "bg-blue-600 hover:bg-blue-700"
-                                }`}
+                                className={`w-full ${session.status === "overstay"
+                                  ? "bg-red-600 hover:bg-red-700"
+                                  : "bg-blue-600 hover:bg-blue-700"
+                                  }`}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Check Out

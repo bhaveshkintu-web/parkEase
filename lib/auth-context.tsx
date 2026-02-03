@@ -1,12 +1,13 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
   useState,
   useCallback,
 } from "react";
+import { signIn } from "next-auth/react";
 
 /* =======================
    TYPES
@@ -68,6 +69,33 @@ interface AuthContextType extends AuthState {
 ======================= */
 
 const AUTH_STORAGE_KEY = "parkease_auth";
+
+export const DEMO_ACCOUNTS = {
+  customer: {
+    email: "customer@example.com",
+    password: "password123",
+    dashboardUrl: "/account",
+    description: "Search and book parking spots, manage your vehicles and reservations.",
+  },
+  owner: {
+    email: "owner@example.com",
+    password: "password123",
+    dashboardUrl: "/owner",
+    description: "Manage your parking locations, watchmen staff, and track earnings.",
+  },
+  watchman: {
+    email: "watchman@example.com",
+    password: "password123",
+    dashboardUrl: "/watchman",
+    description: "Scan QR codes, manage vehicle check-ins and check-outs at locations.",
+  },
+  admin: {
+    email: "admin@example.com",
+    password: "password123",
+    dashboardUrl: "/admin",
+    description: "Full platform oversight, user management, and system-wide analytics.",
+  },
+};
 
 /* =======================
    HELPERS
@@ -158,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ======================= */
   const login = useCallback(async (email: string, password: string) => {
     try {
+      // First, use our custom API to get the user data for localStorage
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,6 +200,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const user = normalizeUser(result.user);
+
+      // CRITICAL: Synchronize with NextAuth session cookie
+      const nextAuthResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (nextAuthResult?.error) {
+        console.error("NextAuth Sync failed:", nextAuthResult.error);
+        // We continue because the custom login succeeded, but warnings are good
+      }
 
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user }));
 

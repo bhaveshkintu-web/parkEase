@@ -426,3 +426,54 @@ enum WatchmanShiftStatus {
   MISSED
   PARTIAL
 }
+
+enum BookingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum BookingRequestType {
+  WALK_IN
+  EXTENSION
+  MODIFICATION
+  EARLY_CHECKOUT
+}
+
+enum BookingRequestPriority {
+  NORMAL
+  URGENT
+}
+
+model BookingRequest {
+  id                String                 @id @default(cuid())
+  customerId        String?
+  customerName      String
+  customerEmail     String?
+  customerPhone     String?
+  vehiclePlate      String
+  vehicleType       String
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleColor      String?
+  parkingId         String
+  parkingName       String
+  spotNumber        String?
+  requestType       BookingRequestType     @default(WALK_IN)
+  originalBookingId String?
+  requestedStart    DateTime
+  requestedEnd      DateTime
+  estimatedAmount   Float
+  status            BookingRequestStatus   @default(PENDING)
+  priority          BookingRequestPriority @default(NORMAL)
+  notes             String?
+  rejectionReason   String?
+  requestedBy       String
+  requestedAt       DateTime               @default(now())
+  processedBy       String?
+  processedAt       DateTime?
+
+  @@index([parkingId])
+  @@index([requestedBy])
+}

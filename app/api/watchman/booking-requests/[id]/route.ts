@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { sendBookingNotification } from "@/lib/mailer";
+import fs from "fs";
+import path from "path";
 
 // PATCH /api/watchman/booking-requests/[id] - Approve/Reject a booking request
 export async function PATCH(
@@ -57,7 +60,7 @@ export async function PATCH(
                 const rows = await prisma.$queryRawUnsafe(`
                     SELECT * FROM "BookingRequest" 
                     WHERE status = 'PENDING' 
-                    ORDER BY "createdAt" DESC 
+                    ORDER BY "requestedAt" DESC 
                     LIMIT 5
                 `) as any[];
 
@@ -91,7 +94,8 @@ export async function PATCH(
         }
 
         // Role and Ownership Check
-        const role = session.user.role?.toUpperCase();
+        const sessionUser = session.user as any;
+        const role = sessionUser.role?.toUpperCase();
         if (role !== "OWNER" && role !== "ADMIN") {
             return NextResponse.json(
                 { error: "Forbidden. Only owners can approve or reject requests." },
@@ -101,7 +105,7 @@ export async function PATCH(
 
         // Verify the owner owns the location
         const ownerProfile = await prisma.ownerProfile.findUnique({
-            where: { userId: session.user.id },
+            where: { userId: sessionUser.id },
             include: { locations: true }
         });
 
@@ -114,7 +118,7 @@ export async function PATCH(
 
         // Update the request status
         let updateData: any = {
-            processedBy: session.user.id,
+            processedBy: sessionUser.id,
             processedAt: new Date(),
         };
 
@@ -165,17 +169,17 @@ export async function PATCH(
             if (action === "approve") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3 WHERE id = $4`,
-                    "APPROVED", session.user.id, new Date(), requestId
+                    "APPROVED", sessionUser.id, new Date(), requestId
                 );
             } else if (action === "reject") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3, "rejectionReason" = $4 WHERE id = $5`,
-                    "REJECTED", session.user.id, new Date(), rejectionReason, requestId
+                    "REJECTED", sessionUser.id, new Date(), rejectionReason, requestId
                 );
             } else if (action === "cancel") {
                 await prisma.$executeRawUnsafe(
                     `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3 WHERE id = $4`,
-                    "CANCELLED", session.user.id, new Date(), requestId
+                    "CANCELLED", sessionUser.id, new Date(), requestId
                 );
             }
             updatedRequest = { ...existingRequest, ...updateData };
@@ -250,9 +254,25 @@ export async function PATCH(
                     "CONFIRMED", confCode
                 );
 
-                // Manual decrement for fallback
                 await prisma.$executeRawUnsafe(`UPDATE "ParkingLocation" SET "availableSpots" = "availableSpots" - 1 WHERE id = $1`, existingRequest.parkingId);
             }
+
+            // Send Approval Notification
+            await sendBookingNotification(existingRequest.customerEmail || "guest@example.com", "APPROVED", {
+                customerName: existingRequest.customerName,
+                parkingName: existingRequest.parkingName,
+                confirmationCode: confCode,
+                vehiclePlate: existingRequest.vehiclePlate,
+                requestedStart: new Date(existingRequest.requestedStart).toLocaleString(),
+                requestedEnd: new Date(existingRequest.requestedEnd).toLocaleString(),
+            });
+        } else if (action === "reject") {
+            // Send Rejection Notification
+            await sendBookingNotification(existingRequest.customerEmail || "guest@example.com", "REJECTED", {
+                customerName: existingRequest.customerName,
+                parkingName: existingRequest.parkingName,
+                rejectionReason: rejectionReason,
+            });
         }
 
         return NextResponse.json({

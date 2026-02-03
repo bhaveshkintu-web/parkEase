@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Scanner } from "@yudiel/react-qr-scanner";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ import {
   MapPin,
   AlertTriangle,
   Keyboard,
+  X,
 } from "lucide-react";
 
 interface ScanResult {
@@ -52,22 +54,68 @@ interface ScanResult {
   };
 }
 
+import { useToast } from "@/hooks/use-toast";
+
 export default function WatchmanScanPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { reservations, checkInVehicle, checkOutVehicle } = useDataStore();
   const [manualCode, setManualCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [dbBookings, setDbBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch all bookings for scanning
+  // We fetch a larger range to ensure we can scan bookings that might have checked in early or late
+  const fetchDbBookings = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/watchman/bookings?date=week");
+      const data = await response.json();
+      if (data.success) {
+        setDbBookings(data.bookings || []);
+      }
+    } catch (e) {
+      console.error("Error fetching bookings for scan:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbBookings();
+  }, []);
 
   const handleManualSearch = () => {
     setError("");
-    const booking = reservations.find(
-      (r) =>
-        r.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
-        r.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
+
+    // Search in DB bookings first
+    let booking = dbBookings.find(
+      (b) =>
+        b.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
+        b.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
     );
+
+    // Fallback to mock reservations
+    if (!booking) {
+      const mockRes = reservations.find(
+        (r) =>
+          r.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
+          r.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
+      );
+      if (mockRes) {
+        booking = {
+          ...mockRes,
+          vehiclePlate: mockRes.vehicleInfo.licensePlate,
+          locationName: mockRes.location.name,
+          total: mockRes.totalPrice,
+          status: mockRes.status
+        };
+      }
+    }
 
     if (!booking) {
       setError("No booking found with this code or license plate");
@@ -84,20 +132,20 @@ export default function WatchmanScanPage() {
     const isCheckOut = now >= checkOutDate || booking.status === "confirmed";
 
     setScanResult({
-      type: isCheckIn && booking.status === "pending" ? "check_in" : "check_out",
+      type: (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out",
       booking: {
         id: booking.id,
         confirmationCode: booking.confirmationCode,
-        vehiclePlate: booking.vehicleInfo.licensePlate,
+        vehiclePlate: booking.vehiclePlate || booking.vehicleInfo.licensePlate,
         vehicleInfo: {
           make: booking.vehicleInfo.make,
           model: booking.vehicleInfo.model,
           color: booking.vehicleInfo.color,
         },
-        checkIn: booking.checkIn,
-        checkOut: booking.checkOut,
+        checkIn: new Date(booking.checkIn),
+        checkOut: new Date(booking.checkOut),
         location: {
-          name: booking.location.name,
+          name: booking.locationName || booking.location?.name,
         },
         guestInfo: {
           firstName: booking.guestInfo.firstName,
@@ -107,42 +155,53 @@ export default function WatchmanScanPage() {
     });
   };
 
-  const handleSimulateScan = () => {
-    setIsScanning(true);
-    setError("");
+  const handleScan = (data: string | null) => {
+    if (!data) return;
 
-    // Simulate scanning delay
-    setTimeout(() => {
+    // Attempt to find booking by ID or confirmation code
+    const booking = dbBookings.find(
+      (b) =>
+        b.confirmationCode === data ||
+        b.id === data
+    ) || reservations.find(
+      (r) =>
+        r.confirmationCode === data ||
+        r.id === data ||
+        r.qrCode === data
+    );
+
+    if (booking) {
       setIsScanning(false);
-      // Get a random booking for demo
-      const randomBooking = reservations[Math.floor(Math.random() * reservations.length)];
-      if (randomBooking) {
-        setScanResult({
-          type: randomBooking.status === "pending" ? "check_in" : "check_out",
-          booking: {
-            id: randomBooking.id,
-            confirmationCode: randomBooking.confirmationCode,
-            vehiclePlate: randomBooking.vehicleInfo.licensePlate,
-            vehicleInfo: {
-              make: randomBooking.vehicleInfo.make,
-              model: randomBooking.vehicleInfo.model,
-              color: randomBooking.vehicleInfo.color,
-            },
-            checkIn: randomBooking.checkIn,
-            checkOut: randomBooking.checkOut,
-            location: {
-              name: randomBooking.location.name,
-            },
-            guestInfo: {
-              firstName: randomBooking.guestInfo.firstName,
-              lastName: randomBooking.guestInfo.lastName,
-            },
-          },
+
+      const type = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out";
+
+      if (type === "check_in") {
+        // For real bookings, we should hit an API. For now, let's just log.
+        // The checkInVehicle/checkOutVehicle from data-store are mock.
+        checkInVehicle(booking.id, "");
+        toast({
+          title: "Check-in Successful",
+          description: `Vehicle ${booking.vehicleInfo.licensePlate} checked in via scan.`,
+          variant: "default",
+          className: "bg-green-600 text-white border-none",
         });
       } else {
-        setError("No active bookings found to scan");
+        checkOutVehicle(booking.id, "");
+        toast({
+          title: "Check-out Successful",
+          description: `Vehicle ${booking.vehicleInfo.licensePlate} checked out via scan.`,
+          variant: "default",
+          className: "bg-blue-600 text-white border-none",
+        });
       }
-    }, 1500);
+
+      router.push("/watchman/sessions");
+    }
+  };
+
+  const handleStartScan = () => {
+    setIsScanning(true);
+    setError("");
   };
 
   const handleConfirmAction = () => {
@@ -181,31 +240,52 @@ export default function WatchmanScanPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Camera View Placeholder */}
-            <div
-              className="relative aspect-square max-h-[300px] mx-auto bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
-              onClick={handleSimulateScan}
-            >
-              {isScanning ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-muted-foreground">Scanning...</p>
-                </div>
-              ) : (
+            {/* Camera View */}
+            {isScanning ? (
+              <div className="relative aspect-square max-h-[300px] mx-auto bg-black rounded-lg overflow-hidden">
+                <Scanner
+                  onScan={(result) => {
+                    if (result && result.length > 0) {
+                      handleScan(result[0].rawValue);
+                    }
+                  }}
+                  styles={{
+                    container: { width: "100%", height: "100%" },
+                    video: { width: "100%", height: "100%", objectFit: "cover" }
+                  }}
+                  components={{
+                    finder: false
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-white bg-black/50 hover:bg-black/70 rounded-full z-10"
+                  onClick={() => setIsScanning(false)}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+                <div className="absolute inset-0 pointer-events-none border-2 border-white/50 rounded-lg m-12 z-10"></div>
+              </div>
+            ) : (
+              <div
+                className="relative aspect-square max-h-[300px] mx-auto bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:bg-muted/80 transition-colors"
+                onClick={handleStartScan}
+              >
                 <>
                   <div className="absolute inset-4 border-2 border-dashed border-primary/50 rounded-lg" />
                   <div className="flex flex-col items-center gap-4 p-4 text-center">
                     <QrCode className="w-16 h-16 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-foreground">Tap to simulate scan</p>
+                      <p className="font-medium text-foreground">Tap to Open Camera</p>
                       <p className="text-sm text-muted-foreground">
-                        Camera access would be enabled in production
+                        Scan booking QR code
                       </p>
                     </div>
                   </div>
                 </>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -422,11 +502,10 @@ export default function WatchmanScanPage() {
             </Button>
             <Button
               onClick={handleConfirmAction}
-              className={`w-full sm:w-auto ${
-                scanResult?.type === "check_in"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
+              className={`w-full sm:w-auto ${scanResult?.type === "check_in"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+                }`}
             >
               {scanResult?.type === "check_in" ? (
                 <>
