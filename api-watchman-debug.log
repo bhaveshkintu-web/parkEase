@@ -5269,3 +5269,21 @@ Raw query failed. Code: `42703`. Message: `column "requestedBy" does not exist`
 [2026-02-03T11:38:44.803Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
 [2026-02-03T11:39:14.817Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
 [2026-02-03T11:39:44.803Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:46:55.084Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-03T11:46:55.095Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-03T11:46:55.111Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-03T11:46:55.117Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-03T11:46:55.119Z] OWNER-API: Found owner profile with 1 locations
+[2026-02-03T11:46:55.120Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-03T11:46:55.120Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-03T11:46:55.122Z] OWNER-API: Found owner profile with 1 locations
+[2026-02-03T11:46:55.123Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-03T11:46:55.123Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-03T11:46:55.131Z] OWNER-API: Successfully fetched 7 requests
+[2026-02-03T11:46:55.136Z] OWNER-API: Successfully fetched 7 requests
+[2026-02-03T11:47:13.412Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-03T11:47:13.421Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-03T11:47:13.427Z] OWNER-API: Found owner profile with 1 locations
+[2026-02-03T11:47:13.427Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-03T11:47:13.427Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-03T11:47:13.431Z] OWNER-API: Successfully fetched 7 requests
