@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
       user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role.toLowerCase() === roleFilter.toLowerCase();
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || user.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
   };
 
   const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "active":
         return "default";
       case "inactive":
@@ -171,7 +171,7 @@ export default function AdminUsersPage() {
           <CardHeader className="pb-2">
             <CardDescription>Active Users</CardDescription>
             <CardTitle className="text-3xl text-primary">
-              {users.filter((u) => u.status === "active").length}
+              {users.filter((u) => u.status.toLowerCase() === "active").length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -187,7 +187,7 @@ export default function AdminUsersPage() {
           <CardHeader className="pb-2">
             <CardDescription>Suspended</CardDescription>
             <CardTitle className="text-3xl text-destructive">
-              {users.filter((u) => u.status === "suspended").length}
+              {users.filter((u) => u.status.toLowerCase() === "suspended").length}
             </CardTitle>
           </CardHeader>
         </Card>

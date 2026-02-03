@@ -34,7 +34,9 @@ export async function GET(
             firstName: true,
             lastName: true,
             phone: true,
+            avatar: true,
             createdAt: true,
+            status: true,
           },
         },
         locations: {
@@ -49,7 +51,14 @@ export async function GET(
           },
         },
         documents: true,
-        wallet: true,
+        wallet: {
+          include: {
+            transactions: {
+              orderBy: { createdAt: "desc" },
+              take: 10,
+            },
+          },
+        },
       },
     });
 
@@ -57,7 +66,24 @@ export async function GET(
       return NextResponse.json({ error: "Owner not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ owner });
+    // Calculate aggregate stats
+    const totalBookings = owner.locations.reduce((acc, loc) => acc + loc._count.bookings, 0);
+    const totalReviews = owner.locations.reduce((acc, loc) => acc + loc._count.reviews, 0);
+    const avgRating = owner.locations.length > 0 
+      ? owner.locations.reduce((acc, loc) => acc + (loc.analytics?.averageRating || 0), 0) / owner.locations.length 
+      : 0;
+
+    return NextResponse.json({ 
+      owner: {
+        ...owner,
+        stats: {
+          totalBookings,
+          totalReviews,
+          avgRating,
+          locationCount: owner.locations.length
+        }
+      } 
+    });
   } catch (error) {
     console.error("[ADMIN_OWNER_GET]", error);
     return NextResponse.json({ 
@@ -99,49 +125,96 @@ export async function PATCH(
     
     console.log("Action:", action);
 
-    if (action === "approve") {
-      const updatedProfile = await prisma.ownerProfile.update({
-        where: { id },
+    if (action) {
+      if (action === "approve") {
+        const updatedProfile = await prisma.ownerProfile.update({
+          where: { id },
+          data: {
+            status: "approved",
+            verificationStatus: "verified",
+          },
+        });
+        return NextResponse.json({ message: "Owner profile approved successfully", profile: updatedProfile });
+      } else if (action === "reject") {
+        const updatedProfile = await prisma.ownerProfile.update({
+          where: { id },
+          data: {
+            status: "rejected",
+            verificationStatus: "failed",
+          },
+        });
+        return NextResponse.json({ message: "Owner profile rejected", profile: updatedProfile });
+      } else if (action === "suspend") {
+        const updatedProfile = await prisma.ownerProfile.update({
+          where: { id },
+          data: {
+            status: "suspended",
+          },
+        });
+        return NextResponse.json({ message: "Owner profile suspended", profile: updatedProfile });
+      }
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    // Handle general profile update
+    const {
+      businessName,
+      businessType,
+      taxId,
+      registrationNumber,
+      website,
+      description,
+      street,
+      city,
+      state,
+      zipCode,
+      country,
+      bankAccountName,
+      bankName,
+      accountNumber,
+      routingNumber,
+      user,
+    } = body;
+
+    // Update User details if provided
+    if (user) {
+      await prisma.user.update({
+        where: { id: (await prisma.ownerProfile.findUnique({ where: { id }, select: { userId: true } }))?.userId },
         data: {
-          status: "approved",
-          verificationStatus: "verified",
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
         },
-      });
-
-      console.log("Owner approved successfully:", updatedProfile.id);
-
-      return NextResponse.json({
-        message: "Owner profile approved successfully",
-        profile: updatedProfile,
-      });
-    } else if (action === "reject") {
-      const updatedProfile = await prisma.ownerProfile.update({
-        where: { id },
-        data: {
-          status: "rejected",
-          verificationStatus: "failed",
-        },
-      });
-
-      return NextResponse.json({
-        message: "Owner profile rejected",
-        profile: updatedProfile,
-      });
-    } else if (action === "suspend") {
-      const updatedProfile = await prisma.ownerProfile.update({
-        where: { id },
-        data: {
-          status: "suspended",
-        },
-      });
-
-      return NextResponse.json({
-        message: "Owner profile suspended",
-        profile: updatedProfile,
       });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    // Update Owner Profile details
+    const updatedProfile = await prisma.ownerProfile.update({
+      where: { id },
+      data: {
+        businessName,
+        businessType,
+        taxId,
+        registrationNumber,
+        website,
+        description,
+        street,
+        city,
+        state,
+        zipCode,
+        country,
+        bankAccountName,
+        bankName,
+        accountNumber,
+        routingNumber,
+      },
+    });
+
+    return NextResponse.json({
+      message: "Owner profile updated successfully",
+      profile: updatedProfile,
+    });
   } catch (error) {
     console.error("[ADMIN_OWNER_APPROVE] Error:", error);
     return NextResponse.json({ 

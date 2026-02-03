@@ -4,8 +4,8 @@ import React from "react"
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Plus, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,66 +46,89 @@ export default function NewOwnerPage() {
     routingNumber: "",
   });
 
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!showSuggestions || formData.street.length < 3) {
+        setSuggestions([]);
+        return;
+      }
+
+      setIsFetchingSuggestions(true);
+      try {
+        const response = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(formData.street)}&limit=5`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.features || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch address suggestions:", error);
+      } finally {
+        setIsFetchingSuggestions(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.street, showSuggestions]);
+
+  const handleSelectSuggestion = (suggestion: any) => {
+    const props = suggestion.properties;
+    
+    // Construct street address
+    let streetAddress = props.name || "";
+    if (props.housenumber && props.street) {
+      streetAddress = `${props.housenumber} ${props.street}`;
+    } else if (props.street) {
+      streetAddress = props.street;
+    }
+
+    setFormData({
+      ...formData,
+      street: streetAddress,
+      city: props.city || props.town || props.village || props.hamlet || props.suburb || props.district || props.city_district || "",
+      state: props.state || props.county || "",
+      zipCode: props.postcode || "",
+      country: props.country || "USA",
+    });
+    
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
     try {
-      // Create user object for the owner
-      const newUserId = `user_${Date.now()}`;
-      const newUser = {
-        id: newUserId,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        role: "owner" as const,
-        status: "active" as const,
-        emailVerified: false,
-        createdAt: new Date(),
-        preferences: {
-          notifications: { email: true, sms: true, marketing: false },
+      const response = await fetch("/api/admin/owners", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      };
-
-      await addOwnerProfile({
-        userId: newUserId,
-        user: newUser,
-        businessName: formData.businessName,
-        businessType: formData.businessType,
-        taxId: formData.taxId || undefined,
-        registrationNumber: formData.registrationNumber || undefined,
-        address: {
-          street: formData.street,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          country: formData.country,
-        },
-        bankDetails: formData.bankAccountName
-          ? {
-              accountName: formData.bankAccountName,
-              bankName: formData.bankName,
-              accountNumber: formData.accountNumber,
-              routingNumber: formData.routingNumber || undefined,
-            }
-          : undefined,
-        documents: [],
-        status: "pending",
-        verificationStatus: "unverified",
+        body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create owner");
+      }
 
       toast({
         title: "Owner Created",
         description: "The new owner has been created successfully.",
       });
       router.push("/admin/owners");
-    } catch {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create owner",
+        description: error.message || "Failed to create owner",
         variant: "destructive",
       });
     } finally {
@@ -239,14 +262,58 @@ export default function NewOwnerPage() {
               <CardDescription>Primary business location</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="street">Street Address *</Label>
-                <Input
-                  id="street"
-                  value={formData.street}
-                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="street"
+                    value={formData.street}
+                    onChange={(e) => {
+                      setFormData({ ...formData, street: e.target.value });
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    required
+                    placeholder="Start typing an address..."
+                    autoComplete="off"
+                  />
+                  {isFetchingSuggestions && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Suggestions list */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md max-h-60 overflow-auto">
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className="flex items-start gap-2 w-full px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-left transition-colors border-b last:border-0"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                      >
+                        <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">
+                            {suggestion.properties.name || 
+                             (suggestion.properties.housenumber ? `${suggestion.properties.housenumber} ${suggestion.properties.street}` : suggestion.properties.street)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {[
+                              suggestion.properties.city || suggestion.properties.town || suggestion.properties.village,
+                              suggestion.properties.state,
+                              suggestion.properties.postcode,
+                              suggestion.properties.country
+                            ].filter(Boolean).join(", ")}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
