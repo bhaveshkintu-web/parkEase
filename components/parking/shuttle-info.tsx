@@ -11,6 +11,8 @@ interface ShuttleInfoProps {
 }
 
 export function ShuttleInfoCard({ shuttleInfo }: ShuttleInfoProps) {
+  if (!shuttleInfo) return null;
+  
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">

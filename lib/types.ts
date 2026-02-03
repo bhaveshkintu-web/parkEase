@@ -23,6 +23,8 @@ export interface ParkingLocation {
   id: string;
   name: string;
   address: string;
+  city: string;
+  zipCode: string;
   airport: string;
   airportCode: string;
   coordinates: { lat: number; lng: number };
@@ -42,11 +44,12 @@ export interface ParkingLocation {
   availableSpots: number;
   totalSpots: number;
   description: string;
-  redeemSteps: RedeemStep[];
+  redeemSteps?: RedeemStep[];
   specialInstructions?: string[];
-  cancellationPolicy: CancellationPolicy;
+  cancellationPolicy?: CancellationPolicy;
   heightLimit?: string;
   securityFeatures: string[];
+  ownerId?: string;
 }
 
 export interface Destination {
@@ -80,6 +83,7 @@ export interface VehicleInfo {
   model: string;
   color: string;
   licensePlate: string;
+  type?: string;
 }
 
 export interface Quote {
@@ -166,6 +170,7 @@ export interface User {
   preferences: UserPreferences;
   // Owner specific
   ownerId?: string;
+  ownerProfile?: OwnerProfile;
   assignedParkingIds?: string[];
 }
 
@@ -178,7 +183,7 @@ export interface Watchman {
   phone: string;
   email: string;
   assignedParkingIds: string[];
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "archived";
   shift: "morning" | "evening" | "night" | "all";
   createdAt: Date;
   lastActive?: Date;
@@ -243,27 +248,29 @@ export interface ParkingSession {
 // Watchman Booking Request Types
 export interface WatchmanBookingRequest {
   id: string;
-  customerId: string;
+  customerId?: string;
   customerName: string;
-  customerPhone: string;
+  customerPhone?: string;
   vehiclePlate: string;
   vehicleType: string;
   parkingId: string;
   parkingName: string;
   spotNumber?: string;
-  requestType: "walk_in" | "extension" | "modification" | "early_checkout";
+  requestType: "WALK_IN" | "EXTENSION" | "MODIFICATION" | "EARLY_CHECKOUT";
   originalBookingId?: string;
-  requestedStart: Date;
-  requestedEnd: Date;
+  requestedStart: string | Date;
+  requestedEnd: string | Date;
   estimatedAmount: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
-  priority: "normal" | "urgent";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  priority: string;
   notes?: string;
-  requestedBy: string;
-  requestedAt: Date;
-  processedBy?: string;
-  processedAt?: Date;
+  requestedById: string;
+  requestedAt: string | Date;
+  processedById?: string;
+  processedAt?: string | Date;
   rejectionReason?: string;
+  requestedBy?: { firstName: string, lastName: string };
+  bookingId?: string;
 }
 
 // Watchman Activity Types
@@ -286,15 +293,9 @@ export interface WatchmanActivityLog {
 export interface ShiftBreak {
   id: string;
   startTime: Date;
-  endTime: Date;
-  duration: number; // in minutes
-}
-
-export interface ShiftBreak {
-  id: string;
-  startTime: Date;
   endTime?: Date;
-  type: "lunch" | "short" | "emergency";
+  duration?: number; // in minutes
+  type?: "lunch" | "short" | "emergency";
 }
 
 export interface WatchmanShift {
@@ -496,7 +497,7 @@ export interface AdminReview extends Review {
 
 // Admin Location Types
 export interface AdminParkingLocation extends ParkingLocation {
-  status: "active" | "inactive" | "maintenance";
+  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "PENDING";
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

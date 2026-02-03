@@ -37,7 +37,8 @@ const systemAdminNav: NavSection[] = [
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Owners", href: "/admin/owners", icon: Building2 },
       { label: "Locations", href: "/admin/locations", icon: MapPin },
-      { label: "Approvals", href: "/admin/approvals", icon: Shield },
+      { label: "Location Approvals", href: "/admin/approvals", icon: Shield },
+      { label: "Owner Approvals", href: "/admin/approvals/owners", icon: Building2 },
       { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     ],
   },
@@ -175,7 +176,10 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
                 {section.items.map((item) => {
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== `/${role}` && pathname.startsWith(item.href));
+                    (item.href !== "/admin" &&
+                      item.href !== "/admin/approvals" &&
+                      item.href !== `/${role}` &&
+                      pathname.startsWith(item.href));
                   return (
                     <Link
                       key={item.href}

@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   MapPin,
   MessageSquare,
+  Building2,
 } from "lucide-react";
 
 const userNavItems = [
@@ -83,6 +84,8 @@ export function AccountSidebar() {
               </Link>
             );
           })}
+          
+
         </div>
 
         {isAdmin && (

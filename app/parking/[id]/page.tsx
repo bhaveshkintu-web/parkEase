@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -11,7 +11,8 @@ import { ReviewsSection } from "@/components/parking/reviews-section";
 import { ShuttleInfoCard } from "@/components/parking/shuttle-info";
 import { RedeemStepsCard, SpecialInstructionsCard } from "@/components/parking/redeem-steps";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { parkingLocations, getAvailabilityStatus, formatCurrency, calculateQuote } from "@/lib/data";
+import { getAvailabilityStatus, formatCurrency, calculateQuote } from "@/lib/data";
+import { getParkingLocationById, getNearbyParkingLocations } from "@/lib/actions/parking-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,25 +39,94 @@ import {
   Zap,
   ParkingCircle,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { use } from "react";
 
 function LocationDetailsContent({ id }: { id: string }) {
-  const location = parkingLocations.find((l) => l.id === id);
+  const router = useRouter();
+  const [location, setLocationData] = React.useState<any>(null);
+  const [nearbyLocations, setNearbyLocations] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
   const { checkIn, checkOut, setLocation } = useBooking();
+
+  React.useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      const locResponse = await getParkingLocationById(id);
+      if (locResponse.success && locResponse.data) {
+        setLocationData(locResponse.data);
+        
+        // Fetch nearby locations once we have the airport code
+        const nearbyResponse = await getNearbyParkingLocations(locResponse.data.airportCode, locResponse.data.id);
+        if (nearbyResponse.success && nearbyResponse.data) {
+          setNearbyLocations(nearbyResponse.data);
+        }
+      }
+      setIsLoading(false);
+    }
+    fetchData();
+  }, [id]);
+
+  const { toast } = require("@/hooks/use-toast");
+
+  const handleReserve = async () => {
+    if (!location) return;
+    setIsLoading(true);
+    setLocation(location);
+    // Give context some time to update and simulate processing
+    await new Promise(resolve => setTimeout(resolve, 500));
+    router.push("/checkout");
+  };
+
+  const handleGetDirections = () => {
+    if (!location) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: location.name,
+        text: `Check out this parking at ${location.name}`,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link Copied",
+        description: "The link has been copied to your clipboard.",
+      });
+    }
+  };
+
+  const handleSave = () => {
+    toast({
+      title: "Saved",
+      description: "Location added to your favorites.",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading location details...</p>
+      </div>
+    );
+  }
 
   if (!location) {
     notFound();
   }
 
-  const availability = getAvailabilityStatus(location);
-  const quote = calculateQuote(location, checkIn, checkOut);
+  const availability = getAvailabilityStatus(location as any);
+  const quote = calculateQuote(location as any, checkIn, checkOut);
 
-  // Find nearby alternatives
-  const nearbyLocations = parkingLocations
-    .filter((l) => l.id !== location.id && l.airportCode === location.airportCode)
-    .slice(0, 3);
+  // For related locations, we now use the fetched nearbyLocations state
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -103,9 +173,9 @@ function LocationDetailsContent({ id }: { id: string }) {
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-accent text-accent" />
-                  <span className="font-semibold text-foreground">{location.rating}</span>
+                  <span className="font-semibold text-foreground">{location.rating || "0.0"}</span>
                   <span className="text-muted-foreground">
-                    ({location.reviewCount.toLocaleString()} reviews)
+                    ({(location.reviewCount || 0).toLocaleString()} reviews)
                   </span>
                 </div>
                 <span className="text-muted-foreground">·</span>
@@ -119,11 +189,11 @@ function LocationDetailsContent({ id }: { id: string }) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleShare}>
                 <Share className="h-4 w-4" />
                 Share
               </Button>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleSave}>
                 <Heart className="h-4 w-4" />
                 Save
               </Button>
@@ -133,9 +203,17 @@ function LocationDetailsContent({ id }: { id: string }) {
           {/* Image Gallery */}
           <div className="relative mb-8 grid gap-2 overflow-hidden rounded-xl md:grid-cols-4 md:grid-rows-2">
             <div className="relative col-span-2 row-span-2 aspect-[4/3] bg-gradient-to-br from-primary/20 to-primary/5 md:aspect-auto">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Car className="h-24 w-24 text-primary/30" />
-              </div>
+              {location.images && location.images[0] ? (
+                <img 
+                  src={location.images[0]} 
+                  alt={location.name} 
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Car className="h-24 w-24 text-primary/30" />
+                </div>
+              )}
               <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                 {location.shuttle && (
                   <Badge className="gap-1 bg-primary">
@@ -143,7 +221,7 @@ function LocationDetailsContent({ id }: { id: string }) {
                     Free Shuttle
                   </Badge>
                 )}
-                {location.cancellationPolicy.type === "free" && (
+                {location.cancellationPolicy?.type === "free" && (
                   <Badge variant="secondary" className="gap-1 bg-card/90 text-foreground">
                     <CheckCircle className="h-3 w-3 text-primary" />
                     Free Cancellation
@@ -154,11 +232,19 @@ function LocationDetailsContent({ id }: { id: string }) {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="hidden aspect-video bg-gradient-to-br from-muted to-muted/50 md:block"
+                className="hidden aspect-video bg-gradient-to-br from-muted to-muted/50 md:block relative overflow-hidden"
               >
-                <div className="flex h-full items-center justify-center">
-                  <Car className="h-12 w-12 text-muted-foreground/30" />
-                </div>
+                {location.images && location.images[i] ? (
+                  <img 
+                    src={location.images[i]} 
+                    alt={`${location.name} ${i}`} 
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Car className="h-12 w-12 text-muted-foreground/30" />
+                  </div>
+                )}
               </div>
             ))}
             <Button
@@ -209,6 +295,65 @@ function LocationDetailsContent({ id }: { id: string }) {
                 )}
               </div>
 
+              {/* Amenities Highlights */}
+              <div className="flex flex-wrap gap-4">
+                <div className={cn(
+                  "flex items-center gap-2 rounded-lg border p-3 transition-colors",
+                  location.shuttle ? "border-primary/20 bg-primary/5" : "border-border bg-card"
+                )}>
+                  <div className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full",
+                    location.shuttle ? "bg-primary/10" : "bg-muted"
+                  )}>
+                    <Bus className={cn(
+                      "h-4 w-4",
+                      location.shuttle ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Shuttle</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {location.shuttle ? "Free Shuttle" : "No Shuttle"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={cn(
+                  "flex items-center gap-2 rounded-lg border p-3 transition-colors",
+                  location.cancellationPolicy?.type === "free" && "border-primary/20 bg-primary/5"
+                )}>
+                  <div className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full",
+                    location.cancellationPolicy?.type === "free" ? "bg-primary/10" : "bg-muted"
+                  )}>
+                    <CheckCircle className={cn(
+                      "h-4 w-4",
+                      location.cancellationPolicy?.type === "free" ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Cancellation</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {location.cancellationPolicy?.type === "free"
+                        ? "Free"
+                        : location.cancellationPolicy?.type === "partial"
+                        ? "Partial Refund"
+                        : "Non-refundable"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Security</p>
+                    <p className="text-sm font-semibold text-foreground">Verified Secure</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Description */}
               <Card>
                 <CardHeader>
@@ -221,28 +366,28 @@ function LocationDetailsContent({ id }: { id: string }) {
 
               {/* Cancellation Policy */}
               <Card className={cn(
-                location.cancellationPolicy.type === "free" && "border-primary/20 bg-primary/5"
+                location.cancellationPolicy?.type === "free" && "border-primary/20 bg-primary/5"
               )}>
                 <CardContent className="flex items-start gap-4 pt-6">
                   <div className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                    location.cancellationPolicy.type === "free" ? "bg-primary/10" : "bg-muted"
+                    location.cancellationPolicy?.type === "free" ? "bg-primary/10" : "bg-muted"
                   )}>
                     <CheckCircle className={cn(
                       "h-5 w-5",
-                      location.cancellationPolicy.type === "free" ? "text-primary" : "text-muted-foreground"
+                      location.cancellationPolicy?.type === "free" ? "text-primary" : "text-muted-foreground"
                     )} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
-                      {location.cancellationPolicy.type === "free" 
-                        ? "Free Cancellation" 
-                        : location.cancellationPolicy.type === "partial"
+                      {location.cancellationPolicy?.type === "free"
+                        ? "Free Cancellation"
+                        : location.cancellationPolicy?.type === "partial"
                         ? "Partial Refund Available"
                         : "Non-Refundable"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {location.cancellationPolicy.description}
+                      {location.cancellationPolicy?.description}
                     </p>
                   </div>
                 </CardContent>
@@ -272,7 +417,7 @@ function LocationDetailsContent({ id }: { id: string }) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {location.securityFeatures.map((feature) => (
+                    {(location.securityFeatures || []).map((feature: string) => (
                       <div key={feature} className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary" />
                         <span className="text-sm text-foreground">{feature}</span>
@@ -310,11 +455,23 @@ function LocationDetailsContent({ id }: { id: string }) {
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <Button variant="outline" className="flex-1 gap-2 bg-transparent">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2 bg-transparent"
+                      onClick={handleGetDirections}
+                    >
                       <Navigation className="h-4 w-4" />
                       Get Directions
                     </Button>
-                    <Button variant="outline" className="flex-1 gap-2 bg-transparent">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2 bg-transparent"
+                      onClick={() => {
+                        if (location.shuttleInfo?.phone) {
+                          window.location.href = `tel:${location.shuttleInfo.phone}`;
+                        }
+                      }}
+                    >
                       <Phone className="h-4 w-4" />
                       Contact
                     </Button>
@@ -323,17 +480,21 @@ function LocationDetailsContent({ id }: { id: string }) {
               </Card>
 
               {/* Reviews */}
-              <ReviewsSection rating={location.rating} reviewCount={location.reviewCount} />
+              <ReviewsSection 
+                rating={location.rating} 
+                reviewCount={location.reviewCount} 
+                reviews={location.reviews}
+              />
 
               {/* Nearby Options */}
-              {nearbyLocations.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Need more options?</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {nearbyLocations.map((nearby) => (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Need more options?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {nearbyLocations.length > 0 ? (
+                      nearbyLocations.map((nearby) => (
                         <Link
                           key={nearby.id}
                           href={`/parking/${nearby.id}`}
@@ -344,8 +505,6 @@ function LocationDetailsContent({ id }: { id: string }) {
                             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                               <Star className="h-3 w-3 fill-accent text-accent" />
                               <span>{nearby.rating}</span>
-                              <span>·</span>
-                              <span>{nearby.distance}</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -355,16 +514,20 @@ function LocationDetailsContent({ id }: { id: string }) {
                             <p className="text-xs text-muted-foreground">per day</p>
                           </div>
                         </Link>
-                      ))}
-                    </div>
-                    <Button variant="outline" className="mt-4 w-full bg-transparent" asChild>
-                      <Link href={`/parking?q=${location.airportCode}`}>
-                        View all {location.airportCode} parking
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No other parking options available at this location.
+                      </p>
+                    )}
+                  </div>
+                  <Button variant="outline" className="mt-4 w-full bg-transparent" asChild>
+                    <Link href="/parking">
+                      View all parking
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Booking Widget - Desktop */}
@@ -389,11 +552,13 @@ function LocationDetailsContent({ id }: { id: string }) {
               <span className="text-muted-foreground">· {quote.days} days</span>
             </div>
           </div>
-          <Link href="/checkout" onClick={() => setLocation(location)}>
-            <Button size="lg" disabled={availability.status === "soldout"}>
-              {availability.status === "soldout" ? "Sold Out" : "Reserve Now"}
-            </Button>
-          </Link>
+          <Button 
+            size="lg" 
+            disabled={availability.status === "soldout"}
+            onClick={handleReserve}
+          >
+            {availability.status === "soldout" ? "Sold Out" : "Reserve Now"}
+          </Button>
         </div>
       </div>
 
@@ -407,8 +572,6 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ id: 
   const resolvedParams = params instanceof Promise ? React.use(params) : params;
   
   return (
-    <BookingProvider>
-      <LocationDetailsContent id={resolvedParams.id} />
-    </BookingProvider>
+    <LocationDetailsContent id={resolvedParams.id} />
   );
 }

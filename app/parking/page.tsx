@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -8,7 +8,8 @@ import { SearchWidget } from "@/components/search-widget";
 import { LocationCard } from "@/components/parking/location-card";
 import { FilterSidebar } from "@/components/parking/filter-sidebar";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
-import { parkingLocations, calculateDays } from "@/lib/data";
+import { getParkingLocations } from "@/lib/actions/parking-actions";
+import { calculateDays } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -50,8 +51,11 @@ function ParkingResultsContent() {
   const query = searchParams.get("q") || "";
   const { checkIn, checkOut } = useBooking();
 
+  const [locations, setLocations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [filters, setFilters] = useState<Filters>({
-    priceRange: [0, 50],
+    priceRange: [0, 100],
     shuttle: false,
     covered: false,
     selfPark: false,
@@ -64,18 +68,30 @@ function ParkingResultsContent() {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      const response = await getParkingLocations();
+      if (response.success && response.data) {
+        setLocations(response.data);
+      }
+      setIsLoading(false);
+    }
+    fetchData();
+  }, []);
+
   const days = calculateDays(checkIn, checkOut);
 
   // Filter locations
   const filteredLocations = useMemo(() => {
-    return parkingLocations.filter((location) => {
+    return locations.filter((location) => {
       // Search query filter
       if (query) {
         const searchLower = query.toLowerCase();
         const matchesSearch =
           location.name.toLowerCase().includes(searchLower) ||
-          location.airport.toLowerCase().includes(searchLower) ||
-          location.airportCode.toLowerCase().includes(searchLower) ||
+          (location.airport && location.airport.toLowerCase().includes(searchLower)) ||
+          (location.airportCode && location.airportCode.toLowerCase().includes(searchLower)) ||
           location.address.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
@@ -95,11 +111,11 @@ function ParkingResultsContent() {
       if (filters.valet && !location.valet) return false;
       if (filters.evCharging && !location.amenities.includes("EV Charging")) return false;
       if (filters.open24Hours && !location.open24Hours) return false;
-      if (filters.freeCancellation && location.cancellationPolicy.type !== "free") return false;
+      if (filters.freeCancellation && location.cancellationPolicy?.type !== "free") return false;
 
       return true;
     });
-  }, [query, filters]);
+  }, [query, filters, locations]);
 
   // Sort locations
   const sortedLocations = useMemo(() => {
@@ -270,10 +286,8 @@ function ParkingResultsContent() {
 
 export default function ParkingResultsPage() {
   return (
-    <BookingProvider>
-      <Suspense fallback={<Loading />}>
-        <ParkingResultsContent />
-      </Suspense>
-    </BookingProvider>
+    <Suspense fallback={<Loading />}>
+      <ParkingResultsContent />
+    </Suspense>
   );
 }

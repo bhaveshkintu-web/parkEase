@@ -2,12 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import QRCodeGenerator from "react-qr-code";
-import { useDataStore } from "@/lib/data-store";
+import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +52,7 @@ import {
   RefreshCw,
   ArrowRight,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 
 export default function ReservationDetailPage({
@@ -62,10 +63,9 @@ export default function ReservationDetailPage({
   // Handle both Promise and direct object params for compatibility
   const resolvedParams = params instanceof Promise ? React.use(params) : params;
   const id = resolvedParams.id;
-
-  const { reservations, cancelReservation } = useDataStore();
+  const [reservation, setReservation] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
   const { toast } = useToast();
-  const reservation = reservations.find((r) => r.id === id);
 
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState("");
@@ -73,18 +73,63 @@ export default function ReservationDetailPage({
   const [showShareDialog, setShowShareDialog] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("details");
 
+  // Review state
+  const [reviewRating, setReviewRating] = React.useState(0);
+  const [reviewTitle, setReviewTitle] = React.useState("");
+  const [reviewContent, setReviewContent] = React.useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
+  const [hasSubmittedReview, setHasSubmittedReview] = React.useState(false);
+
+  // Email state
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
+  const [shareEmail, setShareEmail] = React.useState("");
+
+  React.useEffect(() => {
+    async function loadBooking() {
+      setIsLoading(true);
+      const response = await getBookingDetails(id);
+      if (response.success && response.data) {
+        setReservation(response.data);
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to load reservation",
+          variant: "destructive",
+        });
+      }
+      setIsLoading(false);
+    }
+    loadBooking();
+  }, [id, toast]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading reservation details...</p>
+      </div>
+    );
+  }
+
   if (!reservation) {
-    notFound();
+    return (
+      <div className="max-w-4xl mx-auto py-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">Reservation not found</h2>
+        <Link href="/account/reservations">
+          <Button variant="outline">Back to Reservations</Button>
+        </Link>
+      </div>
+    );
   }
 
   const now = new Date();
   const checkInDate = new Date(reservation.checkIn);
   const checkOutDate = new Date(reservation.checkOut);
 
-  const isUpcoming = reservation.status === "confirmed" && checkInDate > now;
-  const isActive = reservation.status === "confirmed" && checkInDate <= now && checkOutDate >= now;
-  const isPast = reservation.status === "confirmed" && checkOutDate < now;
-  const isCancelled = reservation.status === "cancelled";
+  const isUpcoming = (reservation.status === "CONFIRMED" || reservation.status === "PENDING") && checkInDate > now;
+  const isActive = reservation.status === "CONFIRMED" && checkInDate <= now && checkOutDate >= now;
+  const isPast = (reservation.status === "CONFIRMED" || reservation.status === "COMPLETED") && checkOutDate < now;
+  const isCancelled = reservation.status === "CANCELLED";
 
   // Calculate duration
   const durationMs = checkOutDate.getTime() - checkInDate.getTime();
@@ -98,20 +143,64 @@ export default function ReservationDetailPage({
   const handleCancelReservation = async () => {
     setIsCancelling(true);
     try {
-      await cancelReservation(id);
-      toast({
-        title: "Reservation Cancelled",
-        description: "Your reservation has been cancelled successfully.",
-      });
-      setShowCancelDialog(false);
-    } catch {
+      const response = await cancelBooking(id, cancelReason);
+      if (response.success) {
+        setReservation({ ...reservation, status: "CANCELLED" });
+        toast({
+          title: "Reservation Cancelled",
+          description: "Your reservation has been cancelled successfully.",
+        });
+        setShowCancelDialog(false);
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to cancel reservation. Please try again.",
+        description: error.message || "Failed to cancel reservation. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) {
+      toast({
+        title: "Rating required",
+        description: "Please select a star rating before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const response = await submitReview(id, {
+        rating: reviewRating,
+        title: reviewTitle,
+        content: reviewContent,
+      });
+
+      if (response.success) {
+        setHasSubmittedReview(true);
+        toast({
+          title: "Review submitted!",
+          description: "Thank you for sharing your experience.",
+        });
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit review. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -125,6 +214,91 @@ export default function ReservationDetailPage({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleEmailReceipt = async () => {
+    setIsSendingEmail(true);
+    try {
+      const response = await sendEmailReceipt(id);
+      if (response.success) {
+        toast({
+          title: "Email Sent!",
+          description: `A copy of your receipt has been sent to ${reservation.guestEmail}.`,
+        });
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleShareEmail = async () => {
+    if (!shareEmail || !shareEmail.includes("@")) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const response = await sendEmailReceipt(id, shareEmail);
+      if (response.success) {
+        toast({
+          title: "Reservation Shared!",
+          description: `Details have been sent to ${shareEmail}.`,
+        });
+        setShowShareDialog(false);
+        setShareEmail("");
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to share",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleCallLocation = () => {
+    const SUPPORT_PHONE = "(800) 555-0199";
+    const phone = reservation?.location?.owner?.user?.phone || reservation?.location?.phone || reservation?.location?.shuttleInfo?.phone;
+    const phoneToCall = phone || SUPPORT_PHONE;
+
+    if (phoneToCall) {
+      window.location.href = `tel:${phoneToCall.replace(/[^\d+]/g, '')}`;
+    } else {
+      toast({
+        title: "Phone number not available",
+        description: "We couldn't find a contact number for this location.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenMaps = () => {
+    const { address, city, state, zipCode } = reservation.location;
+    const fullAddress = `${address}, ${city}, ${state || ""} ${zipCode || ""}`;
+    const query = encodeURIComponent(fullAddress);
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(googleMapsUrl, "_blank");
+  };
+
+  const handleContactSupport = () => {
+    window.location.href = "/support";
   };
 
   const getStatusConfig = () => {
@@ -269,7 +443,7 @@ export default function ReservationDetailPage({
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="directions">Directions</TabsTrigger>
-          {reservation.modificationHistory.length > 0 && (
+          {(reservation.modificationHistory || []).length > 0 && (
             <TabsTrigger value="history">History</TabsTrigger>
           )}
           {isPast && <TabsTrigger value="review">Leave Review</TabsTrigger>}
@@ -312,8 +486,18 @@ export default function ReservationDetailPage({
                           <Download className="w-4 h-4 mr-2" />
                           Add to Wallet
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
-                          <Mail className="w-4 h-4 mr-2" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent"
+                          onClick={handleEmailReceipt}
+                          disabled={isSendingEmail}
+                        >
+                          {isSendingEmail ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
                           Email Receipt
                         </Button>
                       </div>
@@ -366,15 +550,15 @@ export default function ReservationDetailPage({
                         </div>
                         <div>
                           <p className="font-semibold text-foreground">
-                            {reservation.vehicleInfo.make} {reservation.vehicleInfo.model}
+                            {reservation.vehicleMake} {reservation.vehicleModel}
                           </p>
-                          <p className="text-sm text-muted-foreground">{reservation.vehicleInfo.color}</p>
+                          <p className="text-sm text-muted-foreground">{reservation.vehicleColor}</p>
                         </div>
                       </div>
                       <div className="p-4 border rounded-lg">
                         <p className="text-sm text-muted-foreground mb-1">License Plate</p>
                         <p className="font-mono text-xl font-bold text-foreground">
-                          {reservation.vehicleInfo.licensePlate}
+                          {reservation.vehiclePlate}
                         </p>
                       </div>
                     </div>
@@ -565,16 +749,16 @@ export default function ReservationDetailPage({
                   <div>
                     <p className="text-sm text-muted-foreground">Name</p>
                     <p className="font-medium text-foreground">
-                      {reservation.guestInfo.firstName} {reservation.guestInfo.lastName}
+                      {reservation.guestFirstName} {reservation.guestLastName}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium text-foreground break-all">{reservation.guestInfo.email}</p>
+                    <p className="font-medium text-foreground break-all">{reservation.guestEmail}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium text-foreground">{reservation.guestInfo.phone}</p>
+                    <p className="font-medium text-foreground">{reservation.guestPhone}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -592,23 +776,23 @@ export default function ReservationDetailPage({
                     <Badge
                       variant="outline"
                       className={
-                        reservation.location.cancellationPolicy.type === "free"
+                        reservation.location.cancellationPolicy?.type === "free"
                           ? "bg-green-50 text-green-700 border-green-200"
-                          : reservation.location.cancellationPolicy.type === "partial"
+                          : reservation.location.cancellationPolicy?.type === "partial"
                             ? "bg-yellow-50 text-yellow-700 border-yellow-200"
                             : "bg-red-50 text-red-700 border-red-200"
                       }
                     >
-                      {reservation.location.cancellationPolicy.type === "free"
+                      {reservation.location.cancellationPolicy?.type === "free"
                         ? "Free Cancellation"
-                        : reservation.location.cancellationPolicy.type === "partial"
+                        : reservation.location.cancellationPolicy?.type === "partial"
                           ? "Partial Refund"
                           : "Non-refundable"}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
-                      {reservation.location.cancellationPolicy.description}
+                      {reservation.location.cancellationPolicy?.description || "Refer to terminal instructions for cancellation details."}
                     </p>
-                    {reservation.cancellationEligibility.eligible && (
+                    {reservation.cancellationEligibility?.eligible && (
                       <div className="p-3 bg-green-50 rounded-lg">
                         <p className="text-sm font-medium text-green-800">
                           Eligible refund: {formatCurrency(reservation.cancellationEligibility.refundAmount)}
@@ -628,11 +812,19 @@ export default function ReservationDetailPage({
                   <CardTitle>Need Help?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent"
+                    onClick={handleCallLocation}
+                  >
                     <Phone className="w-4 h-4 mr-3" />
                     Call Location
                   </Button>
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent"
+                    onClick={handleContactSupport}
+                  >
                     <MessageSquare className="w-4 h-4 mr-3" />
                     Contact Support
                   </Button>
@@ -652,19 +844,23 @@ export default function ReservationDetailPage({
               <CardDescription>{reservation.location.address}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">Interactive map</p>
-                </div>
+              <div className="h-64 bg-muted rounded-lg overflow-hidden">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{ border: 0 }}
+                  src={`https://www.google.com/maps?q=${reservation.location.latitude},${reservation.location.longitude}&z=15&output=embed`}
+                  allowFullScreen
+                ></iframe>
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1">
+                <Button className="flex-1" onClick={handleOpenMaps}>
                   <Navigation className="w-4 h-4 mr-2" />
                   Open in Maps
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleCallLocation}>
                   <Phone className="w-4 h-4" />
                 </Button>
               </div>
@@ -684,7 +880,7 @@ export default function ReservationDetailPage({
           </Card>
         </TabsContent>
 
-        {reservation.modificationHistory.length > 0 && (
+        {(reservation.modificationHistory || []).length > 0 && (
           <TabsContent value="history" className="mt-6">
             <Card>
               <CardHeader>
@@ -696,13 +892,13 @@ export default function ReservationDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reservation.modificationHistory.map((mod, index) => (
+                  {(reservation.modificationHistory || []).map((mod: any, index: number) => (
                     <div key={mod.id} className="flex gap-4">
                       <div className="relative">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                           <RefreshCw className="w-4 h-4 text-muted-foreground" />
                         </div>
-                        {index < reservation.modificationHistory.length - 1 && (
+                        {index < (reservation.modificationHistory || []).length - 1 && (
                           <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
                         )}
                       </div>
@@ -758,35 +954,77 @@ export default function ReservationDetailPage({
                 <CardDescription>Share your experience with other travelers</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">Your rating:</p>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="p-1 hover:scale-110 transition-transform">
-                        <Star className="w-6 h-6 text-muted-foreground hover:text-amber-400" />
-                      </button>
-                    ))}
+                {hasSubmittedReview ? (
+                  <div className="py-8 text-center space-y-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Review Submitted!</h3>
+                      <p className="text-muted-foreground">Thank you for your feedback. It helps our community of travelers.</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setHasSubmittedReview(false)}>
+                      Write another review
+                    </Button>
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="review-title">Review Title</Label>
-                  <input
-                    id="review-title"
-                    type="text"
-                    className="w-full mt-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Summarize your experience"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="review-content">Your Review</Label>
-                  <Textarea
-                    id="review-content"
-                    className="mt-1"
-                    rows={4}
-                    placeholder="Tell others about your parking experience..."
-                  />
-                </div>
-                <Button>Submit Review</Button>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-muted-foreground">Your rating:</p>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                          >
+                            <Star
+                              className={`w-8 h-8 ${star <= reviewRating
+                                  ? "text-amber-400 fill-amber-400"
+                                  : "text-muted-foreground hover:text-amber-400"
+                                }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="review-title">Review Title</Label>
+                      <Input
+                        id="review-title"
+                        value={reviewTitle}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReviewTitle(e.target.value)}
+                        className="w-full mt-1"
+                        placeholder="Summarize your experience"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="review-content">Your Review</Label>
+                      <Textarea
+                        id="review-content"
+                        value={reviewContent}
+                        onChange={(e) => setReviewContent(e.target.value)}
+                        className="mt-1"
+                        rows={4}
+                        placeholder="Tell others about your parking experience..."
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSubmitReview}
+                      disabled={isSubmittingReview || reviewRating === 0}
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Review"
+                      )}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -802,7 +1040,7 @@ export default function ReservationDetailPage({
               Are you sure you want to cancel this reservation? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          {reservation.cancellationEligibility.eligible && (
+          {reservation.cancellationEligibility?.eligible && (
             <div className="p-4 bg-green-50 rounded-lg">
               <p className="font-medium text-green-800">
                 You will receive a refund of {formatCurrency(reservation.cancellationEligibility.refundAmount)}
@@ -851,14 +1089,31 @@ export default function ReservationDetailPage({
               <p className="text-sm text-muted-foreground">Confirmation Code</p>
               <p className="font-mono font-bold text-lg">{reservation.confirmationCode}</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" className="bg-transparent" onClick={handleCopyConfirmation}>
+            <div className="space-y-2">
+              <Label htmlFor="share-email">Email Address</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="share-email"
+                  placeholder="friend@example.com"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                />
+                <Button
+                  onClick={handleShareEmail}
+                  disabled={isSendingEmail || !shareEmail}
+                >
+                  {isSendingEmail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Send"
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <Button variant="outline" className="w-full bg-transparent" onClick={handleCopyConfirmation}>
                 <Copy className="w-4 h-4 mr-2" />
-                Copy Code
-              </Button>
-              <Button variant="outline" className="bg-transparent">
-                <Mail className="w-4 h-4 mr-2" />
-                Send Email
+                Copy Confirmation Code
               </Button>
             </div>
           </div>

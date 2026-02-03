@@ -31,7 +31,7 @@ function VerifyEmailContent() {
         }
 
         setMessage("Email verified successfully 🎉 Redirecting...");
-        setTimeout(() => router.push("/auth/login"), 5000);
+        setTimeout(() => router.push("/auth/login"), 2000);
       } catch {
         setError("Network error");
       } finally {

@@ -95,10 +95,30 @@ export async function PATCH(
 
         // Role and Ownership Check
         const sessionUser = session.user as any;
-        const role = sessionUser.role?.toUpperCase();
+        let role = (sessionUser.role || "").toUpperCase();
+
+        // Fallback: Check DB if session role is missing or not authorized
         if (role !== "OWNER" && role !== "ADMIN") {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: sessionUser.id },
+                select: { role: true }
+            });
+            if (dbUser) {
+                role = dbUser.role.toUpperCase();
+                console.log(`Fallback: User role from DB is ${role}`);
+            }
+        }
+
+        console.log(`PATCH request by ${sessionUser.email}, role: ${role}`);
+
+        if (role !== "OWNER" && role !== "ADMIN") {
+            try {
+                const fs = require('fs');
+                fs.appendFileSync('api-error.log', `[${new Date().toISOString()}] FORBIDDEN: User ${sessionUser.email} role is [${role}] (id: ${sessionUser.id})\n`);
+            } catch (e) { }
+
             return NextResponse.json(
-                { error: "Forbidden. Only owners can approve or reject requests." },
+                { error: `Forbidden. Only owners can approve or reject requests. Your role is: ${role}` },
                 { status: 403 }
             );
         }
@@ -118,7 +138,7 @@ export async function PATCH(
 
         // Update the request status
         let updateData: any = {
-            processedBy: sessionUser.id,
+            processedById: sessionUser.id,
             processedAt: new Date(),
         };
 
@@ -168,17 +188,17 @@ export async function PATCH(
         } catch (err) {
             if (action === "approve") {
                 await prisma.$executeRawUnsafe(
-                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3 WHERE id = $4`,
+                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3 WHERE id = $4`,
                     "APPROVED", sessionUser.id, new Date(), requestId
                 );
             } else if (action === "reject") {
                 await prisma.$executeRawUnsafe(
-                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3, "rejectionReason" = $4 WHERE id = $5`,
+                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3, "rejectionReason" = $4 WHERE id = $5`,
                     "REJECTED", sessionUser.id, new Date(), rejectionReason, requestId
                 );
             } else if (action === "cancel") {
                 await prisma.$executeRawUnsafe(
-                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedBy" = $2, "processedAt" = $3 WHERE id = $4`,
+                    `UPDATE "BookingRequest" SET status = $1::"BookingRequestStatus", "processedById" = $2, "processedAt" = $3 WHERE id = $4`,
                     "CANCELLED", sessionUser.id, new Date(), requestId
                 );
             }
@@ -195,7 +215,7 @@ export async function PATCH(
                 await prisma.$transaction(async (tx) => {
                     const newBooking = await tx.booking.create({
                         data: {
-                            userId: existingRequest.requestedBy,
+                            userId: existingRequest.requestedById || null, // Link to the watchman who requested it
                             locationId: existingRequest.parkingId,
                             checkIn: new Date(existingRequest.requestedStart),
                             checkOut: new Date(existingRequest.requestedEnd),
@@ -243,7 +263,7 @@ export async function PATCH(
                         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::"BookingStatus", $18, NOW()
                     )
                 `,
-                    bookingId, existingRequest.requestedBy, existingRequest.parkingId,
+                    bookingId, existingRequest.requestedById || null, existingRequest.parkingId,
                     new Date(existingRequest.requestedStart), new Date(existingRequest.requestedEnd),
                     existingRequest.customerName.split(' ')[0] || "Guest",
                     existingRequest.customerName.split(' ').slice(1).join(' ') || "User",

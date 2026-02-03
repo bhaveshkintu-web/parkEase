@@ -18,10 +18,13 @@ export default function WatchmanLayout({ children }: { children: React.ReactNode
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push("/auth/login?redirect=/watchman");
-      } else if (user?.role !== "watchman" && user?.role !== "admin") {
-        router.push("/account");
-      } else if (user) {
-        initializeForWatchman(user.id);
+      } else {
+        const role = user?.role?.toLowerCase();
+        if (role !== "watchman" && role !== "admin") {
+          router.push("/account");
+        } else if (user) {
+          initializeForWatchman(user.id);
+        }
       }
     }
   }, [isLoading, isAuthenticated, user, router, initializeForWatchman]);
@@ -37,7 +40,8 @@ export default function WatchmanLayout({ children }: { children: React.ReactNode
     );
   }
 
-  if (!isAuthenticated || (user?.role !== "watchman" && user?.role !== "admin")) {
+  const role = user?.role?.toLowerCase();
+  if (!isAuthenticated || (role !== "watchman" && role !== "admin")) {
     return null;
   }
 

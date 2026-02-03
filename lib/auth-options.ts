@@ -1,11 +1,10 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
 
   session: {
     strategy: "jwt",
@@ -21,32 +20,15 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
-        console.log('🔐 NextAuth authorize called with:', { email: credentials?.email });
-
         if (!credentials?.email || !credentials.password) {
-          console.log('❌ Missing credentials');
           throw new Error("Missing credentials");
         }
-
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        console.log('👤 User found:', user ? {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          emailVerified: user.emailVerified
-        } : 'NO USER FOUND');
-
-        if (!user) {
-          console.log('❌ User not found');
-          throw new Error("Invalid credentials");
-        }
-
-        if (!user.emailVerified) {
-          console.log('❌ Email not verified');
+        if (!user || !user.emailVerified) {
           throw new Error("Email not verified");
         }
 
@@ -55,14 +37,10 @@ export const authOptions: NextAuthOptions = {
           user.password,
         );
 
-        console.log('🔑 Password validation result:', isValid);
-
         if (!isValid) {
-          console.log('❌ Invalid password');
           throw new Error("Invalid credentials");
         }
 
-        console.log('✅ Authorization successful');
         return {
           id: user.id,
           email: user.email,

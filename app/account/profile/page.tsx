@@ -205,32 +205,6 @@ export default function ProfilePage() {
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email}</p>
               )}
-              {user && !user.emailVerified && (
-                <p className="text-sm text-amber-600">
-                  Email not verified.{" "}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={async () => {
-                      const res = await resendEmailVerification();
-                      if (res.success) {
-                        toast({
-                          title: "Verification email sent",
-                          description: "Please check your inbox",
-                        });
-                      } else {
-                        toast({
-                          title: "Error",
-                          description: res.error,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Resend verification
-                  </button>
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cml68fmmu0006u1e4qjgnt179",
+    "vehiclePlate": "ABC-123",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-04T06:43:22.323Z"
+  },
+  {
+    "id": "cml6ezr1p0007u1p8rfxns5zw",
+    "vehiclePlate": "GJ057896",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T09:38:21.690Z"
+  },
+  {
+    "id": "cml6g0ha4000bu1p8q9m3apx6",
+    "vehiclePlate": "GJ057896",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T09:38:21.690Z"
+  },
+  {
+    "id": "cml6gp07v000fu1p8nj915cmk",
+    "vehiclePlate": "GJ01AB1234",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T10:19:38.134Z"
+  },
+  {
+    "id": "cml6gpmzf000ju1p8vvpbjr7f",
+    "vehiclePlate": "GJ01AB1234",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T10:19:38.134Z"
+  },
+  {
+    "id": "cml6grwa9000nu1p8e8bm89qw",
+    "vehiclePlate": "GJ01AB1234",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T10:19:38.134Z"
+  },
+  {
+    "id": "cml6h2ov90001u1pciw340umy",
+    "vehiclePlate": "PEND-123",
+    "status": "PENDING",
+    "checkIn": "2026-02-03T11:45:15.233Z"
+  },
+  {
+    "id": "cml6h2ovo0005u1pcn4dpgycd",
+    "vehiclePlate": "ACTI-456",
+    "status": "PENDING",
+    "checkIn": "2026-02-03T09:45:15.233Z"
+  },
+  {
+    "id": "cml6h2ovt0009u1pcgdtl8zpb",
+    "vehiclePlate": "OVER-789",
+    "status": "PENDING",
+    "checkIn": "2026-02-03T08:45:15.233Z"
+  },
+  {
+    "id": "cml6h98ro000ru1p8qbuglntq",
+    "vehiclePlate": "GJ01AB1234",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T10:19:38.134Z"
+  },
+  {
+    "id": "cml6hago2000vu1p8kwmll24e",
+    "vehiclePlate": "GJ01AB1234",
+    "status": "CONFIRMED",
+    "checkIn": "2026-02-03T10:19:38.134Z"
+  }
+]

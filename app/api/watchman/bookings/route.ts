@@ -12,30 +12,47 @@ export async function GET(request: NextRequest) {
         }
 
         const sessionUser = session.user as any;
-        const role = sessionUser.role?.toUpperCase();
+        const role = (sessionUser.role || "").toUpperCase();
 
         if (role !== "WATCHMAN" && role !== "OWNER" && role !== "ADMIN") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const weekFromNow = new Date(now);
+        weekFromNow.setDate(now.getDate() + 7);
+
         let locationIds: string[] = [];
 
         if (role === "WATCHMAN") {
             // Find watchman profile
-            const watchman = await prisma.watchman.findUnique({
+            const watchman = await (prisma.watchman as any).findUnique({
                 where: { userId: sessionUser.id },
                 include: {
                     shifts: {
+                        where: {
+                            scheduledStart: { gte: now, lt: tomorrow }
+                        },
                         select: { locationId: true }
+                    },
+                    assignedLocations: {
+                        select: { id: true }
                     }
                 }
             });
 
             if (watchman) {
-                locationIds = watchman.shifts.map(s => s.locationId);
+                const shiftLocationIds = (watchman.shifts as any[] || []).map(s => s.locationId);
+                const assignedLocationIds = (watchman.assignedLocations as any[] || []).map(l => l.id);
 
-                // If no shifts, maybe they are assigned to all owner's locations?
-                if (locationIds.length === 0) {
+                // Combine and deduplicate
+                locationIds = Array.from(new Set([...shiftLocationIds, ...assignedLocationIds]));
+
+                // If still no locations, fallback to owner's locations
+                if (locationIds.length === 0 && watchman.ownerId) {
                     const ownerLocations = await prisma.parkingLocation.findMany({
                         where: { ownerId: watchman.ownerId },
                         select: { id: true }
@@ -63,13 +80,6 @@ export async function GET(request: NextRequest) {
         const searchParams = request.nextUrl.searchParams;
         const dateFilter = searchParams.get("date") || "today";
 
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        const weekFromNow = new Date(now);
-        weekFromNow.setDate(now.getDate() + 7);
-
         let dateQuery: any = {};
         if (dateFilter === "today") {
             dateQuery = {
@@ -96,12 +106,21 @@ export async function GET(request: NextRequest) {
             };
         }
 
+        // Prepare query
+        const whereClause = {
+            locationId: { in: locationIds },
+            ...dateQuery,
+            status: { not: "CANCELLED" } as any
+        };
+
+        // Debug logging
+        try {
+            const fs = require('fs');
+            fs.appendFileSync('api-watchman-debug.log', `[${new Date().toISOString()}] FETCH_BOOKINGS: User ${sessionUser.email} (Role: ${role}) LocationIds: [${locationIds.join(', ')}] DateFilter: ${dateFilter} Results Found: `);
+        } catch (e) { }
+
         const bookings = await prisma.booking.findMany({
-            where: {
-                locationId: { in: locationIds },
-                ...dateQuery,
-                status: { not: "CANCELLED" }
-            },
+            where: whereClause,
             include: {
                 location: true,
                 parkingSession: true
@@ -110,6 +129,11 @@ export async function GET(request: NextRequest) {
                 checkIn: "asc"
             }
         });
+
+        try {
+            const fs = require('fs');
+            fs.appendFileSync('api-watchman-debug.log', `${bookings.length}\n`);
+        } catch (e) { }
 
         return NextResponse.json({
             success: true,

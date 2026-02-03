@@ -1,50 +1,140 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
-import { use, useState, useEffect } from "react";
-import { useRouter, notFound } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { vehicleSchema, type VehicleInput } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CAR_MAKES = [
-  "Acura", "Audi", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler", "Dodge",
-  "Ford", "GMC", "Honda", "Hyundai", "Infiniti", "Jeep", "Kia", "Lexus",
-  "Lincoln", "Mazda", "Mercedes-Benz", "Nissan", "Porsche", "Ram", "Subaru",
-  "Tesla", "Toyota", "Volkswagen", "Volvo", "Other"
+  "Acura",
+  "Audi",
+  "BMW",
+  "Buick",
+  "Cadillac",
+  "Chevrolet",
+  "Chrysler",
+  "Dodge",
+  "Ford",
+  "GMC",
+  "Honda",
+  "Hyundai",
+  "Infiniti",
+  "Jeep",
+  "Kia",
+  "Lexus",
+  "Lincoln",
+  "Mazda",
+  "Mercedes-Benz",
+  "Nissan",
+  "Porsche",
+  "Ram",
+  "Subaru",
+  "Tesla",
+  "Toyota",
+  "Volkswagen",
+  "Volvo",
+  "Other",
 ];
 
 const COLORS = [
-  "Black", "White", "Silver", "Gray", "Red", "Blue", "Green", "Brown",
-  "Beige", "Gold", "Orange", "Yellow", "Purple", "Other"
+  "Black",
+  "White",
+  "Silver",
+  "Gray",
+  "Red",
+  "Blue",
+  "Green",
+  "Brown",
+  "Beige",
+  "Gold",
+  "Orange",
+  "Yellow",
+  "Purple",
+  "Other",
 ];
 
 const STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
-  "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
-  "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
-  "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
 ];
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 30 }, (_, i) => currentYear + 1 - i);
 
-export default function EditVehiclePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function EditVehiclePage() {
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
   const { vehicles, updateVehicle } = useDataStore();
   const { toast } = useToast();
 
@@ -78,8 +168,20 @@ export default function EditVehiclePage({
     }
   }, [vehicle]);
 
+  if (!vehicles.length) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
   if (!vehicle) {
-    notFound();
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        Vehicle not found
+      </div>
+    );
   }
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -147,8 +249,13 @@ export default function EditVehiclePage({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="make">Make</Label>
-                <Select value={formData.make} onValueChange={(v) => handleChange("make", v)}>
-                  <SelectTrigger className={errors.make ? "border-destructive" : ""}>
+                <Select
+                  value={formData.make}
+                  onValueChange={(v) => handleChange("make", v)}
+                >
+                  <SelectTrigger
+                    className={errors.make ? "border-destructive" : ""}
+                  >
                     <SelectValue placeholder="Select make" />
                   </SelectTrigger>
                   <SelectContent>
@@ -159,7 +266,9 @@ export default function EditVehiclePage({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.make && <p className="text-sm text-destructive">{errors.make}</p>}
+                {errors.make && (
+                  <p className="text-sm text-destructive">{errors.make}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -171,14 +280,19 @@ export default function EditVehiclePage({
                   onChange={(e) => handleChange("model", e.target.value)}
                   className={errors.model ? "border-destructive" : ""}
                 />
-                {errors.model && <p className="text-sm text-destructive">{errors.model}</p>}
+                {errors.model && (
+                  <p className="text-sm text-destructive">{errors.model}</p>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Year</Label>
-                <Select value={String(formData.year)} onValueChange={(v) => handleChange("year", Number(v))}>
+                <Select
+                  value={String(formData.year)}
+                  onValueChange={(v) => handleChange("year", Number(v))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -194,8 +308,13 @@ export default function EditVehiclePage({
 
               <div className="space-y-2">
                 <Label htmlFor="color">Color</Label>
-                <Select value={formData.color} onValueChange={(v) => handleChange("color", v)}>
-                  <SelectTrigger className={errors.color ? "border-destructive" : ""}>
+                <Select
+                  value={formData.color}
+                  onValueChange={(v) => handleChange("color", v)}
+                >
+                  <SelectTrigger
+                    className={errors.color ? "border-destructive" : ""}
+                  >
                     <SelectValue placeholder="Select color" />
                   </SelectTrigger>
                   <SelectContent>
@@ -206,7 +325,9 @@ export default function EditVehiclePage({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.color && <p className="text-sm text-destructive">{errors.color}</p>}
+                {errors.color && (
+                  <p className="text-sm text-destructive">{errors.color}</p>
+                )}
               </div>
             </div>
 
@@ -217,16 +338,27 @@ export default function EditVehiclePage({
                   id="licensePlate"
                   placeholder="ABC1234"
                   value={formData.licensePlate}
-                  onChange={(e) => handleChange("licensePlate", e.target.value.toUpperCase())}
+                  onChange={(e) =>
+                    handleChange("licensePlate", e.target.value.toUpperCase())
+                  }
                   className={errors.licensePlate ? "border-destructive" : ""}
                 />
-                {errors.licensePlate && <p className="text-sm text-destructive">{errors.licensePlate}</p>}
+                {errors.licensePlate && (
+                  <p className="text-sm text-destructive">
+                    {errors.licensePlate}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="state">State</Label>
-                <Select value={formData.state} onValueChange={(v) => handleChange("state", v)}>
-                  <SelectTrigger className={errors.state ? "border-destructive" : ""}>
+                <Select
+                  value={formData.state}
+                  onValueChange={(v) => handleChange("state", v)}
+                >
+                  <SelectTrigger
+                    className={errors.state ? "border-destructive" : ""}
+                  >
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
@@ -237,7 +369,9 @@ export default function EditVehiclePage({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.state && <p className="text-sm text-destructive">{errors.state}</p>}
+                {errors.state && (
+                  <p className="text-sm text-destructive">{errors.state}</p>
+                )}
               </div>
             </div>
 
@@ -245,16 +379,25 @@ export default function EditVehiclePage({
               <Checkbox
                 id="isDefault"
                 checked={formData.isDefault}
-                onCheckedChange={(checked) => handleChange("isDefault", checked === true)}
+                onCheckedChange={(checked) =>
+                  handleChange("isDefault", checked === true)
+                }
               />
-              <label htmlFor="isDefault" className="text-sm text-muted-foreground">
+              <label
+                htmlFor="isDefault"
+                className="text-sm text-muted-foreground"
+              >
                 Set as my default vehicle
               </label>
             </div>
           </CardContent>
 
           <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

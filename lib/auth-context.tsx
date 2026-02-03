@@ -7,13 +7,13 @@ import {
   useState,
   useCallback,
 } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 
 /* =======================
    TYPES
 ======================= */
 
-export type UserRole = "admin" | "owner" | "watchman" | "customer";
+export type UserRole = "ADMIN" | "OWNER" | "WATCHMAN" | "CUSTOMER" | "admin" | "owner" | "watchman" | "customer";
 
 export type User = {
   id: string;
@@ -24,6 +24,8 @@ export type User = {
   avatar: string | null;
   emailVerified: boolean;
   role: UserRole;
+  ownerId?: string;
+  ownerProfile?: any; // Avoiding circular dependency if possible, or just use any for now
   createdAt?: string;
 };
 
@@ -110,7 +112,9 @@ function normalizeUser(raw: any): User {
     phone: raw.phone ?? null,
     avatar: raw.avatar ?? null,
     emailVerified: Boolean(raw.emailVerified),
-    role: raw.role,
+    role: raw.role, // Preserve exact role from database (ADMIN, OWNER, CUSTOMER, etc.)
+    ownerId: raw.ownerId,
+    ownerProfile: raw.ownerProfile,
     createdAt: raw.createdAt,
   };
 }
@@ -126,39 +130,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 ======================= */
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  /* =======================
-     RESTORE SESSION
-  ======================= */
+  // restore session
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!stored) throw new Error("No session");
-
-      const parsed = JSON.parse(stored);
-      if (!parsed?.user) throw new Error("Invalid session");
-
-      const user = normalizeUser(parsed.user);
-
-      setState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      setState((s) => ({ ...s, isLoading: false }));
+    async function restoreSession() {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+        if (data?.user) {
+          setUser(normalizeUser(data.user));
+          setIsAuthenticated(true);
+        }
+      } catch { }
+      setIsLoading(false);
     }
+    restoreSession();
   }, []);
 
   /* =======================
-     REGISTER
-  ======================= */
+       REGISTER
+    ======================= */
   const register = useCallback(async (data: RegisterData) => {
     try {
       const res = await fetch("/api/auth/register", {
@@ -181,59 +175,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /* =======================
-     LOGIN
-  ======================= */
   const login = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
     try {
-      // First, use our custom API to get the user data for localStorage
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        return { success: false, error: result.error };
-      }
-
-      const user = normalizeUser(result.user);
-
-      // CRITICAL: Synchronize with NextAuth session cookie
-      const nextAuthResult = await signIn("credentials", {
+      const res = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
-
-      if (nextAuthResult?.error) {
-        console.error("NextAuth Sync failed:", nextAuthResult.error);
-        // We continue because the custom login succeeded, but warnings are good
+      if (res?.error) {
+        setIsLoading(false);
+        return { success: false, error: res.error };
       }
 
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user }));
+      const sessionRes = await fetch("/api/auth/session");
+      const sessionData = await sessionRes.json();
+      if (!sessionData?.user) throw new Error("Unauthorized");
 
-      setState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      console.log("session==================", sessionData);
 
-      return { success: true, user };
-    } catch (err) {
-      console.error("LOGIN_ERROR:", err);
+      setUser(normalizeUser(sessionData.user));
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      return { success: true, user: normalizeUser(sessionData.user) };
+    } catch {
+      setIsLoading(false);
       return { success: false, error: "Network error" };
     }
   }, []);
 
   /* =======================
-     UPDATE PROFILE
-  ======================= */
+       UPDATE PROFILE
+    ======================= */
   const updateProfile = useCallback(
     async (data: Partial<User>) => {
-      if (!state.user) {
+      if (!user) {
         return { success: false, error: "Not authenticated" };
       }
 
@@ -242,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId: state.user.id,
+            userId: user.id,
             ...data,
           }),
         });
@@ -253,17 +229,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: false, error: result.error };
         }
 
-        const mergedUser = normalizeUser({
-          ...state.user,
-          ...result.user,
-        });
+        // 🔁 refresh NextAuth session
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
 
-        localStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({ user: mergedUser }),
-        );
-
-        setState((s) => ({ ...s, user: mergedUser }));
+        if (sessionData?.user) {
+          setUser(normalizeUser(sessionData.user));
+        }
 
         return { success: true };
       } catch (err) {
@@ -271,14 +243,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: "Network error" };
       }
     },
-    [state.user],
+    [user],
   );
 
-  /* =======================
-     RESEND EMAIL
-  ======================= */
   const resendEmailVerification = useCallback(async () => {
-    if (!state.user) {
+    if (!user?.email) {
       return { success: false, error: "Not authenticated" };
     }
 
@@ -286,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: state.user.email }),
+        body: JSON.stringify({ email: user.email }),
       });
 
       const result = await res.json();
@@ -300,20 +269,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("RESEND_VERIFICATION_ERROR:", err);
       return { success: false, error: "Network error" };
     }
-  }, [state.user]);
+  }, [user]);
 
-  /* =======================
-     UPLOAD AVATAR
-  ======================= */
+  //   /* =======================
+  //      UPLOAD AVATAR
+  //   ======================= */
   const uploadAvatar = useCallback(
     async (file: File) => {
-      if (!state.user) {
+      if (!user) {
         return { success: false, error: "Not authenticated" };
       }
 
       const formData = new FormData();
       formData.append("avatar", file);
-      formData.append("userId", state.user.id);
+      formData.append("userId", user.id);
 
       try {
         const res = await fetch("/api/user/avatar", {
@@ -327,17 +296,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: false, error: result.error };
         }
 
-        const updatedUser = normalizeUser({
-          ...state.user,
-          avatar: result.avatar,
-        });
+        // 🔁 refresh session
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
 
-        localStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({ user: updatedUser }),
-        );
-
-        setState((s) => ({ ...s, user: updatedUser }));
+        if (sessionData?.user) {
+          setUser(normalizeUser(sessionData.user));
+        }
 
         return { success: true };
       } catch (err) {
@@ -345,14 +310,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: "Network error" };
       }
     },
-    [state.user],
+    [user],
   );
 
-  /* =======================
-     REMOVE AVATAR
-  ======================= */
+  //   /* =======================
+  //      REMOVE AVATAR
+  //   ======================= */
   const removeAvatar = useCallback(async () => {
-    if (!state.user) {
+    if (!user) {
       return { success: false, error: "Not authenticated" };
     }
 
@@ -360,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/user/avatar", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: state.user.id }),
+        body: JSON.stringify({ userId: user.id }),
       });
 
       const result = await res.json();
@@ -369,45 +334,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: result.error };
       }
 
-      const updatedUser = { ...state.user, avatar: null };
+      // 🔁 refresh session
+      const sessionRes = await fetch("/api/auth/session");
+      const sessionData = await sessionRes.json();
 
-      localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify({ user: updatedUser }),
-      );
-
-      setState((s) => ({ ...s, user: updatedUser }));
+      if (sessionData?.user) {
+        setUser(normalizeUser(sessionData.user));
+      }
 
       return { success: true };
     } catch (err) {
       console.error("REMOVE_AVATAR_ERROR:", err);
       return { success: false, error: "Network error" };
     }
-  }, [state.user]);
+  }, [user]);
 
-  /* =======================
-     LOGOUT
-  ======================= */
   const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
+    signOut({ callbackUrl: "/" });
+    setUser(null);
+    setIsAuthenticated(false);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        ...state,
+        user,
+        isAuthenticated,
+        isLoading,
         login,
+        logout,
         register,
         updateProfile,
-        resendEmailVerification,
         uploadAvatar,
         removeAvatar,
-        logout,
+        resendEmailVerification,
       }}
     >
       {children}
@@ -431,8 +391,9 @@ export function useAuth() {
    ROLE → DASHBOARD
 ======================= */
 
-export function getDashboardUrlForRole(role: UserRole) {
-  switch (role) {
+export function getDashboardUrlForRole(role: string) {
+  const normalizedRole = role.toLowerCase();
+  switch (normalizedRole) {
     case "admin":
       return "/admin";
     case "owner":

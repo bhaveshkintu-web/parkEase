@@ -225,3 +225,71 @@
 [2026-02-02T06:35:47.412Z] GET Req Sample: {"id":"cml4qy42m0004u1jgwyyiwm1g","customerId":null,"customerName":"Anish","customerEmail":"","customerPhone":"6549824782","vehiclePlate":"GJ057653","vehicleType":"sedan","vehicleMake":null,"vehicleMo
 [2026-02-02T06:35:47.508Z] Prisma keys: constructor, user, ownerProfile, parkingLocation, booking, payment, wallet, walletTransaction, withdrawalRequest, watchman, watchmanShift, watchmanActivityLog, parkingSession, review, adminReview, refundRequest, savedVehicle, paymentMethod, ownerDocument, parkingApproval, ownerLead, locationAnalytics, pricingRule, promotion, cMSPage, commissionRule, workflow, workflowExecution, bookingRequest
 [2026-02-02T06:35:47.531Z] GET Req Sample: {"id":"cml4qy42m0004u1jgwyyiwm1g","customerId":null,"customerName":"Anish","customerEmail":"","customerPhone":"6549824782","vehiclePlate":"GJ057653","vehicleType":"sedan","vehicleMake":null,"vehicleMo
+[2026-02-03T08:45:51.919Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T08:45:51.925Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T08:46:15.255Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T08:46:15.262Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T08:58:06.864Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T08:58:06.877Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T09:05:48.153Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T09:05:48.158Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T09:06:02.974Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T09:06:02.982Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T09:06:19.730Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T09:06:19.742Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T09:14:52.471Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T09:14:52.484Z] FUZZY FIND: Guessed request ID cml6c1agx0003u1p8jyzqak73 for undefined request
+[2026-02-03T09:46:58.801Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T09:46:58.806Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:15:32.415Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:15:32.420Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:16:18.696Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:16:18.706Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:16:31.347Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:16:31.352Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:16:42.421Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:16:42.427Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:17:50.842Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:17:50.848Z] FUZZY FIND: Guessed request ID cml6eoo0z0005u1p8l7ceyosm for undefined request
+[2026-02-03T10:19:43.860Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:19:43.868Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:31:29.312Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:31:29.327Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:31:38.494Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:31:38.498Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:34:36.696Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:34:36.700Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:35:06.234Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:35:06.240Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:35:50.165Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:35:50.171Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:36:16.528Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:36:16.612Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:36:51.592Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:36:51.598Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:49:48.031Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:49:48.044Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:50:20.915Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:50:20.924Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:50:58.169Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:50:58.180Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T10:51:17.829Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T10:51:17.832Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:00:57.404Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:00:57.417Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:01:27.622Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:01:27.627Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:02:12.493Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:02:12.501Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:07:50.352Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:07:50.367Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:08:03.140Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:08:03.145Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:08:10.873Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:08:10.877Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:08:20.674Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:08:20.686Z] FUZZY FIND: Guessed request ID req_7iix72fu9 for undefined request
+[2026-02-03T11:14:26.477Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:14:26.483Z] FUZZY FIND: Guessed request ID cml6i3sbr0013u1p8tqmf6gms for undefined request
+[2026-02-03T11:21:32.678Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-03T11:21:32.682Z] FUZZY FIND: Guessed request ID cml6iczqo0019u1p8hannz6t0 for undefined request

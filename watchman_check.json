@@ -1,0 +1,61 @@
+{
+  "id": "wm_cccnmelzr",
+  "userId": "cml6833ve0000u1bwj8lqmwhi",
+  "ownerId": "cml6ch6ur0001u1wcw485nw6u",
+  "status": "ACTIVE",
+  "shift": null,
+  "createdAt": "2026-02-03T16:03:10.362Z",
+  "shifts": [
+    {
+      "id": "shift_m8ehti7n8",
+      "watchmanId": "wm_cccnmelzr",
+      "locationId": "cml68fmmh0004u1e44c9lqfyi",
+      "scheduledStart": "2026-02-03T16:03:10.362Z",
+      "scheduledEnd": "2026-02-04T16:03:10.362Z",
+      "actualStart": null,
+      "actualEnd": null,
+      "status": "SCHEDULED"
+    }
+  ],
+  "assignedLocations": [
+    {
+      "id": "cml68fmmh0004u1e44c9lqfyi",
+      "ownerId": "cml6ch6ur0001u1wcw485nw6u",
+      "name": "JFK Airport Long Term Parking",
+      "address": "123 Airport Rd",
+      "city": "New York",
+      "state": "NY",
+      "country": "USA",
+      "zipCode": "11430",
+      "airportCode": "JFK",
+      "latitude": 40.6413,
+      "longitude": -73.7781,
+      "description": "Secure long-term parking near JFK with 24/7 shuttle service.",
+      "pricePerDay": 25,
+      "originalPrice": 35,
+      "amenities": [
+        "CCTV",
+        "24/7 Access",
+        "Shuttle",
+        "Fenced"
+      ],
+      "images": [
+        "/airports/jfk.jpg"
+      ],
+      "shuttle": false,
+      "covered": false,
+      "selfPark": true,
+      "valet": false,
+      "open24Hours": false,
+      "availableSpots": 113,
+      "totalSpots": 200,
+      "cancellationPolicy": null,
+      "shuttleInfo": null,
+      "redeemSteps": null,
+      "specialInstructions": [],
+      "status": "ACTIVE",
+      "createdAt": "2026-02-03T06:43:22.313Z",
+      "updatedAt": "2026-02-03T10:51:17.865Z"
+    }
+  ]
+}

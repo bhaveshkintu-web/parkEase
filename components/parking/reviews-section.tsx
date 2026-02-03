@@ -40,9 +40,13 @@ const mockReviews: Review[] = [
 interface ReviewsSectionProps {
   rating: number;
   reviewCount: number;
+  reviews?: any[];
 }
 
-export function ReviewsSection({ rating, reviewCount }: ReviewsSectionProps) {
+export function ReviewsSection({ rating, reviewCount, reviews = [] }: ReviewsSectionProps) {
+  // If no real reviews yet, we can show a message or fallback
+  const hasReviews = reviews.length > 0;
+
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       {/* Rating Summary */}
@@ -70,7 +74,11 @@ export function ReviewsSection({ rating, reviewCount }: ReviewsSectionProps) {
       {/* Rating Breakdown */}
       <div className="mb-6 space-y-2">
         {[5, 4, 3, 2, 1].map((stars) => {
-          const percentage = stars === 5 ? 78 : stars === 4 ? 15 : stars === 3 ? 5 : stars === 2 ? 1 : 1;
+          const count = reviews.filter(r => r.rating === stars).length;
+          const percentage = reviewCount > 0 ? Math.round((count / reviewCount) * 100) : 0;
+          // Fallback if we don't have enough reviews but have a rating
+          const displayPercentage = reviewCount > 0 ? percentage : (stars === 5 ? 80 : stars === 4 ? 15 : 5);
+          
           return (
             <div key={stars} className="flex items-center gap-2">
               <span className="w-3 text-sm text-muted-foreground">{stars}</span>
@@ -78,10 +86,10 @@ export function ReviewsSection({ rating, reviewCount }: ReviewsSectionProps) {
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-accent"
-                  style={{ width: `${percentage}%` }}
+                  style={{ width: `${displayPercentage}%` }}
                 />
               </div>
-              <span className="w-8 text-right text-xs text-muted-foreground">{percentage}%</span>
+              <span className="w-8 text-right text-xs text-muted-foreground">{displayPercentage}%</span>
             </div>
           );
         })}
@@ -89,42 +97,57 @@ export function ReviewsSection({ rating, reviewCount }: ReviewsSectionProps) {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Recent Reviews</h3>
-        {mockReviews.map((review) => (
-          <div key={review.id} className="border-t border-border pt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-                  {review.author.charAt(0)}
+        <h3 className="font-semibold text-foreground">
+          {hasReviews ? "Recent Reviews" : "No reviews yet"}
+        </h3>
+        
+        {reviews.slice(0, 3).map((review) => {
+          const authorName = review.user 
+            ? `${review.user.firstName} ${review.user.lastName.charAt(0)}.`
+            : review.author || "Anonymous";
+          const date = new Date(review.createdAt).toLocaleDateString("en-US", { 
+            month: "long", 
+            year: "numeric" 
+          });
+
+          return (
+            <div key={review.id} className="border-t border-border pt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+                    {authorName.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{authorName}</p>
+                    <p className="text-xs text-muted-foreground">{date}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{review.author}</p>
-                  <p className="text-xs text-muted-foreground">{review.date}</p>
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-3 w-3 ${
+                        i < review.rating ? "fill-accent text-accent" : "text-muted"
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3 w-3 ${
-                      i < review.rating ? "fill-accent text-accent" : "text-muted"
-                    }`}
-                  />
-                ))}
-              </div>
+              <p className="mb-2 text-sm text-foreground">{review.content || review.text}</p>
+              <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground">
+                <ThumbsUp className="h-3 w-3" />
+                Helpful ({review.helpful || 0})
+              </Button>
             </div>
-            <p className="mb-2 text-sm text-foreground">{review.text}</p>
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground">
-              <ThumbsUp className="h-3 w-3" />
-              Helpful ({review.helpful})
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <Button variant="outline" className="mt-4 w-full bg-transparent">
-        Show all {reviewCount.toLocaleString()} reviews
-      </Button>
+      {reviewCount > 3 && (
+        <Button variant="outline" className="mt-4 w-full bg-transparent">
+          Show all {reviewCount.toLocaleString()} reviews
+        </Button>
+      )}
     </div>
   );
 }

@@ -25,6 +25,8 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
+  Building2,
+  Users2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getUserInitials } from "@/lib/user-utils";
@@ -35,6 +37,7 @@ const navLinks = [
   { href: "#", label: "Car Wash", icon: Droplets },
   { href: "#", label: "Gas", icon: Fuel },
   { href: "#", label: "EV Chargers", icon: Zap },
+  { href: "/partner-with-us", label: "Partner With Us", icon: Building2 },
 ];
 
 export function Navbar() {
@@ -124,32 +127,40 @@ export function Navbar() {
                     Payment Methods
                   </Link>
                 </DropdownMenuItem>
-                {(user.role === "admin" ||
-                  user.role === "owner" ||
-                  user.role === "watchman") && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={
-                          user.role === "admin"
-                            ? "/admin"
-                            : user.role === "owner"
-                              ? "/owner"
-                              : "/watchman"
-                        }
-                      >
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        {user.role === "admin"
-                          ? "Admin"
-                          : user.role === "owner"
-                            ? "Owner"
-                            : "Watchman"}{" "}
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                {(user.role.toLowerCase() === "admin" ||
+                  user.role.toLowerCase() === "owner" ||
+                  user.role.toLowerCase() === "watchman") && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={
+                            user.role.toLowerCase() === "admin"
+                              ? "/admin"
+                              : user.role.toLowerCase() === "owner"
+                                ? "/owner"
+                                : "/watchman"
+                          }
+                        >
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          {user.role.toLowerCase() === "admin"
+                            ? "Admin"
+                            : user.role.toLowerCase() === "owner"
+                              ? "Owner"
+                              : "Watchman"}{" "}
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      {user.role.toLowerCase() === "admin" && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/approvals/owners">
+                            <Users2 className="mr-2 h-4 w-4" />
+                            Owner Approvals
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </>
+                  )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -220,29 +231,29 @@ export function Navbar() {
                         <Calendar className="h-5 w-5" />
                         Reservations
                       </Link>
-                      {(user.role === "admin" ||
-                        user.role === "owner" ||
-                        user.role === "watchman") && (
-                        <Link
-                          href={
-                            user.role === "admin"
-                              ? "/admin"
-                              : user.role === "owner"
-                                ? "/owner"
-                                : "/watchman"
-                          }
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <LayoutDashboard className="h-5 w-5" />
-                          {user.role === "admin"
-                            ? "Admin"
-                            : user.role === "owner"
-                              ? "Owner"
-                              : "Watchman"}{" "}
-                          Dashboard
-                        </Link>
-                      )}
+                      {(user.role.toLowerCase() === "admin" ||
+                        user.role.toLowerCase() === "owner" ||
+                        user.role.toLowerCase() === "watchman") && (
+                          <Link
+                            href={
+                              user.role.toLowerCase() === "admin"
+                                ? "/admin"
+                                : user.role.toLowerCase() === "owner"
+                                  ? "/owner"
+                                  : "/watchman"
+                            }
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <LayoutDashboard className="h-5 w-5" />
+                            {user.role.toLowerCase() === "admin"
+                              ? "Admin"
+                              : user.role.toLowerCase() === "owner"
+                                ? "Owner"
+                                : "Watchman"}{" "}
+                            Dashboard
+                          </Link>
+                        )}
                       <Button
                         variant="outline"
                         className="w-full gap-2 mt-2 bg-transparent"
@@ -289,6 +300,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-    </header>
+    </header >
   );
 }
