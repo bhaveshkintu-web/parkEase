@@ -5237,3 +5237,8 @@ Raw query failed. Code: `42703`. Message: `column "requestedBy" does not exist`
 [2026-02-03T11:21:48.052Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: week Results Found: 14
 [2026-02-03T11:21:48.658Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
 [2026-02-03T11:21:48.705Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:22:18.777Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:22:48.773Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:23:18.777Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:23:48.773Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
+[2026-02-03T11:24:18.792Z] FETCH_BOOKINGS: User vidhipatel5044@gmail.com (Role: WATCHMAN) LocationIds: [cml68fmmh0004u1e44c9lqfyi] DateFilter: today Results Found: 13
