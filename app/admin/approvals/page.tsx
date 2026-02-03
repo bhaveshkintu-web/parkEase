@@ -157,7 +157,7 @@ export default function ParkingApprovalsPage() {
 
   const pendingCount = locations.filter((l) => l.status?.toUpperCase() === "PENDING").length;
   const activeCount = locations.filter((l) => l.status?.toUpperCase() === "ACTIVE").length;
-  const rejectedCount = locations.filter((l) => l.status?.toUpperCase() === "REJECTED").length;
+  const rejectedCount = locations.filter((l) => l.status?.toUpperCase() === "INACTIVE" || l.status?.toUpperCase() === "REJECTED").length;
 
   if (isLoading) {
     return (
@@ -222,7 +222,11 @@ export default function ParkingApprovalsPage() {
           <TabsContent key={tab} value={tab} className="mt-4">
             <div className="grid gap-4">
               {filteredLocations
-                .filter((loc) => tab === "all" || loc.status?.toUpperCase() === tab.toUpperCase())
+                .filter((loc) => {
+                  if (tab === "all") return true;
+                  if (tab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
+                  return loc.status?.toUpperCase() === tab.toUpperCase();
+                })
                 .map((location) => (
                   <Card key={location.id} className="hover:border-primary/50 transition-colors">
                     <CardContent className="p-4 sm:p-6">
@@ -238,8 +242,8 @@ export default function ParkingApprovalsPage() {
                                 {location.address}, {location.city}
                               </div>
                             </div>
-                            <Badge variant={location.status === "active" ? "default" : "secondary"}>
-                              {location.status}
+                            <Badge variant={location.status?.toUpperCase() === "ACTIVE" ? "default" : location.status?.toUpperCase() === "INACTIVE" ? "destructive" : "secondary"}>
+                              {location.status === "INACTIVE" ? "REJECTED" : location.status}
                             </Badge>
                           </div>
 
@@ -287,7 +291,11 @@ export default function ParkingApprovalsPage() {
                   </Card>
                 ))}
 
-              {filteredLocations.filter((loc) => tab === "all" || loc.status?.toUpperCase() === tab.toUpperCase()).length === 0 && (
+              {filteredLocations.filter((loc) => {
+                  if (tab === "all") return true;
+                  if (tab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
+                  return loc.status?.toUpperCase() === tab.toUpperCase();
+                }).length === 0 && (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
