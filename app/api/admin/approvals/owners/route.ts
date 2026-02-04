@@ -72,7 +72,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    let lead = await (prisma as any).ownerLead.findUnique({
+    // Handle Profile Approval/Rejection
+    if (String(leadId).startsWith("profile:")) {
+      const profileId = leadId.split(":")[1];
+
+      if (action === "reject") {
+        // We might want to mark as rejected or suspended. 
+        // For now, let's look at the schema. "rejected" might not be a valid status in db?
+        // Checking schema... OwnerProfile status is string.
+        await prisma.ownerProfile.update({
+          where: { id: profileId },
+          data: { status: "rejected" } // adminNotes not on profile?
+        });
+        return NextResponse.json({ message: "Owner application rejected" });
+      }
+
+      if (action === "approve") {
+        await prisma.ownerProfile.update({
+          where: { id: profileId },
+          data: {
+            status: "approved", // or 'active'? Schema default is 'pending'.
+            verificationStatus: "verified"
+          }
+        });
+
+        // Also ensure user role is OWNER if not already (should be)
+        // Send email notification here if needed
+
+        return NextResponse.json({ message: "Owner application approved successfully" });
+      }
+    }
+
+    // Handle Lead Approval (Original Logic)
+    const lead = await prisma.ownerLead.findUnique({
       where: { id: leadId },
     });
 

@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
 
     // In production, require approval. In development, allow pending profiles.
     const isDevelopment = process.env.NODE_ENV !== "production";
-    
+
     if (!isDevelopment && ownerProfile.status !== "approved") {
       return NextResponse.json(
-        { 
+        {
           error: "Your owner profile is pending approval. Please wait for admin approval before adding locations.",
-          details: { 
-            status: ownerProfile.status, 
-            verificationStatus: ownerProfile.verificationStatus 
+          details: {
+            status: ownerProfile.status,
+            verificationStatus: ownerProfile.verificationStatus
           }
         },
         { status: 403 }
@@ -70,9 +70,9 @@ export async function POST(req: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { 
-          error: "Validation failed", 
-          details: result.error.flatten().fieldErrors 
+        {
+          error: "Validation failed",
+          details: result.error.flatten().fieldErrors
         },
         { status: 400 }
       );
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           open24Hours: data.open24Hours,
           totalSpots: data.totalSpots,
           availableSpots: data.totalSpots, // Initial state
-          status: "ACTIVE", // Production-ready default
+          status: "PENDING", // Requires admin approval
         },
       });
 
@@ -127,9 +127,9 @@ export async function POST(req: NextRequest) {
 
     // 6. Response
     return NextResponse.json(
-      { 
-        message: "Parking location created successfully.", 
-        location: newLocation 
+      {
+        message: "Parking location created successfully.",
+        location: newLocation
       },
       { status: 201 }
     );

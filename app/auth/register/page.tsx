@@ -227,11 +227,10 @@ export default function RegisterPage() {
                       {[0, 1, 2, 3].map((i) => (
                         <div
                           key={i}
-                          className={`h-1 flex-1 rounded-full ${
-                            i < strength
+                          className={`h-1 flex-1 rounded-full ${i < strength
                               ? strengthColors[strength - 1]
                               : "bg-muted"
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -264,7 +263,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2 mb-4">
                 <Checkbox
                   id="terms"
                   checked={agreedToTerms}

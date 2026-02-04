@@ -32,6 +32,7 @@ interface DashboardStats {
   totalBookings: number;
   activeLocations: number;
   pendingOwners: number;
+  pendingLocations: number;
   totalRevenue: number;
 }
 
@@ -140,21 +141,39 @@ export default function SystemAdminDashboard() {
       </div>
 
       {/* Alerts Row */}
-      {stats.pendingOwners > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Link href="/admin/owners?status=pending">
-            <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-amber-900">{stats.pendingOwners} Pending Owners</p>
-                  <p className="text-xs text-amber-700">Require approval</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+      {(stats.pendingOwners > 0 || stats.pendingLocations > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {stats.pendingOwners > 0 && (
+            <Link href="/admin/owners?status=pending">
+              <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-amber-900">{stats.pendingOwners} Pending Owners</p>
+                    <p className="text-xs text-amber-700">Require approval</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {stats.pendingLocations > 0 && (
+            <Link href="/admin/approvals?status=pending">
+              <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-amber-900">{stats.pendingLocations} Pending Locations</p>
+                    <p className="text-xs text-amber-700">Require approval</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
       )}
 
@@ -250,6 +269,12 @@ export default function SystemAdminDashboard() {
                 <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
                   <span className="text-sm">Pending Owners</span>
                   <span className="font-bold text-amber-600">{stats.pendingOwners}</span>
+                </div>
+              </Link>
+              <Link href="/admin/approvals?status=pending">
+                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
+                  <span className="text-sm">Pending Locations</span>
+                  <span className="font-bold text-amber-600">{stats.pendingLocations}</span>
                 </div>
               </Link>
             </div>

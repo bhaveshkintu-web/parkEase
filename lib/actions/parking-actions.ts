@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 import { calculatePricing } from "@/lib/utils/booking-utils";
+import { ownerLocationSchema, type OwnerLocationInput } from "@/lib/validations";
 
 /**
  * Common shape for location search results
@@ -214,6 +216,7 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
 }
 
 /**
+
  * Fetches all parking locations belonging to a specific owner.
  */
 export async function getOwnerLocations(userId: string) {
@@ -229,6 +232,10 @@ export async function getOwnerLocations(userId: string) {
     const locations = await prisma.parkingLocation.findMany({
       where: { ownerId: ownerProfile.id },
       orderBy: { createdAt: 'desc' },
+      include: {
+        analytics: true,
+        reviews: true,
+      }
     });
 
     return { success: true, data: locations };
@@ -237,3 +244,102 @@ export async function getOwnerLocations(userId: string) {
     return { success: false, error: "Internal server error" };
   }
 }
+
+
+/**
+ * Updates the status of a parking location.
+ */
+export async function updateLocationStatus(id: string, status: string) {
+  try {
+    const currentLocation = await prisma.parkingLocation.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+
+    if (!currentLocation) {
+      return { success: false, error: "Location not found" };
+    }
+
+    const newStatus = status.toUpperCase();
+
+    // Prevent owners from activating a location that is still PENDING admin approval
+    if (currentLocation.status === "PENDING" && newStatus === "ACTIVE") {
+      return { success: false, error: "Cannot activate location until it is approved by an admin." };
+    }
+
+    const updated = await prisma.parkingLocation.update({
+      where: { id },
+      data: { status: newStatus as any },
+    });
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Failed to update location status:", error);
+    return { success: false, error: "Failed to update status" };
+  }
+}
+
+/**
+ * Deletes a parking location.
+ */
+export async function deleteLocation(id: string) {
+  try {
+    // Check for associated bookings before deletion
+    const bookingCount = await prisma.booking.count({
+      where: { locationId: id },
+    });
+
+    if (bookingCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete location with existing bookings. Try deactivating it instead."
+      };
+    }
+
+    await prisma.parkingLocation.delete({
+      where: { id },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete location:", error);
+    return { success: false, error: "Failed to delete location" };
+  }
+}
+
+
+/**
+ * Updates an existing parking location.
+ */
+export async function updateParkingLocation(id: string, data: OwnerLocationInput) {
+  try {
+    const result = ownerLocationSchema.safeParse(data);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: result.error.flatten().fieldErrors
+      };
+    }
+
+    const updatedLocation = await prisma.parkingLocation.update({
+      where: { id },
+      data: {
+        ...result.data,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/owner/locations");
+    revalidatePath(`/owner/locations/${id}`);
+
+    return { success: true, data: updatedLocation };
+  } catch (error) {
+    console.error("Failed to update location:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update location"
+    };
+  }
+}
+

@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     let totalBookings = 0;
     let activeLocations = 0;
     let pendingOwners = 0;
+    let pendingLocations = 0;
     let totalRevenue = 0;
 
     try {
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      activeLocations = await prisma.parkingLocation.count({ 
+      activeLocations = await prisma.parkingLocation.count({
         where: { status: "ACTIVE" } // Use enum value
       });
     } catch (error) {
@@ -60,11 +61,19 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      pendingOwners = await prisma.ownerProfile.count({ 
-        where: { status: "pending" } 
+      pendingOwners = await prisma.ownerProfile.count({
+        where: { status: "pending" }
       });
     } catch (error) {
       console.error("Error counting pending owners:", error);
+    }
+
+    try {
+      pendingLocations = await prisma.parkingLocation.count({
+        where: { status: "PENDING" }
+      });
+    } catch (error) {
+      console.error("Error counting pending locations:", error);
     }
 
     // Get revenue safely (sum of all bookings)
@@ -87,6 +96,7 @@ export async function GET(req: NextRequest) {
         totalBookings,
         activeLocations,
         pendingOwners,
+        pendingLocations,
         totalRevenue,
       },
     });

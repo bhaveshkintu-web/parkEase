@@ -94,6 +94,8 @@ model ParkingLocation {
   shuttleInfo        Json?
   redeemSteps        Json?
   specialInstructions String[]
+  heightLimit        String?
+  securityFeatures   String[]
   status         ParkingStatus      @default(PENDING)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

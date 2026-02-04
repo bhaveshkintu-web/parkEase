@@ -26,32 +26,34 @@ export async function addPricingRule(data: any) {
         endDate: data.endDate ? new Date(data.endDate) : null,
         daysOfWeek: data.daysOfWeek || [],
         isActive: data.isActive ?? true,
+        locationId: data.locationId || null,
       },
     });
     revalidatePath("/admin/pricing");
     return { success: true, rule };
-  } catch (error) {
+  } catch (error: any) {
     console.error("ADD_PRICING_RULE_ERROR:", error);
-    return { success: false, error: "Failed to add pricing rule" };
+    return { success: false, error: error.message || "Failed to add pricing rule" };
   }
 }
 
 export async function updatePricingRule(id: string, data: any) {
   try {
+    const { id: _, ...updateData } = data; // Ensure id is not passed to data block
     const rule = await prisma.pricingRule.update({
       where: { id },
       data: {
-        ...data,
+        ...updateData,
         multiplier: data.multiplier !== undefined ? Number(data.multiplier) : undefined,
-        startDate: data.startDate !== undefined ? (data.startDate ? new Date(data.startDate) : null) : undefined,
-        endDate: data.endDate !== undefined ? (data.endDate ? new Date(data.endDate) : null) : undefined,
+        startDate: data.startDate !== undefined ? (data.startDate ? (data.startDate instanceof Date ? data.startDate : new Date(data.startDate)) : null) : undefined,
+        endDate: data.endDate !== undefined ? (data.endDate ? (data.endDate instanceof Date ? data.endDate : new Date(data.endDate)) : null) : undefined,
       },
     });
     revalidatePath("/admin/pricing");
     return { success: true, rule };
-  } catch (error) {
+  } catch (error: any) {
     console.error("UPDATE_PRICING_RULE_ERROR:", error);
-    return { success: false, error: "Failed to update pricing rule" };
+    return { success: false, error: error.message || "Failed to update pricing rule" };
   }
 }
 
@@ -62,8 +64,8 @@ export async function deletePricingRule(id: string) {
     });
     revalidatePath("/admin/pricing");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("DELETE_PRICING_RULE_ERROR:", error);
-    return { success: false, error: "Failed to delete pricing rule" };
+    return { success: false, error: error.message || "Failed to delete pricing rule" };
   }
 }
