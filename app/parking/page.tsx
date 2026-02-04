@@ -9,7 +9,8 @@ import { LocationCard } from "@/components/parking/location-card";
 import { FilterSidebar } from "@/components/parking/filter-sidebar";
 import { BookingProvider, useBooking } from "@/lib/booking-context";
 import { getParkingLocations } from "@/lib/actions/parking-actions";
-import { calculateDays } from "@/lib/data";
+import { calculateDays, destinations } from "@/lib/data";
+import { calculateDistance, formatDistance } from "@/lib/utils/geo-utils";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -82,9 +83,40 @@ function ParkingResultsContent() {
 
   const days = calculateDays(checkIn, checkOut);
 
+  // Resolve search destination coordinates
+  const searchDestination = useMemo(() => {
+    if (!query) return null;
+    const lowerQuery = query.toLowerCase();
+    return destinations.find(
+      (d) =>
+        (d.code && d.code.toLowerCase() === lowerQuery) ||
+        d.name.toLowerCase().includes(lowerQuery) ||
+        d.city.toLowerCase().includes(lowerQuery)
+    );
+  }, [query]);
+
+  // Enhanced locations with distance
+  const enrichedLocations = useMemo(() => {
+    return locations.map((loc) => {
+      let distanceStr = "";
+      if (searchDestination && loc.latitude && loc.longitude) {
+        const dist = calculateDistance(
+          searchDestination.coordinates.lat,
+          searchDestination.coordinates.lng,
+          loc.latitude,
+          loc.longitude
+        );
+        distanceStr = formatDistance(dist);
+      } else {
+        distanceStr = "Near terminal";
+      }
+      return { ...loc, distance: distanceStr };
+    });
+  }, [locations, searchDestination]);
+
   // Filter locations
   const filteredLocations = useMemo(() => {
-    return locations.filter((location) => {
+    return enrichedLocations.filter((location) => {
       // Search query filter
       if (query) {
         const searchLower = query.toLowerCase();
@@ -115,7 +147,7 @@ function ParkingResultsContent() {
 
       return true;
     });
-  }, [query, filters, locations]);
+  }, [query, filters, enrichedLocations]);
 
   // Sort locations
   const sortedLocations = useMemo(() => {

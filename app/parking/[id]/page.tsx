@@ -182,9 +182,19 @@ function LocationDetailsContent({ id }: { id: string }) {
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
                   <span>{location.distance}</span>
+                  {location.airport && !location.distance.includes(location.airport) && (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>{location.airport}</span>
+                    </>
+                  )}
+                  {location.airport && location.distance === "Near terminal" && (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>{location.airport}</span>
+                    </>
+                  )}
                 </div>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground">{location.airport}</span>
               </div>
             </div>
 

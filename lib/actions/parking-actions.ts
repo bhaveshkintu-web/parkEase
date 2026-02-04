@@ -23,6 +23,9 @@ export type ParkingLocationSearchResult = {
   reviewCount: number;
   pricing: any;
   availableSpots: number;
+  airport: string;
+  latitude: number;
+  longitude: number;
 };
 
 /**
@@ -95,6 +98,9 @@ export async function getParkingLocations(searchParams?: {
           reviewCount,
           pricing,
           availableSpots: loc.totalSpots - loc._count.bookings,
+          airport: loc.airportCode ? (require("@/lib/data").airports.find((a: any) => a.code === loc.airportCode)?.name || loc.airportCode) : "General",
+          latitude: loc.latitude,
+          longitude: loc.longitude,
         };
       });
 
@@ -167,7 +173,24 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
         reviewCount,
         rating,
         availability,
-        pricing
+        pricing,
+        airport: location.airportCode
+          ? (require("@/lib/data").airports.find((a: any) => a.code === location.airportCode)?.name || location.airportCode)
+          : "General",
+        distance: (() => {
+          if (!location.airportCode || !location.latitude || !location.longitude) return "Contact for details";
+          const airport = require("@/lib/data").destinations.find((d: any) => d.code === location.airportCode);
+          if (!airport) return "Near terminal";
+
+          const { calculateDistance, formatDistance } = require("@/lib/utils/geo-utils");
+          const dist = calculateDistance(
+            airport.coordinates.lat,
+            airport.coordinates.lng,
+            location.latitude,
+            location.longitude
+          );
+          return formatDistance(dist);
+        })()
       }
     };
   } catch (error) {
