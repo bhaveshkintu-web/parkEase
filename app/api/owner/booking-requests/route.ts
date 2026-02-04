@@ -37,21 +37,34 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Forbidden", role }, { status: 403 });
         }
 
-        // Try to get location IDs for this owner
+        // Try to get location IDs for this owner using raw SQL to be ultra-safe
         let locationIds: string[] = [];
         try {
-            const ownerProfile = await prisma.ownerProfile.findUnique({
-                where: { userId: sessionUser.id },
-                include: { locations: { select: { id: true } } }
-            });
-            if (ownerProfile && ownerProfile.locations) {
-                locationIds = ownerProfile.locations.map((loc: any) => loc.id);
-                logInfo(`Found owner profile with ${locationIds.length} locations`);
+            logInfo(`Fetching owner profile for userId: ${sessionUser.id}`);
+
+            // Try fetching profile first - avoid fetching all fields to bypass potential schema mismatch issues
+            const profileRows = await prisma.$queryRawUnsafe(
+                'SELECT id FROM "OwnerProfile" WHERE "userId" = $1 LIMIT 1',
+                sessionUser.id
+            ) as any[];
+
+            if (profileRows.length > 0) {
+                const ownerProfileId = profileRows[0].id;
+                logInfo(`Found owner profile ID: ${ownerProfileId}`);
+
+                // Fetch locations for this profile
+                const locRows = await prisma.$queryRawUnsafe(
+                    'SELECT id FROM "ParkingLocation" WHERE "ownerId" = $1',
+                    ownerProfileId
+                ) as any[];
+
+                locationIds = locRows.map((loc: any) => loc.id);
+                logInfo(`Found ${locationIds.length} locations via raw SQL`);
             } else {
-                logInfo(`No owner profile or locations found for userId: ${sessionUser.id}`);
+                logInfo(`No owner profile found for userId: ${sessionUser.id}`);
             }
         } catch (e) {
-            logInfo(`Error fetching owner profile: ${e instanceof Error ? e.message : String(e)}`);
+            logInfo(`Error fetching ownership mapping: ${e instanceof Error ? e.message : String(e)}`);
         }
 
         logInfo(`Target Locations: ${JSON.stringify(locationIds)}`);

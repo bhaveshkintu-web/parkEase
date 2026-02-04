@@ -803,6 +803,7 @@ interface DataStoreContextType {
   // Watchman: Booking Requests
   bookingRequests: WatchmanBookingRequest[];
   fetchBookingRequests: (parkingId?: string) => Promise<void>;
+  fetchWatchmanLocations: () => Promise<void>;
   addBookingRequest: (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => Promise<WatchmanBookingRequest>;
   updateBookingRequestStatus: (id: string, status: WatchmanBookingRequest["status"], rejectionReason?: string) => Promise<void>;
 
@@ -902,6 +903,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     // Generate some mock reservations for the watchman to scan
     setReservations(generateMockReservations("demo_user"));
     fetchBookingRequests();
+    fetchWatchmanLocations();
     setIsLoading(false);
   }, []);
 
@@ -1422,6 +1424,17 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const fetchWatchmanLocations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/locations");
+      if (!res.ok) throw new Error("Failed to fetch watchman locations");
+      const data = await res.json();
+      setAdminLocations(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
   const addBookingRequest = useCallback(async (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => {
     const res = await fetch("/api/watchman/requests", {
       method: "POST",
@@ -1524,6 +1537,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         currentOwnerProfile,
         bookingRequests,
         fetchBookingRequests,
+        fetchWatchmanLocations,
         addBookingRequest,
         updateBookingRequestStatus,
       }}

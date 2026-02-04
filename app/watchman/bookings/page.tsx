@@ -80,6 +80,7 @@ export default function WatchmanBookingsPage() {
   const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const [rejectionReason, setRejectionReason] = useState("");
 
   // Fetch bookings
@@ -119,7 +120,8 @@ export default function WatchmanBookingsPage() {
   useEffect(() => {
     loadAllData();
 
-    // Polling every 30 seconds for live updates
+    // Polling every 30 seconds for live updates (Way.com Style)
+
     const interval = setInterval(() => {
       fetchBookings();
       fetchBookingRequests();
@@ -303,7 +305,7 @@ export default function WatchmanBookingsPage() {
               View bookings, create requests, and manage approvals
             </p>
           </div>
-          <Button onClick={() => setIsNewRequestOpen(true)}>
+          <Button onClick={() => setIsNewRequestOpen(true)} className="bg-[#00A386] hover:bg-[#008F75] text-white">
             <Plus className="w-4 h-4 mr-2" />
             New Request
           </Button>

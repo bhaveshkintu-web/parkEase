@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -30,6 +29,7 @@ interface RequestDialogProps {
   onOpenChange: (open: boolean) => void;
   initialData?: {
     customerName?: string;
+    customerEmail?: string;
     customerPhone?: string;
     vehiclePlate?: string;
     vehicleType?: string;
@@ -40,48 +40,28 @@ interface RequestDialogProps {
 }
 
 export function RequestDialog({ open, onOpenChange, initialData }: RequestDialogProps) {
-  const { addBookingRequest } = useDataStore(); // Removed adminLocations from here to use local state
+  const { addBookingRequest, adminLocations } = useDataStore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
 
   const [formData, setFormData] = useState({
     customerName: "",
+    customerEmail: "",
     customerPhone: "",
     vehiclePlate: "",
-    vehicleType: "sedan",
+    vehicleType: "Sedan",
     parkingId: "",
     requestType: "WALK_IN" as any,
     duration: "2",
     notes: "",
   });
 
-  // Fetch locations when dialog opens
-  useEffect(() => {
-    if (open) {
-      const fetchLocations = async () => {
-        try {
-          // Adjust this endpoint as needed, e.g., /api/locations or /api/watchman/locations
-          const res = await fetch("/api/locations");
-          if (res.ok) {
-            const data = await res.json();
-            // Handle different response structures if necessary
-            const locs = Array.isArray(data) ? data : (data.locations || []);
-            setLocations(locs);
-          }
-        } catch (e) {
-          console.error("Failed to fetch locations", e);
-        }
-      };
-      fetchLocations();
-    }
-  }, [open]);
-
   useEffect(() => {
     if (initialData) {
       setFormData(prev => ({
         ...prev,
         customerName: initialData.customerName || prev.customerName,
+        customerEmail: initialData.customerEmail || prev.customerEmail,
         customerPhone: initialData.customerPhone || prev.customerPhone,
         vehiclePlate: initialData.vehiclePlate || prev.vehiclePlate,
         vehicleType: initialData.vehicleType || prev.vehicleType,
@@ -103,9 +83,10 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
 
     setIsLoading(true);
     try {
-      const parking = locations.find((l) => l.id === formData.parkingId);
+      const parking = adminLocations.find((l) => l.id === formData.parkingId);
       await addBookingRequest({
         customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
         customerPhone: formData.customerPhone,
         vehiclePlate: formData.vehiclePlate.toUpperCase(),
         vehicleType: formData.vehicleType,
@@ -128,9 +109,10 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
       // Reset form
       setFormData({
         customerName: "",
+        customerEmail: "",
         customerPhone: "",
         vehiclePlate: "",
-        vehicleType: "sedan",
+        vehicleType: "Sedan",
         parkingId: "",
         requestType: "WALK_IN",
         duration: "2",
@@ -149,77 +131,102 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>New Booking Request</DialogTitle>
-          <DialogDescription>
-            Create a walk-in booking or modification request
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl font-bold">New Booking Request</DialogTitle>
+              <DialogDescription className="mt-1">
+                Create a walk-in booking or modification request
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4">
+        <div className="space-y-4 py-6">
+          {/* Row 1: Name & Phone */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customerName">Customer Name *</Label>
+              <Label htmlFor="customerName" className="text-sm font-semibold">
+                Customer Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="customerName"
                 placeholder="John Smith"
                 value={formData.customerName}
                 onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                disabled={formData.requestType === "EXTENSION"}
+                className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="customerPhone">Phone</Label>
-              <Input
-                id="customerPhone"
-                placeholder="+1 555-1234"
-                value={formData.customerPhone}
-                onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customerEmail" className="text-sm font-semibold">Email</Label>
+                <Input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.customerEmail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                  className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customerPhone" className="text-sm font-semibold">Phone</Label>
+                <Input
+                  id="customerPhone"
+                  placeholder="+1 555-1234"
+                  value={formData.customerPhone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                  className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
             </div>
           </div>
 
+          {/* Row 2: License Plate & Vehicle Type */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="vehiclePlate">License Plate *</Label>
+              <Label htmlFor="vehiclePlate" className="text-sm font-semibold">
+                License Plate <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="vehiclePlate"
                 placeholder="ABC-1234"
                 value={formData.vehiclePlate}
                 onChange={(e) => setFormData(prev => ({ ...prev, vehiclePlate: e.target.value }))}
-                disabled={formData.requestType === "EXTENSION"}
+                className="h-10 transition-all focus:ring-2 focus:ring-primary/20 uppercase"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vehicleType">Vehicle Type</Label>
+              <Label className="text-sm font-semibold">Vehicle Type</Label>
               <Select
                 value={formData.vehicleType}
                 onValueChange={(v) => setFormData(prev => ({ ...prev, vehicleType: v }))}
               >
-                <SelectTrigger id="vehicleType">
+                <SelectTrigger className="h-10">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sedan">Sedan</SelectItem>
-                  <SelectItem value="suv">SUV</SelectItem>
-                  <SelectItem value="truck">Truck</SelectItem>
-                  <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                  <SelectItem value="van">Van</SelectItem>
+                  <SelectItem value="Sedan">Sedan</SelectItem>
+                  <SelectItem value="SUV">SUV</SelectItem>
+                  <SelectItem value="Truck">Truck</SelectItem>
+                  <SelectItem value="Van">Van</SelectItem>
+                  <SelectItem value="Motorcycle">Motorcycle</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
+          {/* Row 3: Request Type & Duration */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="requestType">Request Type</Label>
+              <Label className="text-sm font-semibold">Request Type</Label>
               <Select
                 value={formData.requestType}
-                onValueChange={(v) => setFormData(prev => ({ ...prev, requestType: v as any }))}
+                onValueChange={(v) => setFormData(prev => ({ ...prev, requestType: v }))}
               >
-                <SelectTrigger id="requestType">
-                  <SelectValue placeholder="Select Type" />
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="WALK_IN">Walk-in</SelectItem>
@@ -230,40 +237,42 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration (hours)</Label>
+              <Label className="text-sm font-semibold">Duration (hours)</Label>
               <Select
                 value={formData.duration}
                 onValueChange={(v) => setFormData(prev => ({ ...prev, duration: v }))}
               >
-                <SelectTrigger id="duration">
-                  <SelectValue placeholder="Select duration" />
+                <SelectTrigger className="h-10">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 Hour</SelectItem>
-                  <SelectItem value="2">2 Hours</SelectItem>
-                  <SelectItem value="4">4 Hours</SelectItem>
-                  <SelectItem value="8">8 Hours</SelectItem>
-                  <SelectItem value="12">12 Hours</SelectItem>
-                  <SelectItem value="24">24 Hours</SelectItem>
-                  <SelectItem value="48">2 Days</SelectItem>
+                  <SelectItem value="1">1 hour</SelectItem>
+                  <SelectItem value="2">2 hours</SelectItem>
+                  <SelectItem value="4">4 hours</SelectItem>
+                  <SelectItem value="8">8 hours</SelectItem>
+                  <SelectItem value="12">12 hours</SelectItem>
+                  <SelectItem value="24">24 hours</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
+          {/* Row 4: Parking Location */}
           <div className="space-y-2">
-            <Label htmlFor="parkingLocation">Parking Location *</Label>
+            <Label className="text-sm font-semibold">
+              Parking Location <span className="text-red-500">*</span>
+            </Label>
             <Select
               value={formData.parkingId}
               onValueChange={(v) => setFormData(prev => ({ ...prev, parkingId: v }))}
               disabled={formData.requestType === "EXTENSION"}
             >
-              <SelectTrigger id="parkingLocation">
+              <SelectTrigger className="h-10 w-full md:w-[240px]">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                {locations.length > 0 ? (
-                  locations.map(loc => (
+                {adminLocations.length > 0 ? (
+                  adminLocations.map(loc => (
                     <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
                   ))
                 ) : (
@@ -273,22 +282,31 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
             </Select>
           </div>
 
+          {/* Row 5: Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes" className="text-sm font-semibold">Notes</Label>
             <Textarea
               id="notes"
               placeholder="Additional notes..."
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="min-h-[100px]"
+              className="min-h-[100px] resize-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="px-8">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="bg-[#00A386] hover:bg-[#008F75] text-white px-8"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : null}
             Create Request
           </Button>
         </DialogFooter>

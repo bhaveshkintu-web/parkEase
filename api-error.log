@@ -118,3 +118,717 @@ Raw query failed. Code: `42703`. Message: `column "processedBy" of relation "Boo
 [2026-02-03T11:08:03.151Z] FORBIDDEN: User vidhipatel5044@gmail.com role is [WATCHMAN] (id: cml6833ve0000u1bwj8lqmwhi)
 [2026-02-03T11:08:10.883Z] FORBIDDEN: User vidhipatel5044@gmail.com role is [WATCHMAN] (id: cml6833ve0000u1bwj8lqmwhi)
 [2026-02-03T11:08:20.692Z] FORBIDDEN: User vidhipatel5044@gmail.com role is [WATCHMAN] (id: cml6833ve0000u1bwj8lqmwhi)
+[2026-02-04T05:46:10.578Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:171
+
+  588     });
+  589 }
+  590 // Verify the owner owns the location
+→ 591 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:171
+
+  588     });
+  589 }
+  590 // Verify the owner owns the location
+→ 591 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T05:46:17.427Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:171
+
+  588     });
+  589 }
+  590 // Verify the owner owns the location
+→ 591 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:171
+
+  588     });
+  589 }
+  590 // Verify the owner owns the location
+→ 591 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:591:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T05:54:56.120Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T05:55:40.742Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:07:43.607Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:07:59.485Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:08.663Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:33.464Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:42.943Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:43.795Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:44.518Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:44.732Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:44.915Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:08:45.150Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:11:34.136Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:11:38.886Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-02-04T06:16:20.468Z] PATCH /api/watchman/booking-requests/undefined ERROR: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+PrismaClientKnownRequestError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique()` invocation in
+C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:171
+
+  603     });
+  604 }
+  605 // Verify the owner owns the location
+→ 606 const ownerProfile = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].ownerProfile.findUnique(
+The column `OwnerProfile.website` does not exist in the current database.
+    at ei.handleRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\parkEase\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\parkEase\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async PATCH (C:\parkEase\.next\dev\server\chunks\[root-of-the-server]__81aa7527._.js:606:30)
+    at async AppRouteRouteModule.do (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15485:38)
+    at async AppRouteRouteModule.handleResponse (C:\parkEase\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15547:32)
+    at async handler (C:\parkEase\.next\dev\server\chunks\node_modules_next_91529b47._.js:15600:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\parkEase\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\parkEase\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\parkEase\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\parkEase\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\parkEase\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\parkEase\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\parkEase\node_modules\next\dist\server\lib\start-server.js:226:13)

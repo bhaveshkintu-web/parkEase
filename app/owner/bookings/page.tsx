@@ -696,6 +696,7 @@ export default function OwnerBookingsPage() {
                               <div>
                                 <p className="text-sm font-medium">{request.customerName}</p>
                                 <p className="text-xs text-muted-foreground">{request.customerPhone}</p>
+                                {request.customerEmail && <p className="text-xs text-muted-foreground">{request.customerEmail}</p>}
                               </div>
                             </TableCell>
                             <TableCell>

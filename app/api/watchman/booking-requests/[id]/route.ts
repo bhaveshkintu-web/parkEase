@@ -6,6 +6,18 @@ import { sendBookingNotification } from "@/lib/mailer";
 import fs from "fs";
 import path from "path";
 
+// Helper to log info
+function logInfo(message: string) {
+    const timestamp = new Date().toISOString();
+    const logMsg = `[${timestamp}] WATCHMAN-PATCH-API: ${message}\n`;
+    try {
+        const logPath = path.join(process.cwd(), "api-watchman-debug.log");
+        fs.appendFileSync(logPath, logMsg);
+    } catch (e) {
+        // Ignore log errors
+    }
+}
+
 // PATCH /api/watchman/booking-requests/[id] - Approve/Reject a booking request
 export async function PATCH(
     request: NextRequest,
@@ -211,70 +223,89 @@ export async function PATCH(
             const confCode = `PKE-${generateConfirmationCode()}`;
 
             try {
-                // Standard method
-                await prisma.$transaction(async (tx) => {
+                console.log("Starting transaction for booking creation...");
+                await (prisma as any).$transaction(async (tx: any) => {
+                    logInfo(`Creating booking for request ${existingRequest.id}`);
                     const newBooking = await tx.booking.create({
                         data: {
-                            userId: existingRequest.requestedById || null, // Link to the watchman who requested it
+                            userId: existingRequest.requestedById || null,
                             locationId: existingRequest.parkingId,
                             checkIn: new Date(existingRequest.requestedStart),
                             checkOut: new Date(existingRequest.requestedEnd),
-                            guestFirstName: existingRequest.customerName.split(' ')[0] || "Guest",
-                            guestLastName: existingRequest.customerName.split(' ').slice(1).join(' ') || "User",
+                            guestFirstName: (existingRequest.customerName || "Guest").split(' ')[0],
+                            guestLastName: (existingRequest.customerName || "User").split(' ').slice(1).join(' ') || "User",
                             guestEmail: existingRequest.customerEmail || "guest@example.com",
                             guestPhone: existingRequest.customerPhone || "",
                             vehicleMake: existingRequest.vehicleMake || "Unknown",
-                            vehicleModel: existingRequest.vehicleModel || existingRequest.vehicleType,
+                            vehicleModel: existingRequest.vehicleModel || existingRequest.vehicleType || "Sedan",
                             vehicleColor: existingRequest.vehicleColor || "Unknown",
                             vehiclePlate: existingRequest.vehiclePlate,
-                            totalPrice: existingRequest.estimatedAmount,
-                            taxes: existingRequest.estimatedAmount * 0.1,
+                            totalPrice: Number(existingRequest.estimatedAmount) || 0,
+                            taxes: (Number(existingRequest.estimatedAmount) || 0) * 0.1,
                             fees: 2.99,
                             status: "CONFIRMED",
                             confirmationCode: confCode,
                         }
                     });
 
-                    // Create ParkingSession
-                    await tx.parkingSession.create({
-                        data: {
-                            bookingId: newBooking.id,
-                            locationId: existingRequest.parkingId,
-                            status: "RESERVED",
-                        },
-                    });
+                    logInfo(`Booking created: ${newBooking.id}.`);
 
+                    logInfo(`Updating available spots for location ${existingRequest.parkingId}`);
                     // Update available spots (decrement)
                     await tx.parkingLocation.update({
                         where: { id: existingRequest.parkingId },
                         data: { availableSpots: { decrement: 1 } }
                     });
                 });
+                logInfo("Approval transaction completed successfully.");
             } catch (err: any) {
-                console.log("Prisma booking create failed, trying raw query fallback...");
+                console.log("Prisma booking create failed, trying raw query fallback...", err.message);
+                logInfo(`Prisma failed: ${err.message}. Using raw SQL fallback.`);
+
                 const bookingId = `b_${Math.random().toString(36).substring(2, 11)}`;
-                await prisma.$executeRawUnsafe(`
+                const sessionId = `s_${Math.random().toString(36).substring(2, 11)}`;
+
+                // Insert booking with raw SQL
+                await prisma.$executeRaw`
                     INSERT INTO "Booking" (
                         "id", "userId", "locationId", "checkIn", "checkOut", 
                         "guestFirstName", "guestLastName", "guestEmail", "guestPhone", 
                         "vehicleMake", "vehicleModel", "vehicleColor", "vehiclePlate", 
-                        "totalPrice", "taxes", "fees", "status", "confirmationCode", "updatedAt"
+                        "totalPrice", "taxes", "fees", "status", "confirmationCode", "createdAt", "updatedAt"
                     ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::"BookingStatus", $18, NOW()
+                        ${bookingId}, 
+                        ${existingRequest.requestedById || null}, 
+                        ${existingRequest.parkingId}, 
+                        ${new Date(existingRequest.requestedStart)}, 
+                        ${new Date(existingRequest.requestedEnd)},
+                        ${(existingRequest.customerName || "Guest").split(' ')[0]}, 
+                        ${(existingRequest.customerName || "User").split(' ').slice(1).join(' ') || "User"}, 
+                        ${existingRequest.customerEmail || "guest@example.com"}, 
+                        ${existingRequest.customerPhone || ""},
+                        ${existingRequest.vehicleMake || "Unknown"}, 
+                        ${existingRequest.vehicleModel || existingRequest.vehicleType || "Sedan"}, 
+                        ${existingRequest.vehicleColor || "Unknown"}, 
+                        ${existingRequest.vehiclePlate},
+                        ${Number(existingRequest.estimatedAmount) || 0}, 
+                        ${(Number(existingRequest.estimatedAmount) || 0) * 0.1}, 
+                        ${2.99}, 
+                        ${"CONFIRMED"}::"BookingStatus", 
+                        ${confCode}, 
+                        NOW(), 
+                        NOW()
                     )
-                `,
-                    bookingId, existingRequest.requestedById || null, existingRequest.parkingId,
-                    new Date(existingRequest.requestedStart), new Date(existingRequest.requestedEnd),
-                    existingRequest.customerName.split(' ')[0] || "Guest",
-                    existingRequest.customerName.split(' ').slice(1).join(' ') || "User",
-                    existingRequest.customerEmail || "guest@example.com", existingRequest.customerPhone || "",
-                    existingRequest.vehicleMake || "Unknown", existingRequest.vehicleModel || existingRequest.vehicleType,
-                    existingRequest.vehicleColor || "Unknown", existingRequest.vehiclePlate,
-                    existingRequest.estimatedAmount, existingRequest.estimatedAmount * 0.1, 2.99,
-                    "CONFIRMED", confCode
-                );
+                `;
 
-                await prisma.$executeRawUnsafe(`UPDATE "ParkingLocation" SET "availableSpots" = "availableSpots" - 1 WHERE id = $1`, existingRequest.parkingId);
+                logInfo(`Booking ${bookingId} created via raw SQL.`);
+
+                // Update available spots
+                await prisma.$executeRaw`
+                    UPDATE "ParkingLocation" 
+                    SET "availableSpots" = "availableSpots" - 1, "updatedAt" = NOW()
+                    WHERE id = ${existingRequest.parkingId}
+                `;
+
+                logInfo("Raw SQL fallback completed successfully.");
             }
 
             // Send Approval Notification
@@ -306,13 +337,14 @@ export async function PATCH(
             },
         });
     } catch (error: any) {
+        logInfo(`CRITICAL ERROR in PATCH: ${error.message}\n${error.stack}`);
         console.error("Error updating booking request:", error);
         try {
             const fs = require('fs');
             fs.appendFileSync('api-error.log', `[${new Date().toISOString()}] PATCH /api/watchman/booking-requests/${params.id} ERROR: ${error.message}\n${error.stack}\n`);
         } catch (e) { }
         return NextResponse.json(
-            { error: "Failed to update booking request", details: error.message },
+            { error: "Failed to update booking request", details: error.message, stack: error.stack },
             { status: 500 }
         );
     }
