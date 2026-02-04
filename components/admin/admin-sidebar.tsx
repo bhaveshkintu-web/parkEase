@@ -139,21 +139,29 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   const [counts, setCounts] = useState<any>({});
 
   useEffect(() => {
-    fetchCounts();
-    // Refresh counts every 30 seconds
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user?.id) {
+      fetchCounts();
+      // Refresh counts every 30 seconds
+      const interval = setInterval(fetchCounts, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.id]);
 
   const fetchCounts = async () => {
+    if (!user?.id) return;
+    
     try {
       const response = await fetch("/api/admin/analytics/dashboard");
       if (response.ok) {
         const data = await response.json();
-        setCounts(data.stats);
+        setCounts(data.stats || {});
+      } else {
+        console.warn(`Failed to fetch sidebar counts: ${response.status}`);
       }
     } catch (error) {
-      console.error("Failed to fetch sidebar counts:", error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("Failed to fetch sidebar counts:", error);
+      }
     }
   };
 

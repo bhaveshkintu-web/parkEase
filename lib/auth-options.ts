@@ -29,8 +29,16 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user || !user.emailVerified) {
+        if (!user) {
+          throw new Error("No user found with this email");
+        }
+
+        if (!user.emailVerified) {
           throw new Error("Email not verified");
+        }
+
+        if (user.status !== "ACTIVE") {
+          throw new Error(`Account is ${user.status.toLowerCase()}. Please contact support.`);
         }
 
         const isValid = await bcrypt.compare(

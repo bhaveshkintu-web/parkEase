@@ -161,10 +161,10 @@ export default function OwnersPage() {
           <p className="text-muted-foreground">Manage partners, view analytics, and handle approvals.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          {/* <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export
-          </Button>
+          </Button> */}
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
             <Link href="/admin/owners/new">
               <Plus className="mr-2 h-4 w-4" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { Bell, Check, Info, AlertTriangle, MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,15 +22,21 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+  const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNotifications = async () => {
+    if (!isAuthenticated || !user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/notifications?limit=50");
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications);
+        setNotifications(data.notifications || []);
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -39,8 +46,12 @@ export default function NotificationsPage() {
   };
 
   useEffect(() => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
     fetchNotifications();
-  }, []);
+  }, [user?.id]);
 
   const markAsRead = async (id: string) => {
     try {

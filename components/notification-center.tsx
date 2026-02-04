@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth-context";
 
 interface Notification {
   id: string;
@@ -25,29 +26,40 @@ interface Notification {
 }
 
 export function NotificationCenter() {
+  const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
   const fetchNotifications = async () => {
+    if (!isAuthenticated || !user?.id) return;
+
     try {
       const response = await fetch("/api/notifications");
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn(`Failed to fetch notifications: ${response.status}`, errorData);
       }
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      // Only log as error if it's not a fetch abort or similar expected failure during navigation
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("Failed to fetch notifications:", error);
+      }
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
-    // Poll for new notifications every minute
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isAuthenticated && user?.id) {
+      fetchNotifications();
+      // Poll for new notifications every minute
+      const interval = setInterval(fetchNotifications, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user?.id]);
 
   const markAsRead = async (id: string) => {
     try {
