@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,7 @@ const systemAdminNav: NavSection[] = [
     items: [
       { label: "Disputes", href: "/admin/disputes", icon: AlertTriangle },
       { label: "Refunds", href: "/admin/refunds", icon: Wallet },
+      { label: "Support Tickets", href: "/admin/support", icon: MessageSquare },
     ],
   },
   {
@@ -128,23 +129,70 @@ const watchmanAdminNav: NavSection[] = [
 ];
 
 interface AdminSidebarProps {
-  role: "admin" | "owner" | "watchman";
+  role: "admin" | "owner" | "watchman" | "support";
 }
 
 export function AdminSidebar({ role }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [counts, setCounts] = useState<any>({});
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchCounts();
+      // Refresh counts every 30 seconds
+      const interval = setInterval(fetchCounts, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.id]);
+
+  const fetchCounts = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await fetch("/api/admin/analytics/dashboard");
+      if (response.ok) {
+        const data = await response.json();
+        setCounts(data.stats || {});
+      } else {
+        console.warn(`Failed to fetch sidebar counts: ${response.status}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("Failed to fetch sidebar counts:", error);
+      }
+    }
+  };
+
+  const getNavBadge = (label: string) => {
+    switch (label) {
+      case "Owner Lead Approvals": return counts.pendingOwners;
+      case "Location Approvals": return counts.pendingLocations;
+      case "Disputes": return counts.openDisputes;
+      case "Refunds": return counts.pendingRefunds;
+      case "Support Tickets": return counts.openTickets;
+      case "Reviews": return counts.pendingReviews;
+      default: return undefined;
+    }
+  };
 
   const navigation =
-    role === "admin"
-      ? systemAdminNav
+    role === "admin" || role === "support"
+      ? systemAdminNav.map(section => ({
+          ...section,
+          items: section.items.map(item => ({
+            ...item,
+            badge: getNavBadge(item.label)
+          }))
+        }))
       : role === "owner"
       ? ownerAdminNav
       : watchmanAdminNav;
 
   const roleLabels = {
     admin: "System Admin",
+    support: "Support Agent",
     owner: "Owner Portal",
     watchman: "Watchman Portal",
   };

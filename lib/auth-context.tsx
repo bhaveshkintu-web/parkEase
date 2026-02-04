@@ -70,6 +70,33 @@ interface AuthContextType extends AuthState {
    CONSTANTS
 ======================= */
 
+export const DEMO_ACCOUNTS = {
+  customer: {
+    email: "customer@demo.com",
+    password: "password123",
+    description: "Standard user account for booking parking",
+    dashboardUrl: "/account",
+  },
+  owner: {
+    email: "owner@demo.com",
+    password: "password123",
+    description: "Parking lot owner for managing locations",
+    dashboardUrl: "/owner",
+  },
+  watchman: {
+    email: "watchman@demo.com",
+    password: "password123",
+    description: "On-site attendant for verifying bookings",
+    dashboardUrl: "/watchman",
+  },
+  admin: {
+    email: "admin@demo.com",
+    password: "password123",
+    description: "Platform administrator with full access",
+    dashboardUrl: "/admin",
+  },
+};
+
 const AUTH_STORAGE_KEY = "parkease_auth";
 
 /* =======================
