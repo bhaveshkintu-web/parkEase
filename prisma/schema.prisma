@@ -47,8 +47,15 @@ model OwnerProfile {
   state              String
   zipCode            String
   country            String
+  website            String?
+  description        String?
+  taxStatus          String?
   status             String            @default("pending")
   verificationStatus String            @default("unverified")
+  bankAccountName    String?
+  bankName          String?
+  accountNumber      String?
+  routingNumber      String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   documents          OwnerDocument[]

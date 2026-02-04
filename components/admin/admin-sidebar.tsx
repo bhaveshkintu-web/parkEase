@@ -34,11 +34,11 @@ const systemAdminNav: NavSection[] = [
   {
     title: "Management",
     items: [
-      { label: "Users", href: "/admin/users", icon: Users },
+      { label: "All Users", href: "/admin/users", icon: Users },
       { label: "Owners", href: "/admin/owners", icon: Building2 },
-      { label: "Locations", href: "/admin/locations", icon: MapPin },
-      { label: "Location Approvals", href: "/admin/approvals", icon: Shield },
-      { label: "Owner Approvals", href: "/admin/approvals/owners", icon: Building2 },
+      { label: "Owner Lead Approvals", href: "/admin/approvals/owners", icon: Building2 },
+      // { label: "Locations", href: "/admin/locations", icon: MapPin },
+      { label: "Location Approvals", href: "/admin/approvals", icon: Shield },      
       { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     ],
   },
