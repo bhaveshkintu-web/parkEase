@@ -71,12 +71,13 @@ export default function WatchmanSessionsPage() {
         });
         fetchSessions();
       } else {
-        throw new Error("Failed to update session");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Failed to update session");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update session status.",
+        description: error.message || "Failed to update session status.",
         variant: "destructive"
       });
     }

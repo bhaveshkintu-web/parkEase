@@ -6081,3 +6081,55 @@ The column `OwnerProfile.website` does not exist in the current database.
 [2026-02-04T06:30:03.431Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
 [2026-02-04T06:30:03.431Z] OWNER-API: Attempting RAW SQL query for booking requests...
 [2026-02-04T06:30:03.434Z] OWNER-API: Successfully fetched 9 requests
+[2026-02-04T08:09:41.724Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:09:41.732Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:09:41.743Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:09:41.743Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:09:41.748Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:09:41.748Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:09:41.751Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:09:41.755Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:09:41.761Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:09:41.761Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:09:41.761Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:09:41.764Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:09:41.765Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:09:41.765Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:09:41.769Z] OWNER-API: Successfully fetched 9 requests
+[2026-02-04T08:09:41.778Z] OWNER-API: Successfully fetched 9 requests
+[2026-02-04T08:09:57.422Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:09:57.431Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:09:57.432Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:09:57.435Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:09:57.437Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:09:57.438Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:09:57.438Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:09:57.440Z] OWNER-API: Successfully fetched 9 requests
+[2026-02-04T08:29:46.811Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:29:46.821Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:29:46.833Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:29:46.833Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:29:46.837Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:29:46.838Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:29:46.840Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:29:46.842Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:29:46.844Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:29:46.844Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:29:46.845Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:29:46.847Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:29:46.848Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:29:46.848Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:29:46.851Z] OWNER-API: Successfully fetched 11 requests
+[2026-02-04T08:29:46.857Z] OWNER-API: Successfully fetched 11 requests
+[2026-02-04T08:29:54.434Z] WATCHMAN-PATCH-API: Creating booking for request req_7tmfhnl1c
+[2026-02-04T08:29:54.443Z] WATCHMAN-PATCH-API: Booking created: cml7rohhl001du1hgcqllioor.
+[2026-02-04T08:29:54.443Z] WATCHMAN-PATCH-API: Updating available spots for location cml68fmmh0004u1e44c9lqfyi
+[2026-02-04T08:29:54.451Z] WATCHMAN-PATCH-API: Approval transaction completed successfully.
+[2026-02-04T08:29:59.516Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-04T08:29:59.523Z] OWNER-API: IDENTIFIED: vidhikumaripatel.it22@scet.ac.in [OWNER]
+[2026-02-04T08:29:59.524Z] OWNER-API: Fetching owner profile for userId: cml68u8cq0000u1m8wzu6tvbo
+[2026-02-04T08:29:59.531Z] OWNER-API: Found owner profile ID: cml6ch6ur0001u1wcw485nw6u
+[2026-02-04T08:29:59.533Z] OWNER-API: Found 1 locations via raw SQL
+[2026-02-04T08:29:59.533Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
+[2026-02-04T08:29:59.533Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-04T08:29:59.537Z] OWNER-API: Successfully fetched 11 requests

@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Calendar, Car, Clock, CheckCircle, XCircle, Search, Play, Pause, StopCircle, AlertTriangle, Timer, MapPin, User, Activity, FileText, Download, Filter, ArrowUpDown, Coffee, Shield, Eye } from "lucide-react";
+import { Calendar, Car, Clock, CheckCircle, XCircle, Search, Play, Pause, StopCircle, AlertTriangle, Timer, MapPin, User, Activity, FileText, Download, Filter, ArrowUpDown, Coffee, Shield, Eye, Printer } from "lucide-react";
 import type { WatchmanActivityLog, WatchmanShift, ShiftBreak } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "react-toastify";
@@ -180,7 +180,7 @@ const mockCarTimeTracking = [
 export default function WatchmanActivityPage() {
   const { user } = useAuth();
   const { parkingSessions } = useDataStore();
-  const { toast } = useToast();
+  const { toast: toastShadcn } = useToast();
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState("activity");
@@ -199,9 +199,140 @@ export default function WatchmanActivityPage() {
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [activityLogs, setActivityLogs] = useState(mockActivityLogs);
+  // Initialize with empty or mock if loading
+  const [activityLogs, setActivityLogs] = useState<WatchmanActivityLog[]>([]);
   const [shifts, setShifts] = useState(mockShifts);
   const [carTracking, setCarTracking] = useState(mockCarTimeTracking);
+
+  // Fetch activities and active shift on mount
+  React.useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const res = await fetch("/api/watchman/activity?limit=100");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logs) {
+            setActivityLogs(data.logs);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch activities:", error);
+      }
+    };
+
+    const fetchActiveShift = async () => {
+      try {
+        const res = await fetch("/api/watchman/shifts?activeOnly=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shifts && data.shifts.length > 0) {
+            const active = data.shifts[0];
+            // Adapt to frontend model
+            setCurrentShift({
+              id: active.id,
+              watchmanId: active.watchmanId,
+              watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
+              parkingId: active.locationId,
+              parkingName: active.location?.name || "Unknown Location",
+              shiftDate: new Date(active.scheduledStart),
+              scheduledStart: new Date(active.scheduledStart),
+              scheduledEnd: new Date(active.scheduledEnd),
+              actualStart: active.actualStart ? new Date(active.actualStart) : undefined,
+              actualEnd: active.actualEnd ? new Date(active.actualEnd) : undefined,
+              status: active.status.toLowerCase(),
+              breaks: [], // TODO: fetch breaks
+              activities: [],
+              totalCheckIns: 0,
+              totalCheckOuts: 0,
+              incidentsReported: 0
+            });
+          } else {
+            setCurrentShift(null);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch active shift:", error);
+      }
+    };
+
+    const fetchCarTracking = async () => {
+      try {
+        const res = await fetch("/api/watchman/sessions");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.sessions) {
+            const tracking = data.sessions
+              .filter((s: any) => s.checkInTime)
+              .map((s: any) => {
+                const start = new Date(s.checkInTime);
+                const end = s.checkOutTime ? new Date(s.checkOutTime) : (s.status === "active" || s.status === "checked_in" ? null : new Date());
+
+                // Duration calc
+                let duration = "-";
+                if (start) {
+                  const e = end || new Date();
+                  const diff = Math.max(0, e.getTime() - start.getTime());
+                  const hours = Math.floor(diff / (1000 * 60 * 60));
+                  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                  duration = `${hours}h ${minutes}m`;
+                }
+
+                return {
+                  id: s.id,
+                  vehiclePlate: s.vehiclePlate,
+                  vehicleType: s.vehicleType,
+                  timeIn: start,
+                  timeOut: end,
+                  duration: duration,
+                  spotNumber: s.spotNumber || "General",
+                  status: (s.status === "active" || s.status === "checked_in" || s.status === "overstay") ? "active" : "completed"
+                };
+              });
+            setCarTracking(tracking);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch car tracking", e);
+      }
+    };
+
+    if (user?.role === "WATCHMAN") {
+      fetchActivities();
+      fetchActiveShift();
+      fetchCarTracking();
+    }
+  }, [user]);
+
+  // Helper to post new activity
+  const logActivity = async (type: string, details: any = {}) => {
+    try {
+      // Optimistic update
+      const newActivity: WatchmanActivityLog = {
+        id: `temp_${Date.now()}`,
+        watchmanId: user?.id || "",
+        watchmanName: `${user?.firstName} ${user?.lastName}`,
+        type: type as any,
+        timestamp: new Date(),
+        details
+      };
+      setActivityLogs(prev => [newActivity, ...prev]);
+
+      await fetch("/api/watchman/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, details })
+      });
+
+      // Refetch to sync IDs etc
+      const res = await fetch("/api/watchman/activity?limit=50");
+      if (res.ok) {
+        const data = await res.json();
+        setActivityLogs(data.logs);
+      }
+    } catch (e) {
+      console.error("Failed to log activity", e);
+    }
+  };
 
   // Filter activities
   const filteredActivities = useMemo(() => {
@@ -295,43 +426,52 @@ export default function WatchmanActivityPage() {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
-    const newShift: WatchmanShift = {
-      id: `shift_${Date.now()}`,
-      watchmanId: user?.id || "watch_1",
-      watchmanName: `${user?.firstName || "John"} ${user?.lastName || "Doe"}`,
-      parkingId: "park_1",
-      parkingName: "Downtown Parking",
-      shiftDate: new Date(),
-      scheduledStart: new Date(),
-      scheduledEnd: new Date(Date.now() + 8 * 3600000),
-      actualStart: new Date(),
-      status: "active",
-      breaks: [],
-      activities: [],
-      totalCheckIns: 0,
-      totalCheckOuts: 0,
-      incidentsReported: 0,
-    };
+    try {
+      const res = await fetch("/api/watchman/shifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
 
-    setCurrentShift(newShift);
-    setShifts((prev) => [newShift, ...prev]);
+      if (res.ok) {
+        const data = await res.json();
+        const active = data.shift;
+        if (active) {
+          const newShift: WatchmanShift = {
+            id: active.id,
+            watchmanId: user?.id || "watch_1",
+            watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
+            parkingId: active.locationId || "park_1",
+            parkingName: "Downtown Parking",
+            shiftDate: new Date(),
+            scheduledStart: new Date(),
+            scheduledEnd: new Date(Date.now() + 8 * 3600000),
+            actualStart: new Date(),
+            status: "active",
+            breaks: [],
+            activities: [],
+            totalCheckIns: 0,
+            totalCheckOuts: 0,
+            incidentsReported: 0,
+          };
+          setCurrentShift(newShift);
+          setShifts((prev) => [newShift, ...prev]);
 
-    const newActivity: WatchmanActivityLog = {
-      id: `act_${Date.now()}`,
-      watchmanId: user?.id || "watch_1",
-      watchmanName: newShift.watchmanName,
-      type: "shift_start",
-      timestamp: new Date(),
-      details: { parkingId: "park_1", location: "Downtown Parking" },
-    };
-    setActivityLogs((prev) => [newActivity, ...prev]);
+          await logActivity("shift_start", { parkingId: newShift.parkingId });
+
+          toast.success("Shift Started: Your shift has been started successfully");
+        }
+      } else {
+        const err = await res.json();
+        toast.error("Failed to start shift: " + (err.error || "Unknown error"));
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error starting shift");
+    }
 
     setIsStartShiftOpen(false);
     setIsLoading(false);
-
-    toast.success("Shift Started", {
-      description: "Your shift has been started successfully",
-    });
   };
 
   const handleEndShift = async () => {
@@ -340,31 +480,35 @@ export default function WatchmanActivityPage() {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
-    setShifts((prev) =>
-      prev.map((s) =>
-        s.id === currentShift.id
-          ? { ...s, status: "completed", actualEnd: new Date() }
-          : s
-      )
-    );
+    try {
+      const res = await fetch(`/api/watchman/shifts/${currentShift.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" })
+      });
 
-    const newActivity: WatchmanActivityLog = {
-      id: `act_${Date.now()}`,
-      watchmanId: user?.id || "watch_1",
-      watchmanName: currentShift.watchmanName,
-      type: "shift_end",
-      timestamp: new Date(),
-      details: { parkingId: currentShift.parkingId, location: currentShift.parkingName },
-    };
-    setActivityLogs((prev) => [newActivity, ...prev]);
+      if (res.ok) {
+        setShifts((prev) =>
+          prev.map((s) =>
+            s.id === currentShift.id
+              ? { ...s, status: "completed", actualEnd: new Date() }
+              : s
+          )
+        );
 
-    setCurrentShift(null);
+        await logActivity("shift_end", { parkingId: currentShift.parkingId, location: currentShift.parkingName });
+
+        setCurrentShift(null);
+        toast.success("Shift Ended: Your shift has been completed");
+      } else {
+        toast.error("Failed to end shift");
+      }
+    } catch (e) {
+      toast.error("Error ending shift");
+    }
+
     setIsEndShiftOpen(false);
     setIsLoading(false);
-
-    toast.success("Shift Ended", {
-      description: "Your shift has been completed",
-    });
   };
 
   const handleToggleBreak = async () => {
@@ -373,22 +517,13 @@ export default function WatchmanActivityPage() {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 300));
 
-    const newActivity: WatchmanActivityLog = {
-      id: `act_${Date.now()}`,
-      watchmanId: user?.id || "watch_1",
-      watchmanName: currentShift.watchmanName,
-      type: isOnBreak ? "break_end" : "break_start",
-      timestamp: new Date(),
-      details: isOnBreak ? {} : { notes: "Break started" },
-    };
-    setActivityLogs((prev) => [newActivity, ...prev]);
+    await logActivity(isOnBreak ? "break_end" : "break_start", isOnBreak ? {} : { notes: "Break started" });
 
     setIsOnBreak(!isOnBreak);
     setIsLoading(false);
 
-    toast.success(isOnBreak ? "Break Ended" : "Break Started", {
-      description: isOnBreak ? "You are back on duty" : "Enjoy your break",
-    });
+    const msg = isOnBreak ? "Break Ended: You are back on duty" : "Break Started: Enjoy your break";
+    toast.success(msg);
   };
 
   // Calculate shift statistics
@@ -429,6 +564,30 @@ export default function WatchmanActivityPage() {
               </Button>
             ) : (
               <>
+                <Button
+                  variant="outline"
+                  className="hidden sm:flex"
+                  onClick={() => logActivity("patrol", { notes: "Patrol completed" }).then(() => toast.success("Patrol Logged"))}
+                  disabled={isLoading}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Patrol
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden sm:flex text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => {
+                    const note = prompt("Describe the incident:");
+                    if (note) {
+                      logActivity("incident", { notes: note }).then(() => toast.success("Incident Reported"));
+                    }
+                  }}
+                  disabled={isLoading}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Incident
+                </Button>
+
                 <Button
                   variant={isOnBreak ? "default" : "outline"}
                   onClick={handleToggleBreak}
@@ -794,10 +953,110 @@ export default function WatchmanActivityPage() {
                     <CardTitle className="text-lg">Shift History</CardTitle>
                     <CardDescription>View past and scheduled shifts</CardDescription>
                   </div>
-                  <Button variant="outline">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => {
+                      const printWindow = window.open('', '_blank');
+                      if (!printWindow) return;
+
+                      const html = `
+                          <html>
+                            <head>
+                              <title>Shift Report</title>
+                              <style>
+                                body { font-family: sans-serif; padding: 20px; color: #333; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                th { background-color: #f8f9fa; font-weight: bold; }
+                                tr:nth-child(even) { background-color: #f9f9f9; }
+                                h1 { margin-bottom: 0.5rem; }
+                                .header { margin-bottom: 2rem; border-bottom: 2px solid #eee; padding-bottom: 1rem; }
+                                .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 2rem; }
+                                .timestamp { color: #666; font-size: 0.9em; }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <h1>Shift Activity Report</h1>
+                                <p class="timestamp">Generated on: ${new Date().toLocaleString()}</p>
+                              </div>
+
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Location</th>
+                                    <th>Shift Time</th>
+                                    <th>Actual Time</th>
+                                    <th>Activities</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  ${shifts.map(s => `
+                                    <tr>
+                                      <td>${new Date(s.shiftDate).toLocaleDateString()}</td>
+                                      <td><strong>${s.status.toUpperCase()}</strong></td>
+                                      <td>${s.parkingName}</td>
+                                      <td>
+                                        ${new Date(s.scheduledStart).toLocaleTimeString()} - 
+                                        ${new Date(s.scheduledEnd).toLocaleTimeString()}
+                                      </td>
+                                      <td>
+                                        ${s.actualStart ? new Date(s.actualStart).toLocaleTimeString() : "-"} - 
+                                        ${s.actualEnd ? new Date(s.actualEnd).toLocaleTimeString() : "ongoing"}
+                                      </td>
+                                      <td>
+                                        Check-ins: ${s.totalCheckIns}<br>
+                                        Check-outs: ${s.totalCheckOuts}<br>
+                                        Incidents: ${s.incidentsReported}
+                                      </td>
+                                    </tr>
+                                  `).join('')}
+                                </tbody>
+                              </table>
+                              <script>
+                                window.onload = () => { setTimeout(() => window.print(), 500); };
+                              </script>
+                            </body>
+                          </html>
+                        `;
+
+                      printWindow.document.write(html);
+                      printWindow.document.close();
+                    }}>
+                      <Printer className="w-4 h-4 mr-2" />
+                      Print
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                      const headers = ["Date", "Status", "Location", "Scheduled Start", "Scheduled End", "Actual Start", "Actual End", "Check-ins", "Check-outs", "Incidents"];
+                      const rows = shifts.map(s => [
+                        new Date(s.shiftDate).toLocaleDateString(),
+                        s.status,
+                        s.parkingName,
+                        new Date(s.scheduledStart).toLocaleTimeString(),
+                        new Date(s.scheduledEnd).toLocaleTimeString(),
+                        s.actualStart ? new Date(s.actualStart).toLocaleTimeString() : "-",
+                        s.actualEnd ? new Date(s.actualEnd).toLocaleTimeString() : "-",
+                        s.totalCheckIns,
+                        s.totalCheckOuts,
+                        s.incidentsReported
+                      ]);
+
+                      const csvContent = "data:text/csv;charset=utf-8,"
+                        + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", "shift_report.csv");
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -805,37 +1064,34 @@ export default function WatchmanActivityPage() {
                   {shifts.map((shift) => (
                     <div
                       key={shift.id}
-                      className={`p-4 border rounded-lg ${
-                        shift.status === "active"
-                          ? "border-green-200 bg-green-50/50"
-                          : shift.status === "missed"
+                      className={`p-4 border rounded-lg ${shift.status === "active"
+                        ? "border-green-200 bg-green-50/50"
+                        : shift.status === "missed"
                           ? "border-red-200 bg-red-50/50"
                           : ""
-                      }`}
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              shift.status === "active"
-                                ? "bg-green-100"
-                                : shift.status === "completed"
+                            className={`w-12 h-12 rounded-full flex items-center justify-center ${shift.status === "active"
+                              ? "bg-green-100"
+                              : shift.status === "completed"
                                 ? "bg-blue-100"
                                 : shift.status === "missed"
-                                ? "bg-red-100"
-                                : "bg-slate-100"
-                            }`}
+                                  ? "bg-red-100"
+                                  : "bg-slate-100"
+                              }`}
                           >
                             <Calendar
-                              className={`w-6 h-6 ${
-                                shift.status === "active"
-                                  ? "text-green-600"
-                                  : shift.status === "completed"
+                              className={`w-6 h-6 ${shift.status === "active"
+                                ? "text-green-600"
+                                : shift.status === "completed"
                                   ? "text-blue-600"
                                   : shift.status === "missed"
-                                  ? "text-red-600"
-                                  : "text-slate-600"
-                              }`}
+                                    ? "text-red-600"
+                                    : "text-slate-600"
+                                }`}
                             />
                           </div>
                           <div>
@@ -846,10 +1102,10 @@ export default function WatchmanActivityPage() {
                                   shift.status === "active"
                                     ? "bg-green-100 text-green-700"
                                     : shift.status === "completed"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : shift.status === "missed"
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-slate-100 text-slate-700"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : shift.status === "missed"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-slate-100 text-slate-700"
                                 }
                               >
                                 {shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}

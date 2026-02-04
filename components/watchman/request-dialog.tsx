@@ -53,6 +53,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
     parkingId: "",
     requestType: "WALK_IN" as any,
     duration: "2",
+    priority: "normal",
     notes: "",
   });
 
@@ -97,7 +98,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
         requestedEnd: new Date(Date.now() + parseInt(formData.duration) * 3600000),
         estimatedAmount: parseInt(formData.duration) * 5,
         notes: formData.notes,
-        priority: "normal",
+        priority: formData.priority,
         originalBookingId: initialData?.originalBookingId,
       });
 
@@ -116,6 +117,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
         parkingId: "",
         requestType: "WALK_IN",
         duration: "2",
+        priority: "normal",
         notes: "",
       });
     } catch (error) {
@@ -236,6 +238,24 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Priority</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(v) => setFormData(prev => ({ ...prev, priority: v }))}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="URGENT">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Duration (hours)</Label>
               <Select
