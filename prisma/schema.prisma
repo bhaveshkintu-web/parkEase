@@ -33,6 +33,10 @@ model User {
   watchmanProfile  Watchman?
   requestedBookings BookingRequest[] @relation("RequestedBy")
   processedBookings BookingRequest[] @relation("ProcessedBy")
+  disputes         Dispute[]
+  assignedDisputes Dispute[]        @relation("AssignedDisputes")
+  disputeAuditLogs DisputeAuditLog[]
+  notifications    Notification[]
 }
 
 model OwnerProfile {
@@ -135,6 +139,7 @@ model Booking {
   parkingSession   ParkingSession?
   payment          Payment?
   refunds          RefundRequest[]
+  disputes         Dispute[]
 }
 
 model Payment {
@@ -264,6 +269,7 @@ model AdminReview {
 model RefundRequest {
   id             String       @id @default(cuid())
   bookingId      String
+  disputeId      String?      @unique
   amount         Float
   reason         String
   description    String?
@@ -271,7 +277,50 @@ model RefundRequest {
   approvedAmount Float?
   processedAt    DateTime?
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   booking        Booking      @relation(fields: [bookingId], references: [id])
+  dispute        Dispute?     @relation(fields: [disputeId], references: [id])
+}
+
+model Dispute {
+  id               String          @id @default(cuid())
+  bookingId        String
+  userId           String
+  subject          String
+  description      String
+  type             DisputeType
+  status           DisputeStatus   @default(OPEN)
+  priority         DisputePriority @default(MEDIUM)
+  internalNotes    String?
+  resolutionNotes  String?
+  assignedAdminId  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  isDeleted        Boolean         @default(false)
+
+  booking          Booking         @relation(fields: [bookingId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  assignedAdmin    User?           @relation("AssignedDisputes", fields: [assignedAdminId], references: [id])
+  refundRequest    RefundRequest?
+  auditLogs        DisputeAuditLog[]
+
+  @@index([bookingId])
+  @@index([userId])
+  @@index([status])
+}
+
+model DisputeAuditLog {
+  id          String   @id @default(cuid())
+  disputeId   String
+  adminId     String?
+  action      String
+  previousValue Json?
+  newValue      Json?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  dispute     Dispute  @relation(fields: [disputeId], references: [id])
+  admin       User?    @relation(fields: [adminId], references: [id])
 }
 
 model SavedVehicle {
@@ -478,6 +527,26 @@ enum WatchmanShiftStatus {
   COMPLETED
   MISSED
   PARTIAL
+  REJECTED
+}
+
+enum DisputeType {
+  REFUND
+  SERVICE
+  LOCATION
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 model BookingRequest {
@@ -534,6 +603,7 @@ model SupportTicket {
   subject   String
   message   String
   status    TicketStatus @default(OPEN)
+  internalNotes String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -545,4 +615,31 @@ enum TicketStatus {
   OPEN
   IN_PROGRESS
   RESOLVED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  status    String           @default("UNREAD") // UNREAD, READ, ARCHIVED
+  metadata  Json?            // For storing links, IDs, etc.
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum NotificationType {
+  DISPUTE_CREATED
+  DISPUTE_UPDATED
+  REFUND_REQUESTED
+  REFUND_PROCESSED
+  SUPPORT_TICKET_CREATED
+  SUPPORT_TICKET_UPDATED
+  SYSTEM_ALERT
 }

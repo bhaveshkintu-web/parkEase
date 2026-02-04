@@ -26,6 +26,11 @@ export async function GET(req: NextRequest) {
     let activeLocations = 0;
     let pendingOwners = 0;
     let totalRevenue = 0;
+    let openTickets = 0;
+    let openDisputes = 0;
+    let pendingLocations = 0;
+    let pendingRefunds = 0;
+    let pendingReviews = 0;
 
     try {
       totalUsers = await prisma.user.count();
@@ -67,6 +72,46 @@ export async function GET(req: NextRequest) {
       console.error("Error counting pending owners:", error);
     }
 
+    try {
+      openTickets = await prisma.supportTicket.count({
+        where: { status: "OPEN" }
+      });
+    } catch (error) {
+      console.error("Error counting open tickets:", error);
+    }
+
+    try {
+      openDisputes = await prisma.dispute.count({
+        where: { status: "OPEN" }
+      });
+    } catch (error) {
+      console.error("Error counting open disputes:", error);
+    }
+
+    try {
+      pendingLocations = await prisma.parkingLocation.count({
+        where: { status: "PENDING" }
+      });
+    } catch (error) {
+      console.error("Error counting pending locations:", error);
+    }
+
+    try {
+      pendingRefunds = await prisma.refundRequest.count({
+        where: { status: "PENDING" }
+      });
+    } catch (error) {
+      console.error("Error counting pending refunds:", error);
+    }
+
+    try {
+      pendingReviews = await prisma.review.count({
+        where: { adminReview: { is: null } }
+      });
+    } catch (error) {
+      console.error("Error counting pending reviews:", error);
+    }
+
     // Get revenue safely (sum of all bookings)
     try {
       const revenueData = await prisma.booking.aggregate({
@@ -79,6 +124,27 @@ export async function GET(req: NextRequest) {
       console.error("Error calculating revenue:", error);
     }
 
+    // Calculate SLA Adherence (percentage of resolved disputes/tickets within 24h)
+    let slaAdherence = 0;
+    try {
+      const resolvedTickets = await prisma.supportTicket.findMany({
+        where: { status: "RESOLVED" },
+        select: { createdAt: true, updatedAt: true }
+      });
+      
+      if (resolvedTickets.length > 0) {
+        const withinSLA = resolvedTickets.filter(t => {
+          const diff = t.updatedAt.getTime() - t.createdAt.getTime();
+          return diff < 24 * 60 * 60 * 1000; // 24 hours
+        }).length;
+        slaAdherence = Math.round((withinSLA / resolvedTickets.length) * 100);
+      } else {
+        slaAdherence = 100; // Default if no data
+      }
+    } catch (error) {
+       console.error("Error calculating SLA:", error);
+    }
+
     return NextResponse.json({
       stats: {
         totalUsers,
@@ -88,6 +154,13 @@ export async function GET(req: NextRequest) {
         activeLocations,
         pendingOwners,
         totalRevenue,
+        openTickets,
+        openDisputes,
+        pendingLocations,
+        pendingRefunds,
+        pendingReviews,
+        totalPendingApprovals: pendingOwners + pendingLocations + pendingRefunds,
+        slaAdherence,
       },
     });
   } catch (error) {
