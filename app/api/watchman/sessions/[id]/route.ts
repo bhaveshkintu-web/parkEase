@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth-options";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: any }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -15,7 +15,12 @@ export async function PATCH(
 
   try {
     const { action } = await request.json();
+    const params = await props.params;
     const sessionId = params.id;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: "Session ID is missing" }, { status: 400 });
+    }
 
     const watchman = await prisma.watchman.findUnique({
       where: { userId: session.user.id }
@@ -31,9 +36,25 @@ export async function PATCH(
         data: {
           status: "checked_in",
           checkInTime: new Date(),
-          // Associate with watchman if needed, e.g., in metadata or a separate field if added later
+        },
+        include: { booking: true }
+      });
+
+      // Log activity
+      await prisma.watchmanActivityLog.create({
+        data: {
+          watchmanId: watchman.id,
+          type: "check_in",
+          details: {
+            sessionId: updatedSession.id,
+            bookingId: updatedSession.bookingId,
+            vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
+            parkingId: updatedSession.locationId,
+            spotNumber: "N/A" // Add spot logic if exists
+          }
         }
       });
+
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
       const updatedSession = await prisma.parkingSession.update({
@@ -41,29 +62,45 @@ export async function PATCH(
         data: {
           status: "checked_out",
           checkOutTime: new Date(),
+        },
+        include: { booking: true }
+      });
+
+      // Bonus: Increment available spots back
+      await prisma.parkingLocation.update({
+        where: { id: updatedSession.locationId },
+        data: { availableSpots: { increment: 1 } }
+      });
+
+      // Log activity
+      await prisma.watchmanActivityLog.create({
+        data: {
+          watchmanId: watchman.id,
+          type: "check_out",
+          details: {
+            sessionId: updatedSession.id,
+            bookingId: updatedSession.bookingId,
+            vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
+            parkingId: updatedSession.locationId,
+            spotNumber: "N/A"
+          }
         }
       });
-      
-      // Bonus: Increment available spots back
-      const sessionData = await prisma.parkingSession.findUnique({
-        where: { id: sessionId },
-        select: { locationId: true }
-      });
-      
-      if (sessionData) {
-        await prisma.parkingLocation.update({
-          where: { id: sessionData.locationId },
-          data: { availableSpots: { increment: 1 } }
-        });
-      }
 
       return NextResponse.json(updatedSession);
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Session Update Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), 'api-session-error.log');
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] ERROR: ${error.message}\n${error.stack}\n`);
+    } catch (e) { }
+
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }

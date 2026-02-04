@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import QRCodeGenerator from "react-qr-code";
 import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ export default function ReservationDetailPage({
   const now = new Date();
   const checkInDate = new Date(reservation.checkIn);
   const checkOutDate = new Date(reservation.checkOut);
-  
+
   const isUpcoming = (reservation.status === "CONFIRMED" || reservation.status === "PENDING") && checkInDate > now;
   const isActive = reservation.status === "CONFIRMED" && checkInDate <= now && checkOutDate >= now;
   const isPast = (reservation.status === "CONFIRMED" || reservation.status === "COMPLETED") && checkOutDate < now;
@@ -158,6 +159,7 @@ export default function ReservationDetailPage({
         title: "Error",
         description: error.message || "Failed to cancel reservation. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsCancelling(false);
@@ -456,11 +458,13 @@ export default function ReservationDetailPage({
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-center gap-6">
                     {/* QR Code */}
-                    <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm">
-                      <div className="text-center p-4">
-                        <QrCode className="w-20 h-20 mx-auto text-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground">Scan at entrance</p>
-                      </div>
+                    <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm overflow-hidden p-3">
+                      <QRCodeGenerator
+                        value={reservation.confirmationCode}
+                        size={150}
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        viewBox={`0 0 256 256`}
+                      />
                     </div>
 
                     {/* Confirmation details */}
@@ -482,9 +486,9 @@ export default function ReservationDetailPage({
                           <Download className="w-4 h-4 mr-2" />
                           Add to Wallet
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="bg-transparent"
                           onClick={handleEmailReceipt}
                           disabled={isSendingEmail}
@@ -665,7 +669,7 @@ export default function ReservationDetailPage({
                       <div>
                         <p className="font-medium text-blue-900">Check-in Process</p>
                         <p className="text-sm text-blue-700">
-                          Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk. 
+                          Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk.
                           The gate will open automatically.
                         </p>
                       </div>
@@ -675,7 +679,7 @@ export default function ReservationDetailPage({
                       <div>
                         <p className="font-medium text-amber-900">Vehicle Requirements</p>
                         <p className="text-sm text-amber-700">
-                          Ensure your vehicle matches the registered license plate. Different vehicles may be 
+                          Ensure your vehicle matches the registered license plate. Different vehicles may be
                           denied entry or charged additional fees.
                         </p>
                       </div>
@@ -775,15 +779,15 @@ export default function ReservationDetailPage({
                         reservation.location.cancellationPolicy?.type === "free"
                           ? "bg-green-50 text-green-700 border-green-200"
                           : reservation.location.cancellationPolicy?.type === "partial"
-                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          : "bg-red-50 text-red-700 border-red-200"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                       }
                     >
                       {reservation.location.cancellationPolicy?.type === "free"
                         ? "Free Cancellation"
                         : reservation.location.cancellationPolicy?.type === "partial"
-                        ? "Partial Refund"
-                        : "Non-refundable"}
+                          ? "Partial Refund"
+                          : "Non-refundable"}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
                       {reservation.location.cancellationPolicy?.description || "Refer to terminal instructions for cancellation details."}
@@ -808,16 +812,16 @@ export default function ReservationDetailPage({
                   <CardTitle>Need Help?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full justify-start bg-transparent"
                     onClick={handleCallLocation}
                   >
                     <Phone className="w-4 h-4 mr-3" />
                     Call Location
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full justify-start bg-transparent"
                     onClick={handleContactSupport}
                   >
@@ -969,18 +973,17 @@ export default function ReservationDetailPage({
                       <p className="text-sm text-muted-foreground">Your rating:</p>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <button 
-                            key={star} 
+                          <button
+                            key={star}
                             type="button"
                             onClick={() => setReviewRating(star)}
                             className="p-1 hover:scale-110 transition-transform focus:outline-none"
                           >
-                            <Star 
-                              className={`w-8 h-8 ${
-                                star <= reviewRating 
-                                  ? "text-amber-400 fill-amber-400" 
+                            <Star
+                              className={`w-8 h-8 ${star <= reviewRating
+                                  ? "text-amber-400 fill-amber-400"
                                   : "text-muted-foreground hover:text-amber-400"
-                              }`} 
+                                }`}
                             />
                           </button>
                         ))}
@@ -1007,8 +1010,8 @@ export default function ReservationDetailPage({
                         placeholder="Tell others about your parking experience..."
                       />
                     </div>
-                    <Button 
-                      onClick={handleSubmitReview} 
+                    <Button
+                      onClick={handleSubmitReview}
                       disabled={isSubmittingReview || reviewRating === 0}
                     >
                       {isSubmittingReview ? (
@@ -1089,14 +1092,14 @@ export default function ReservationDetailPage({
             <div className="space-y-2">
               <Label htmlFor="share-email">Email Address</Label>
               <div className="flex gap-2">
-                <Input 
-                  id="share-email" 
-                  placeholder="friend@example.com" 
+                <Input
+                  id="share-email"
+                  placeholder="friend@example.com"
                   value={shareEmail}
                   onChange={(e) => setShareEmail(e.target.value)}
                 />
-                <Button 
-                  onClick={handleShareEmail} 
+                <Button
+                  onClick={handleShareEmail}
                   disabled={isSendingEmail || !shareEmail}
                 >
                   {isSendingEmail ? (

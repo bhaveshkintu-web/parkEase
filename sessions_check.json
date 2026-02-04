@@ -1,0 +1,42 @@
+[
+  {
+    "plate": "GJ057896",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T11:38:21.690Z"
+  },
+  {
+    "plate": "GJ057896",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T11:38:21.690Z"
+  },
+  {
+    "plate": "GJ01AB1234",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T12:19:38.134Z"
+  },
+  {
+    "plate": "GJ01AB1234",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T12:19:38.134Z"
+  },
+  {
+    "plate": "GJ01AB1234",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T12:19:38.134Z"
+  },
+  {
+    "plate": "PEND-123",
+    "status": "RESERVED",
+    "checkout": "2026-02-03T12:45:15.233Z"
+  },
+  {
+    "plate": "ACTI-456",
+    "status": "CHECKED_IN",
+    "checkout": "2026-02-03T11:45:15.233Z"
+  },
+  {
+    "plate": "OVER-789",
+    "status": "CHECKED_IN",
+    "checkout": "2026-02-03T09:45:15.233Z"
+  }
+]

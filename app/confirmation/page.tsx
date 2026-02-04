@@ -30,75 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Suspense, useState, useEffect } from "react";
 import Loading from "./loading";
 
-// Simple QR Code component using a data URL pattern
-function QRCodeDisplay({ value, size = 180 }: { value: string; size?: number }) {
-  // Generate a simple visual QR-like pattern (for demo purposes)
-  // In production, use a library like 'qrcode' to generate actual QR codes
-  const cells = 21; // QR code size
-  const cellSize = size / cells;
-  
-  // Create a deterministic pattern based on the value
-  const hash = (str: string) => {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) {
-      h = (h << 5) - h + str.charCodeAt(i);
-      h |= 0;
-    }
-    return Math.abs(h);
-  };
-  
-  const seed = hash(value);
-  const pattern: boolean[][] = [];
-  
-  for (let y = 0; y < cells; y++) {
-    pattern[y] = [];
-    for (let x = 0; x < cells; x++) {
-      // Position detection patterns (corners)
-      const isCorner = (
-        (x < 7 && y < 7) || // Top-left
-        (x >= cells - 7 && y < 7) || // Top-right
-        (x < 7 && y >= cells - 7) // Bottom-left
-      );
-      
-      if (isCorner) {
-        // Corner patterns
-        const inOuter = (x < 7 && y < 7) || (x >= cells - 7 && y < 7) || (x < 7 && y >= cells - 7);
-        const cx = x < 7 ? x : x >= cells - 7 ? x - (cells - 7) : x;
-        const cy = y < 7 ? y : y;
-        const inInner = cx >= 2 && cx <= 4 && cy >= 2 && cy <= 4;
-        const onBorder = cx === 0 || cx === 6 || cy === 0 || cy === 6;
-        pattern[y][x] = inOuter && (onBorder || inInner);
-      } else {
-        // Data pattern (pseudo-random based on seed)
-        pattern[y][x] = ((seed * (x + 1) * (y + 1)) % 3) === 0;
-      }
-    }
-  }
-  
-  return (
-    <div 
-      className="inline-block rounded-lg bg-white p-3"
-      style={{ width: size + 24, height: size + 24 }}
-    >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {pattern.map((row, y) =>
-          row.map((cell, x) =>
-            cell ? (
-              <rect
-                key={`${x}-${y}`}
-                x={x * cellSize}
-                y={y * cellSize}
-                width={cellSize}
-                height={cellSize}
-                fill="black"
-              />
-            ) : null
-          )
-        )}
-      </svg>
-    </div>
-  );
-}
+import QRCode from "react-qr-code";
 
 import { getBookingByConfirmationCode } from "@/lib/actions/booking-actions";
 
@@ -323,12 +255,14 @@ Visit our website at parkease.com for help.
                 <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
                   {/* QR Code */}
                   <div className="flex flex-col items-center">
-                    <QRCodeDisplay value={confirmationCode} size={160} />
+                    <div className="bg-white p-4 rounded-xl">
+                      <QRCode value={confirmationCode} size={160} />
+                    </div>
                     <p className="mt-3 text-sm text-muted-foreground">
                       Scan at entry gate
                     </p>
                   </div>
-                  
+
                   {/* Confirmation Details */}
                   <div className="flex-1 text-center md:text-left">
                     <p className="text-sm text-muted-foreground">Confirmation Code</p>
@@ -593,7 +527,7 @@ Visit our website at parkease.com for help.
                   </div>
                   <div className="mt-4 flex items-center gap-2">
                     <Phone className="h-4 w-4 text-primary" />
-                    <a 
+                    <a
                       href={`tel:${bookingLocation.shuttleInfo.phone}`}
                       className="font-medium text-primary hover:underline"
                     >

@@ -1,11 +1,10 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
 
   session: {
     strategy: "jwt",
@@ -64,6 +63,17 @@ export const authOptions: NextAuthOptions = {
         token.lastName = (user as any).lastName;
         token.phone = (user as any).phone;
         token.avatar = (user as any).avatar;
+
+        // Fetch ownerId if role is OWNER
+        if ((user as any).role === "OWNER") {
+          const profile = await prisma.ownerProfile.findUnique({
+            where: { userId: user.id },
+            select: { id: true }
+          });
+          if (profile) {
+            token.ownerId = profile.id;
+          }
+        }
       }
       return token;
     },
@@ -76,6 +86,7 @@ export const authOptions: NextAuthOptions = {
         session.user.lastName = token.lastName as string;
         session.user.phone = token.phone as string | null;
         session.user.avatar = token.avatar as string | null;
+        (session.user as any).ownerId = token.ownerId as string | undefined;
       }
       return session;
     },

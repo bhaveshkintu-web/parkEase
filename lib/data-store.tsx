@@ -561,7 +561,7 @@ function generateMockUsers(): User[] {
 function generateMockOwnerProfiles(): OwnerProfile[] {
   const users = generateMockUsers();
   const ownerUsers = users.filter(u => u.role === "owner");
-  
+
   return [
     {
       id: "owner_1",
@@ -799,10 +799,11 @@ interface DataStoreContextType {
   // Admin: Refunds
   refundRequests: RefundRequest[];
   processRefund: (id: string, action: "approve" | "partial" | "reject", amount?: number) => Promise<void>;
-  
+
   // Watchman: Booking Requests
   bookingRequests: WatchmanBookingRequest[];
   fetchBookingRequests: (parkingId?: string) => Promise<void>;
+  fetchWatchmanLocations: () => Promise<void>;
   addBookingRequest: (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => Promise<WatchmanBookingRequest>;
   updateBookingRequestStatus: (id: string, status: WatchmanBookingRequest["status"], rejectionReason?: string) => Promise<void>;
 
@@ -899,7 +900,10 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const initializeForWatchman = useCallback((_watchmanId: string) => {
     setIsLoading(true);
     setParkingSessions(generateMockParkingSessions());
+    // Generate some mock reservations for the watchman to scan
+    setReservations(generateMockReservations("demo_user"));
     fetchBookingRequests();
+    fetchWatchmanLocations();
     setIsLoading(false);
   }, []);
 
@@ -1017,12 +1021,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
-              moderatorNotes: notes,
-              moderatedAt: new Date(),
-              moderatedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
+            moderatorNotes: notes,
+            moderatedAt: new Date(),
+            moderatedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1040,15 +1044,15 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId
           ? {
-              ...review,
-              ownerReply: {
-                id: `reply_${Date.now()}`,
-                content,
-                createdAt: new Date(),
-                ownerId,
-                ownerName,
-              },
-            }
+            ...review,
+            ownerReply: {
+              id: `reply_${Date.now()}`,
+              content,
+              createdAt: new Date(),
+              ownerId,
+              ownerName,
+            },
+          }
           : review
       )
     );
@@ -1060,13 +1064,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId && review.ownerReply
           ? {
-              ...review,
-              ownerReply: {
-                ...review.ownerReply,
-                content,
-                updatedAt: new Date(),
-              },
-            }
+            ...review,
+            ownerReply: {
+              ...review.ownerReply,
+              content,
+              updatedAt: new Date(),
+            },
+          }
           : review
       )
     );
@@ -1205,13 +1209,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((a) =>
         a.id === id
           ? {
-              ...a,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
-              reviewNotes: notes,
-              requiredChanges: changes,
-              reviewedAt: new Date(),
-              reviewedBy: currentUserId || undefined,
-            }
+            ...a,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
+            reviewNotes: notes,
+            requiredChanges: changes,
+            reviewedAt: new Date(),
+            reviewedBy: currentUserId || undefined,
+          }
           : a
       )
     );
@@ -1224,12 +1228,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
-              approvedAmount: action === "reject" ? 0 : amount || r.amount,
-              processedAt: new Date(),
-              processedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
+            approvedAmount: action === "reject" ? 0 : amount || r.amount,
+            processedAt: new Date(),
+            processedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1390,18 +1394,18 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((p) =>
         p.id === ownerId
           ? {
-              ...p,
-              documents: p.documents.map((d) =>
-                d.id === documentId
-                  ? {
-                      ...d,
-                      status: action === "verify" ? "verified" : "rejected",
-                      verifiedAt: action === "verify" ? new Date() : undefined,
-                      rejectionReason: action === "reject" ? reason : undefined,
-                    }
-                  : d
-              ),
-            }
+            ...p,
+            documents: p.documents.map((d) =>
+              d.id === documentId
+                ? {
+                  ...d,
+                  status: action === "verify" ? "verified" : "rejected",
+                  verifiedAt: action === "verify" ? new Date() : undefined,
+                  rejectionReason: action === "reject" ? reason : undefined,
+                }
+                : d
+            ),
+          }
           : p
       )
     );
@@ -1420,16 +1424,29 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const fetchWatchmanLocations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/locations");
+      if (!res.ok) throw new Error("Failed to fetch watchman locations");
+      const data = await res.json();
+      setAdminLocations(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
   const addBookingRequest = useCallback(async (request: Omit<WatchmanBookingRequest, "id" | "requestedAt" | "requestedById" | "status">) => {
     const res = await fetch("/api/watchman/requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
-    if (!res.ok) throw new Error("Failed to create request");
-    const newRequest = await res.json();
-    setBookingRequests((prev) => [newRequest, ...prev]);
-    return newRequest;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to create request");
+
+    // Optimistically update the list
+    setBookingRequests((prev) => [data, ...prev]);
+    return data;
   }, []);
 
   const updateBookingRequestStatus = useCallback(async (id: string, status: WatchmanBookingRequest["status"], rejectionReason?: string) => {
@@ -1520,6 +1537,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         currentOwnerProfile,
         bookingRequests,
         fetchBookingRequests,
+        fetchWatchmanLocations,
         addBookingRequest,
         updateBookingRequestStatus,
       }}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { useAuth } from "@/lib/auth-context";
@@ -48,52 +48,87 @@ import {
   User,
   Phone,
   MapPin,
-  Edit,
-  Trash2,
   Eye,
   Timer,
-  ArrowUpRight,
   FileText,
 } from "lucide-react";
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
 import { RequestDialog } from "@/components/watchman/request-dialog";
 
 const Loading = () => null;
 
 export default function WatchmanBookingsPage() {
   const { user } = useAuth();
-  const { reservations, adminLocations, bookingRequests, addBookingRequest, updateBookingRequestStatus, fetchBookingRequests } = useDataStore();
+  const { reservations } = useDataStore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  
+
   const [activeTab, setActiveTab] = useState("today");
   const [requestTab, setRequestTab] = useState("PENDING");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Dialog states
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
+
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Fetch bookings
+  const fetchBookings = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/watchman/bookings?date=${dateFilter}`);
+      const data = await response.json();
+      if (data.success) {
+        setBookings(data.bookings || []);
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    }
+  }, [dateFilter]);
+
+  // Fetch booking requests
+  const fetchBookingRequests = useCallback(async () => {
+    try {
+      const response = await fetch("/api/watchman/requests");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setBookingRequests(data);
+      } else if (data.success && Array.isArray(data.requests)) {
+        setBookingRequests(data.requests);
+      }
+    } catch (error) {
+      console.error("Error fetching booking requests:", error);
+    }
+  }, []);
+
+  const loadAllData = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([fetchBookings(), fetchBookingRequests()]);
+    setIsLoading(false);
+  }, [fetchBookings, fetchBookingRequests]);
+
   useEffect(() => {
-    fetchBookingRequests();
-    
+    loadAllData();
+
     // Polling every 30 seconds for live updates (Way.com Style)
+
     const interval = setInterval(() => {
+      fetchBookings();
       fetchBookingRequests();
     }, 30000);
-    
+
     return () => clearInterval(interval);
-  }, [fetchBookingRequests]);
+  }, [loadAllData, fetchBookings, fetchBookingRequests]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -103,15 +138,19 @@ export default function WatchmanBookingsPage() {
   }, [searchParams]);
 
   // Filter today's bookings
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const todayBookings = useMemo(() => {
+    // If we have actual bookings from API, use them
+    if (bookings.length > 0) return bookings;
+
+    // Fallback/Legacy filter for data-store reservations
     return reservations.filter((r) => {
       const checkInDate = new Date(r.checkIn);
       const checkOutDate = new Date(r.checkOut);
-      const isToday = 
+      const isToday =
         checkInDate.toDateString() === today.toDateString() ||
         checkOutDate.toDateString() === today.toDateString();
-      
+
       if (dateFilter === "today") return isToday;
       if (dateFilter === "tomorrow") {
         const tomorrow = new Date(today);
@@ -125,24 +164,26 @@ export default function WatchmanBookingsPage() {
       }
       return true;
     });
-  }, [reservations, dateFilter, today]);
+  }, [reservations, bookings, dateFilter, today]);
 
   const filteredBookings = useMemo(() => {
     let filtered = todayBookings;
-    
+
     if (statusFilter !== "all") {
       filtered = filtered.filter((b) => b.status === statusFilter);
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
-        (b) =>
-          b.vehicleInfo.licensePlate.toLowerCase().includes(searchLower) ||
-          b.id.toLowerCase().includes(searchLower)
+        (b) => {
+          const plate = b.vehicleInfo?.licensePlate || b.vehiclePlate || "";
+          const id = b.id || "";
+          return plate.toLowerCase().includes(searchLower) || id.toLowerCase().includes(searchLower);
+        }
       );
     }
-    
+
     return filtered;
   }, [todayBookings, statusFilter, search]);
 
@@ -176,20 +217,37 @@ export default function WatchmanBookingsPage() {
     return <Badge className={item.className}>{item.label}</Badge>;
   };
 
-  // handleCreateRequest logic moved to RequestDialog component
+  const updateRequestStatus = async (id: string, status: string, reason?: string) => {
+    try {
+      const response = await fetch(`/api/watchman/booking-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: status === "APPROVED" ? "approve" : status === "REJECTED" ? "reject" : "cancel", rejectionReason: reason }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to update status");
+      }
+      return true;
+    } catch (error: any) {
+      console.error("Update status error:", error);
+      throw error;
+    }
+  };
 
   const handleApproveRequest = async () => {
     if (!selectedRequest) return;
 
     setIsLoading(true);
     try {
-      await updateBookingRequestStatus(selectedRequest.id, "APPROVED");
+      await updateRequestStatus(selectedRequest.id, "APPROVED");
       setIsApproveDialogOpen(false);
       setSelectedRequest(null);
       toast({
         title: "Request Approved",
         description: "A real booking and active session have been created automatically.",
       });
+      fetchBookingRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -213,7 +271,7 @@ export default function WatchmanBookingsPage() {
 
     setIsLoading(true);
     try {
-      await updateBookingRequestStatus(selectedRequest.id, "REJECTED", rejectionReason);
+      await updateRequestStatus(selectedRequest.id, "REJECTED", rejectionReason);
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
       setRejectionReason("");
@@ -221,6 +279,7 @@ export default function WatchmanBookingsPage() {
         title: "Request Rejected",
         description: "The booking request has been rejected",
       });
+      fetchBookingRequests();
     } catch (error) {
       toast({
         title: "Error",
@@ -232,26 +291,8 @@ export default function WatchmanBookingsPage() {
     }
   };
 
-  const handleCancelRequest = async (request: WatchmanBookingRequest) => {
-    if (!confirm("Are you sure you want to cancel this request?")) return;
-
-    try {
-      await updateBookingRequestStatus(request.id, "CANCELLED");
-      toast({
-        title: "Request Cancelled",
-        description: "The booking request has been cancelled",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to cancel request",
-        variant: "destructive",
-      });
-    }
-  };
-
   const pendingCount = bookingRequests.filter((r) => r.status === "PENDING").length;
-  const urgentCount = bookingRequests.filter((r) => r.status === "PENDING" && r.priority === "urgent").length;
+  const urgentCount = bookingRequests.filter((r) => r.status === "PENDING" && r.priority === "URGENT").length; // URGENT matched from Prisma enum
 
   return (
     <Suspense fallback={<Loading />}>
@@ -264,7 +305,7 @@ export default function WatchmanBookingsPage() {
               View bookings, create requests, and manage approvals
             </p>
           </div>
-          <Button onClick={() => setIsNewRequestOpen(true)}>
+          <Button onClick={() => setIsNewRequestOpen(true)} className="bg-[#00A386] hover:bg-[#008F75] text-white">
             <Plus className="w-4 h-4 mr-2" />
             New Request
           </Button>
@@ -320,7 +361,7 @@ export default function WatchmanBookingsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Confirmed</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {todayBookings.filter((b) => b.status === "confirmed").length}
+                    {todayBookings.filter((b) => b.status === "confirmed" || b.status === "CONFIRMED").length}
                   </p>
                 </div>
               </div>
@@ -399,7 +440,14 @@ export default function WatchmanBookingsPage() {
                     </div>
                   ) : (
                     filteredBookings.map((booking) => {
-                      const isCheckIn = new Date(booking.checkIn).toDateString() === today.toDateString();
+                      const checkInDate = new Date(booking.checkIn);
+                      const checkOutDate = new Date(booking.checkOut);
+                      const isCheckIn = checkInDate.toDateString() === today.toDateString();
+                      // Graceful handling of vehicle info if missing
+                      const plate = booking.vehicleInfo?.licensePlate || booking.vehiclePlate || "N/A";
+                      const make = booking.vehicleInfo?.make || booking.vehicleMake || "";
+                      const model = booking.vehicleInfo?.model || booking.vehicleModel || "";
+
                       return (
                         <div
                           key={booking.id}
@@ -407,31 +455,30 @@ export default function WatchmanBookingsPage() {
                         >
                           <div className="flex items-start gap-4">
                             <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-                                isCheckIn ? "bg-green-100" : "bg-blue-100"
-                              }`}
+                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${isCheckIn ? "bg-green-100" : "bg-blue-100"
+                                }`}
                             >
                               <Car className={`w-6 h-6 ${isCheckIn ? "text-green-600" : "text-blue-600"}`} />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-bold text-foreground">{booking.vehicleInfo.licensePlate}</p>
+                                <p className="font-bold text-foreground">{plate}</p>
                                 {getStatusBadge(booking.status)}
                                 <Badge variant="outline" className="text-xs">
                                   {isCheckIn ? "Check-in" : "Check-out"}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
-                                {booking.vehicleInfo.type} - Booking #{booking.id.slice(-8)}
+                                {make} {model} - Code: {booking.confirmationCode}
                               </p>
                               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {formatTime(new Date(booking.checkIn))} - {formatTime(new Date(booking.checkOut))}
+                                  {formatTime(checkInDate)} - {formatTime(checkOutDate)}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3 h-3" />
-                                  {booking.location.name}
+                                  {booking.location?.name || booking.placeName || "Unknown Location"}
                                 </span>
                               </div>
                             </div>
@@ -439,7 +486,7 @@ export default function WatchmanBookingsPage() {
                           <div className="flex items-center gap-2 sm:gap-4">
                             <div className="text-right">
                               <p className="font-semibold text-foreground">{formatCurrency(booking.totalPrice)}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(new Date(booking.checkIn))}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(checkInDate)}</p>
                             </div>
                             <Link href="/watchman/scan">
                               <Button size="sm" variant={isCheckIn ? "default" : "secondary"}>
@@ -511,11 +558,10 @@ export default function WatchmanBookingsPage() {
                     filteredRequests.map((request) => (
                       <div
                         key={request.id}
-                        className={`p-4 border rounded-lg ${
-                          request.priority === "urgent" && request.status === "PENDING"
-                            ? "border-red-200 bg-red-50/50"
-                            : ""
-                        }`}
+                        className={`p-4 border rounded-lg ${request.priority === "URGENT" && request.status === "PENDING"
+                          ? "border-red-200 bg-red-50/50"
+                          : ""
+                          }`}
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -527,7 +573,7 @@ export default function WatchmanBookingsPage() {
                                 <p className="font-bold text-foreground">{request.customerName}</p>
                                 {getRequestTypeBadge(request.requestType)}
                                 {getStatusBadge(request.status)}
-                                {request.priority === "urgent" && (
+                                {request.priority === "URGENT" && (
                                   <Badge variant="destructive" className="text-xs">
                                     <AlertTriangle className="w-3 h-3 mr-1" />
                                     Urgent
@@ -562,7 +608,8 @@ export default function WatchmanBookingsPage() {
                                 {request.requestedBy && (
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
-                                    By {request.requestedBy.firstName}
+                                    {/* Handle potentially nested or missing user name */}
+                                    By {(request.requestedBy as any)?.firstName || "Watchman"}
                                   </span>
                                 )}
                               </div>
@@ -595,27 +642,8 @@ export default function WatchmanBookingsPage() {
                                     setIsViewDialogOpen(true);
                                   }}
                                 >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsApproveDialogOpen(true);
-                                  }}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setIsRejectDialogOpen(true);
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4" />
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
                                 </Button>
                               </div>
                             ) : (
@@ -658,7 +686,14 @@ export default function WatchmanBookingsPage() {
         </Tabs>
 
         {/* Request Dialog */}
-        <RequestDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} />
+        <RequestDialog
+          open={isNewRequestOpen}
+          onOpenChange={(val) => {
+            setIsNewRequestOpen(val);
+            // Refresh data when dialog closes (assuming success)
+            if (!val) fetchBookingRequests();
+          }}
+        />
 
         {/* View Request Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
