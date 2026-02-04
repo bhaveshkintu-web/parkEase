@@ -24,7 +24,8 @@ import {
   Loader2,
   ToggleLeft,
   ToggleRight,
-  Info
+  Info,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -341,13 +342,39 @@ export default function OwnerLocationDetailsPage() {
 
         {/* Right Column - Map/Images (Placeholder) */}
         <div className="space-y-6">
-          <Card>
-            <CardContent className="p-0 overflow-hidden aspect-video relative bg-muted flex items-center justify-center">
-              <MapPin className="h-10 w-10 text-muted-foreground/50" />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-muted-foreground text-sm font-medium">
-                Map View (Coming Soon)
-              </div>
-            </CardContent>
+          <Card className="overflow-hidden">
+            <div className="aspect-video relative bg-muted">
+              {location.latitude && location.longitude ? (
+                <img
+                  src={`https://maps.locationiq.com/v3/staticmap?key=${process.env.NEXT_PUBLIC_LOCATIONIQ_API_KEY}&center=${location.latitude},${location.longitude}&zoom=14&size=600x400&markers=icon:large-red-cutout|${location.latitude},${location.longitude}`}
+                  alt="Location Map"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+                  <MapPin className="h-10 w-10 mb-2 opacity-50" />
+                  <p className="text-sm">Coordinates not available for this location.</p>
+                </div>
+              )}
+            </div>
+            {location.latitude && location.longitude && (
+              <CardContent className="p-3 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full text-xs h-9"
+                  asChild
+                >
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                    Get Directions on Google Maps
+                  </a>
+                </Button>
+              </CardContent>
+            )}
           </Card>
 
           <Card>

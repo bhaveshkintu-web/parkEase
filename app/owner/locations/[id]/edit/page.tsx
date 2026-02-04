@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -89,6 +89,8 @@ interface FormData {
   cancellationDeadline: string;
   securityFeatures: string[];
   specialInstructions: string;
+  latitude: number;
+  longitude: number;
 }
 
 const initialFormData: FormData = {
@@ -116,6 +118,8 @@ const initialFormData: FormData = {
   cancellationDeadline: "24",
   securityFeatures: [],
   specialInstructions: "",
+  latitude: 0,
+  longitude: 0,
 };
 
 export default function OwnerEditLocationPage() {
@@ -130,6 +134,22 @@ export default function OwnerEditLocationPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [airportOpen, setAirportOpen] = useState(false);
+
+  // Address fetching states
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isFetchingAddress, setIsFetchingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const addressRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (addressRef.current && !addressRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -165,6 +185,8 @@ export default function OwnerEditLocationPage() {
           cancellationDeadline: "24", // TODO: Add to schema
           securityFeatures: (data as any).securityFeatures || [],
           specialInstructions: "", // TODO: Add to schema
+          latitude: data.latitude || 0,
+          longitude: data.longitude || 0,
         });
       } else {
         toast({
@@ -186,6 +208,60 @@ export default function OwnerEditLocationPage() {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   }, [errors]);
+
+  // Fetch address suggestions from LocationIQ API
+  const fetchSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_LOCATIONIQ_API_KEY;
+    if (!apiKey) {
+      console.error("LocationIQ API key is missing");
+      return;
+    }
+
+    setIsFetchingAddress(true);
+    try {
+      const response = await fetch(
+        `https://api.locationiq.com/v1/autocomplete?key=${apiKey}&q=${encodeURIComponent(query)}&limit=5&dedupe=1`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAddressSuggestions(data || []);
+        setShowSuggestions(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch address suggestions:", error);
+    } finally {
+      setIsFetchingAddress(false);
+    }
+  };
+
+  const handleSelectSuggestion = (suggestion: any) => {
+    const addr = suggestion.address;
+
+    // Format street address
+    let streetAddress = suggestion.display_name.split(',')[0];
+    if (addr.house_number && addr.road) {
+      streetAddress = `${addr.house_number} ${addr.road}`;
+    } else if (addr.road) {
+      streetAddress = addr.road;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      address: streetAddress,
+      city: addr.city || addr.town || addr.village || addr.suburb || "",
+      state: addr.state || "",
+      zipCode: addr.postcode || "",
+      latitude: parseFloat(suggestion.lat),
+      longitude: parseFloat(suggestion.lon),
+    }));
+
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,8 +289,8 @@ export default function OwnerEditLocationPage() {
         country: "USA", // Default
         zipCode: formData.zipCode,
         airportCode: formData.airportCode || undefined,
-        latitude: 0, // Keep existing or update if geocoding implemented
-        longitude: 0,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         description: formData.description,
         pricePerDay: parseFloat(formData.pricePerDay),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
@@ -313,11 +389,48 @@ export default function OwnerEditLocationPage() {
 
             <div className="space-y-4">
               <Label>Address</Label>
-              <Input
-                value={formData.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
-                placeholder="Street Address"
-              />
+              <div className="relative" ref={addressRef}>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => {
+                    handleInputChange("address", e.target.value);
+                    fetchSuggestions(e.target.value);
+                  }}
+                  onFocus={() => {
+                    if (addressSuggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  placeholder="Street Address"
+                  className="pr-10"
+                />
+                {isFetchingAddress && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <Card className="absolute z-50 w-full mt-1 shadow-lg overflow-hidden border-border max-h-[300px] overflow-y-auto">
+                    <div className="p-1">
+                      {addressSuggestions.map((suggestion, idx) => {
+                        const subText = suggestion.display_name.split(',').slice(1).join(',').trim();
+                        return (
+                          <div
+                            key={idx}
+                            className="px-3 py-2 text-sm hover:bg-muted cursor-pointer rounded-md transition-colors border-b last:border-0"
+                            onClick={() => handleSelectSuggestion(suggestion)}
+                          >
+                            <div className="font-medium text-foreground">
+                              {suggestion.display_name.split(',')[0]}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{subText}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="col-span-2">
                   <Input
@@ -328,9 +441,8 @@ export default function OwnerEditLocationPage() {
                 </div>
                 <Input
                   value={formData.state}
-                  onChange={(e) => handleInputChange("state", e.target.value.toUpperCase())}
+                  onChange={(e) => handleInputChange("state", e.target.value)}
                   placeholder="State"
-                  maxLength={2}
                 />
                 <Input
                   value={formData.zipCode}
