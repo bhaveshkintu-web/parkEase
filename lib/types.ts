@@ -24,6 +24,7 @@ export interface ParkingLocation {
   name: string;
   address: string;
   city: string;
+  state: string;
   zipCode: string;
   airport: string;
   airportCode: string;

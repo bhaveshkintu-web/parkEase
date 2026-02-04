@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Plus, X, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Upload, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +13,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDataStore } from "@/lib/data-store";
 import { useToast } from "@/hooks/use-toast";
-import { locationSchema } from "@/lib/validations";
 import { airports } from "@/lib/data";
 import type { ParkingLocation } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const amenityOptions = [
   "Covered Parking",
@@ -39,6 +39,9 @@ export default function NewLocationPage() {
   const [formData, setFormData] = useState({
     name: "",
     address: "",
+    city: "",
+    state: "",
+    zipCode: "",
     airportCode: "",
     description: "",
     pricePerDay: "",
@@ -55,6 +58,60 @@ export default function NewLocationPage() {
     shuttleFrequency: "Every 10-15 minutes",
     shuttlePhone: "",
   });
+
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!showSuggestions || formData.address.length < 3) {
+        setSuggestions([]);
+        return;
+      }
+
+      setIsFetchingSuggestions(true);
+      try {
+        const response = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(formData.address)}&limit=5`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.features || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch address suggestions:", error);
+      } finally {
+        setIsFetchingSuggestions(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address, showSuggestions]);
+
+  const handleSelectSuggestion = (suggestion: any) => {
+    const props = suggestion.properties;
+    
+    // Construct address
+    let streetAddress = props.name || "";
+    if (props.housenumber && props.street) {
+      streetAddress = `${props.housenumber} ${props.street}`;
+    } else if (props.street) {
+      streetAddress = props.street;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      address: streetAddress,
+      city: props.city || props.town || props.village || props.hamlet || props.suburb || props.district || props.city_district || "",
+      state: props.state || props.county || "",
+      zipCode: props.postcode || "",
+    }));
+    
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const [redeemSteps, setRedeemSteps] = useState([
     { step: 1, title: "Arrive at Lot", description: "" },
@@ -105,6 +162,9 @@ export default function NewLocationPage() {
     if (stepNum === 1) {
       if (!formData.name.trim()) newErrors.name = "Name is required";
       if (!formData.address.trim()) newErrors.address = "Address is required";
+      if (!formData.city.trim()) newErrors.city = "City is required";
+      if (!formData.state.trim()) newErrors.state = "State is required";
+      if (!formData.zipCode.trim()) newErrors.zipCode = "ZIP Code is required";
       if (!formData.airportCode) newErrors.airportCode = "Airport is required";
     } else if (stepNum === 2) {
       if (!formData.pricePerDay || parseFloat(formData.pricePerDay) <= 0) {
@@ -137,6 +197,9 @@ export default function NewLocationPage() {
       const newLocation: Omit<ParkingLocation, "id"> = {
         name: formData.name,
         address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
         airport: airport?.name || "",
         airportCode: formData.airportCode,
         coordinates: { lat: 0, lng: 0 },
@@ -259,18 +322,103 @@ export default function NewLocationPage() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="address">Address *</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
-                placeholder="123 Airport Blvd, City, State ZIP"
-                aria-invalid={!!errors.address}
-              />
+              <div className="relative">
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => {
+                    handleInputChange("address", e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Start typing an address..."
+                  autoComplete="off"
+                  aria-invalid={!!errors.address}
+                />
+                {isFetchingSuggestions && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Suggestions list */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md max-h-60 overflow-auto">
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className="flex items-start gap-2 w-full px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground text-left transition-colors border-b last:border-0"
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                    >
+                      <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">
+                          {suggestion.properties.name || 
+                           (suggestion.properties.housenumber ? `${suggestion.properties.housenumber} ${suggestion.properties.street}` : suggestion.properties.street)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {[
+                            suggestion.properties.city || suggestion.properties.town || suggestion.properties.village || suggestion.properties.hamlet || suggestion.properties.suburb || suggestion.properties.district,
+                            suggestion.properties.state || suggestion.properties.county,
+                            suggestion.properties.postcode,
+                            suggestion.properties.country
+                          ].filter(Boolean).join(", ")}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.address && (
                 <p className="text-sm text-destructive">{errors.address}</p>
               )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange("city", e.target.value)}
+                  placeholder="City"
+                  aria-invalid={!!errors.city}
+                />
+                {errors.city && (
+                  <p className="text-sm text-destructive">{errors.city}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange("state", e.target.value)}
+                  placeholder="State"
+                  aria-invalid={!!errors.state}
+                />
+                {errors.state && (
+                  <p className="text-sm text-destructive">{errors.state}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zipCode">ZIP Code *</Label>
+                <Input
+                  id="zipCode"
+                  value={formData.zipCode}
+                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  placeholder="ZIP Code"
+                  aria-invalid={!!errors.zipCode}
+                />
+                {errors.zipCode && (
+                  <p className="text-sm text-destructive">{errors.zipCode}</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -529,6 +677,18 @@ export default function NewLocationPage() {
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Address:</dt>
                     <dd className="text-foreground text-right max-w-[200px] truncate">{formData.address || "-"}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">City:</dt>
+                    <dd className="text-foreground">{formData.city || "-"}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">State:</dt>
+                    <dd className="text-foreground">{formData.state || "-"}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">ZIP Code:</dt>
+                    <dd className="text-foreground">{formData.zipCode || "-"}</dd>
                   </div>
                 </dl>
               </div>
