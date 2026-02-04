@@ -1,294 +1,302 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
-import { StatusBadge } from "@/components/admin/data-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { 
+  AlertTriangle, 
+  MoreVertical, 
+  Search, 
+  Filter, 
+  ChevronRight, 
+  Clock, 
+  CheckCircle, 
+  ArrowRight,
+  Loader2,
+  ExternalLink,
+  MessageSquare,
+  Shield,
+  CreditCard
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  ArrowLeft,
-  Search,
-  MessageSquare,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  User,
-  Calendar,
-  Tag,
-} from "lucide-react";
-import type { Dispute } from "@/lib/types";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { StatCard } from "@/components/admin/stat-card";
+import { formatCurrency } from "@/lib/data";
+import { toast } from "sonner";
+import { DisputeDetails } from "@/components/admin/dispute-details";
 
 export default function DisputesPage() {
-  const { disputes, updateDispute } = useDataStore();
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
-  const [resolution, setResolution] = useState("");
-  const [newStatus, setNewStatus] = useState<Dispute["status"]>("in_progress");
-  const [newPriority, setNewPriority] = useState<Dispute["priority"]>("medium");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const searchParams = useSearchParams();
+  const [status, setStatus] = useState("all");
+  const [priority, setPriority] = useState("all");
+  const [selectedDispute, setSelectedDispute] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const filteredDisputes = disputes.filter(
-    (d) =>
-      d.subject.toLowerCase().includes(search.toLowerCase()) ||
-      d.bookingId.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    fetchDisputes();
+  }, [search, status, priority]);
 
-  const openCount = disputes.filter((d) => d.status === "open").length;
-  const inProgressCount = disputes.filter((d) => d.status === "in_progress").length;
+  const fetchDisputes = async () => {
+    try {
+      setIsLoading(true);
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.set("search", search);
+      if (status !== "all") queryParams.set("status", status);
+      if (priority !== "all") queryParams.set("priority", priority);
 
-  const handleUpdate = async () => {
-    if (!selectedDispute) return;
-    setIsProcessing(true);
-    await updateDispute(selectedDispute.id, {
-      status: newStatus,
-      priority: newPriority,
-      resolution: resolution || undefined,
-    });
-    setSelectedDispute(null);
-    setResolution("");
-    setIsProcessing(false);
-  };
-
-  const getPriorityColor = (priority: Dispute["priority"]) => {
-    switch (priority) {
-      case "urgent": return "text-red-600 bg-red-100";
-      case "high": return "text-orange-600 bg-orange-100";
-      case "medium": return "text-amber-600 bg-amber-100";
-      case "low": return "text-green-600 bg-green-100";
+      const response = await fetch(`/api/admin/disputes?${queryParams.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDisputes(data.disputes);
+        
+        if (data.stats) {
+          setStats({
+            total: data.stats.total,
+            open: data.stats.open,
+            inProgress: data.stats.inProgress,
+            resolved: data.stats.resolved,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch disputes:", error);
+      toast.error("Failed to load disputes");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getStatusVariant = (status: Dispute["status"]) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "open": return "warning";
-      case "in_progress": return "info";
-      case "resolved": return "success";
-      case "closed": return "default";
+      case "OPEN":
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-100 hover:bg-red-50">Open</Badge>;
+      case "IN_PROGRESS":
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">In Progress</Badge>;
+      case "RESOLVED":
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 hover:bg-green-50">Resolved</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case "HIGH":
+        return <Badge className="bg-red-600">High</Badge>;
+      case "MEDIUM":
+        return <Badge className="bg-amber-500">Medium</Badge>;
+      case "LOW":
+        return <Badge className="bg-slate-500">Low</Badge>;
+      default:
+        return <Badge variant="outline">{priority}</Badge>;
+    }
+  };
+
+  const handleManageDispute = (dispute: any) => {
+    setSelectedDispute(dispute);
+    setIsDetailsOpen(true);
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dispute Management</h1>
-            <p className="text-muted-foreground">Handle customer disputes and complaints</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="destructive" className="py-1.5">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            {openCount} Open
-          </Badge>
-          <Badge variant="outline" className="py-1.5">
-            <Clock className="w-3 h-3 mr-1" />
-            {inProgressCount} In Progress
-          </Badge>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dispute Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Track and resolve customer disputes and refund requests
+          </p>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by subject or booking ID..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Open"
+          value={stats.open}
+          icon={AlertTriangle}
+          iconColor="text-red-600"
+          iconBgColor="bg-red-100"
+        />
+        <StatCard
+          title="In Progress"
+          value={stats.inProgress}
+          icon={Clock}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-100"
+        />
+        <StatCard
+          title="Resolved"
+          value={stats.resolved}
+          icon={CheckCircle}
+          iconColor="text-green-600"
+          iconBgColor="bg-green-100"
+        />
+        <StatCard
+          title="Total Count"
+          value={stats.total}
+          icon={Shield}
+          iconColor="text-slate-600"
+          iconBgColor="bg-slate-100"
         />
       </div>
 
-      {/* Disputes List */}
-      <Tabs defaultValue="open" className="w-full">
-        <TabsList>
-          <TabsTrigger value="open">Open ({openCount})</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress ({inProgressCount})</TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
+      {/* Filters & Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Booking ID, Email, Subject..."
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="RESOLVED">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priority</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => { setSearch(""); setStatus("all"); setPriority("all"); }}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {["open", "in_progress", "resolved", "all"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
-            <div className="grid gap-4">
-              {filteredDisputes
-                .filter((d) => tab === "all" || d.status === tab)
-                .map((dispute) => (
-                  <Card key={dispute.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-start justify-between flex-wrap gap-2">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-lg text-foreground">{dispute.subject}</h3>
-                                <Badge className={`text-xs ${getPriorityColor(dispute.priority)}`}>
-                                  {dispute.priority.toUpperCase()}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">{dispute.description}</p>
-                            </div>
-                            <StatusBadge status={dispute.status.replace("_", " ")} variant={getStatusVariant(dispute.status)} />
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Tag className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Type:</span>
-                              <span className="font-medium capitalize">{dispute.type}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Booking:</span>
-                              <span className="font-medium">{dispute.bookingId}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Created:</span>
-                              <span className="font-medium">{new Date(dispute.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            {dispute.assignedTo && (
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Assigned:</span>
-                                <span className="font-medium">{dispute.assignedTo}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {dispute.resolution && (
-                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                              <p className="text-sm text-green-800">
-                                <span className="font-medium">Resolution:</span> {dispute.resolution}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedDispute(dispute);
-                            setNewStatus(dispute.status);
-                            setNewPriority(dispute.priority);
-                            setResolution(dispute.resolution || "");
-                          }}
-                        >
-                          Manage
-                        </Button>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : disputes.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">No disputes found</p>
+              <p className="text-muted-foreground">Try adjusting your filters or search term</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Dispute ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Date Raised</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {disputes.map((dispute) => (
+                  <TableRow key={dispute.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">ID: {dispute.id.slice(-6).toUpperCase()}</span>
+                        <span className="font-mono text-xs">{dispute.booking.confirmationCode}</span>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate max-w-[150px]">
+                          {dispute.user.firstName} {dispute.user.lastName}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {dispute.user.email}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate max-w-[200px]">{dispute.subject}</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">{dispute.description}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(dispute.status)}</TableCell>
+                    <TableCell>{getPriorityBadge(dispute.priority)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {format(new Date(dispute.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => handleManageDispute(dispute)}>
+                        Manage
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-              {filteredDisputes.filter((d) => tab === "all" || d.status === tab).length === 0 && (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                    <h3 className="text-lg font-medium text-foreground">No disputes found</h3>
-                    <p className="text-muted-foreground mt-1">
-                      {tab === "open" ? "No open disputes at this time" : "No disputes match your criteria"}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      {/* Manage Dialog */}
-      <Suspense fallback={null}>
-        <Dialog open={!!selectedDispute} onOpenChange={() => setSelectedDispute(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Manage Dispute</DialogTitle>
-              <DialogDescription>{selectedDispute?.subject}</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm">{selectedDispute?.description}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
-                  <Select value={newStatus} onValueChange={(v) => setNewStatus(v as Dispute["status"])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Priority</label>
-                  <Select value={newPriority} onValueChange={(v) => setNewPriority(v as Dispute["priority"])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Resolution Notes</label>
-                <Textarea
-                  placeholder="Describe the resolution..."
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedDispute(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdate} disabled={isProcessing}>
-                {isProcessing ? "Updating..." : "Update Dispute"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </Suspense>
+      {/* Dispute Details Slide-over */}
+      {isDetailsOpen && selectedDispute && (
+        <DisputeDetails
+          disputeId={selectedDispute.id}
+          isOpen={isDetailsOpen}
+          onClose={() => {
+            setIsDetailsOpen(false);
+            fetchDisputes(); // Refresh list after managing
+          }}
+        />
+      )}
     </div>
   );
 }

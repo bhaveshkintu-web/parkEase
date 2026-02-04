@@ -1,8 +1,7 @@
 "use client";
 
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import * as React from "react";
+import { useState, useEffect } from "react";
+import { format, differenceInHours } from "date-fns";
 import { 
   Mail, 
   MessageSquare, 
@@ -14,7 +13,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
-  Loader2
+  Loader2,
+  ChevronRight,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,221 +28,193 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import { getSupportTickets, updateTicketStatus } from "@/lib/actions/support-actions";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import { StatCard } from "@/components/admin/stat-card";
+import { TicketDetails } from "@/components/admin/ticket-details";
 
 export default function AdminSupportPage() {
-  const { toast } = useToast();
-  const [tickets, setTickets] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchTickets();
-  }, []);
+  }, [search, status]);
 
   const fetchTickets = async () => {
-    setIsLoading(true);
     try {
-      const result = await getSupportTickets();
-      if (result.success) {
-        setTickets(result.tickets || []);
-      } else {
-        throw new Error(result.error);
+      setIsLoading(true);
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.set("search", search);
+      if (status !== "all") queryParams.set("status", status);
+
+      const response = await fetch(`/api/admin/support-tickets?${queryParams.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTickets(data.tickets);
+        
+        if (data.stats) {
+          setStats({
+            total: data.stats.total,
+            open: data.stats.open,
+            inProgress: data.stats.inProgress,
+            resolved: data.stats.resolved,
+          });
+        }
       }
-    } catch (error: any) {
-      toast({
-        title: "Error fetching tickets",
-        description: error.message || "Failed to load support tickets.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error("Failed to fetch tickets:", error);
+      toast.error("Failed to load tickets");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateStatus = async (ticketId: string, newStatus: any) => {
-    try {
-      const result = await updateTicketStatus(ticketId, newStatus);
-      if (result.success) {
-        toast({
-          title: "Status Updated",
-          description: `Ticket marked as ${newStatus.replace("_", " ")}.`,
-        });
-        // Update local state
-        setTickets(tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t));
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update ticket status.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = 
-      ticket.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "ALL" || ticket.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const stats = {
-    total: tickets.length,
-    open: tickets.filter(t => t.status === "OPEN").length,
-    resolvedToday: tickets.filter(t => t.status === "RESOLVED" && new Date(t.updatedAt).toDateString() === new Date().toDateString()).length,
-    avgResponse: "1.4h", // Placeholder
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "OPEN":
-        return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-200">Open</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-100 uppercase text-[10px]">Open</Badge>;
       case "IN_PROGRESS":
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">In Progress</Badge>;
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 uppercase text-[10px]">In Progress</Badge>;
       case "RESOLVED":
-        return <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-200 uppercase">Resolved</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 uppercase text-[10px]">Resolved</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
+  const getSLABadge = (createdAt: string) => {
+    const hours = differenceInHours(new Date(), new Date(createdAt));
+    if (hours < 2) return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{"< 2h"}</Badge>;
+    if (hours < 8) return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">{"< 8h"}</Badge>;
+    return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Overdue</Badge>;
+  };
+
+  const handleManageTicket = (ticket: any) => {
+    setSelectedTicket(ticket);
+    setIsDetailsOpen(true);
+  };
+
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <Navbar />
-      
-      <main className="flex-1 container px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Support Tickets</h1>
-            <p className="text-slate-500">Manage and respond to customer inquiries.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Support Center</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage customer inquiries and maintain service standards
+          </p>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">All time submissions</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.open}</div>
-              <p className="text-xs text-muted-foreground">Requires attention</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.resolvedToday}</div>
-              <p className="text-xs text-muted-foreground">Successfully closed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
-              <Clock className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.avgResponse}</div>
-              <p className="text-xs text-muted-foreground">Target: &lt; 2h</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Open Tickets"
+          value={stats.open}
+          icon={AlertCircle}
+          iconColor="text-red-600"
+          iconBgColor="bg-red-50"
+        />
+        <StatCard
+          title="In Progress"
+          value={stats.inProgress}
+          icon={Clock}
+          iconColor="text-amber-600"
+          iconBgColor="bg-amber-50"
+        />
+        <StatCard
+          title="Resolved"
+          value={stats.resolved}
+          icon={CheckCircle2}
+          iconColor="text-green-600"
+          iconBgColor="bg-green-50"
+        />
+        <StatCard
+          title="Global SLA"
+          value="--"
+          icon={Shield}
+          iconColor="text-slate-600"
+          iconBgColor="bg-slate-50"
+        />
+      </div>
 
-        {/* Filters and Search */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Search by name, email, or subject..." 
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      {/* Filters & Search */}
+      <Card className="border-none shadow-sm bg-white">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, subject..."
+                className="pl-10 h-10 border-slate-200"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-[160px] h-10 border-slate-200">
+                  <SelectValue placeholder="All Tickets" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tickets</SelectItem>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="RESOLVED">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="h-10 px-4 border-slate-200" onClick={() => { setSearch(""); setStatus("all"); }}>
+                Reset
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[150px] justify-between">
-                  <span className="flex items-center">
-                    <Filter className="w-4 h-4 mr-2" />
-                    {statusFilter === "ALL" ? "All Status" : statusFilter}
-                  </span>
-                  <ChevronDown className="w-4 h-4 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[150px]">
-                <DropdownMenuItem onClick={() => setStatusFilter("ALL")}>All Status</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("OPEN")}>Open</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("IN_PROGRESS")}>In Progress</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("RESOLVED")}>Resolved</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Tickets Table */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* Tickets List */}
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="text-center py-20">
+            <MessageSquare className="w-12 h-12 mx-auto text-slate-200 mb-4" />
+            <p className="text-lg font-medium text-slate-900">All caught up!</p>
+            <p className="text-muted-foreground">No support tickets match your criteria.</p>
+          </div>
+        ) : (
           <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow>
+                <TableHead className="w-[120px] font-semibold text-slate-900">Status</TableHead>
+                <TableHead className="font-semibold text-slate-900">Customer</TableHead>
+                <TableHead className="font-semibold text-slate-900">Subject</TableHead>
+                <TableHead className="font-semibold text-slate-900">SLA Timer</TableHead>
+                <TableHead className="text-right font-semibold text-slate-900">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-                      <span>Loading tickets...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredTickets.map((ticket) => (
-                <TableRow key={ticket.id} className="hover:bg-slate-50/50 transition-colors">
+              {tickets.map((ticket) => (
+                <TableRow key={ticket.id} className="hover:bg-slate-50/80 transition-colors border-slate-100">
                   <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
@@ -250,70 +223,34 @@ export default function AdminSupportPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="max-w-[400px]">
-                      <span className="font-medium block truncate">{ticket.subject}</span>
-                      <p className="text-xs text-slate-500 truncate">{ticket.message}</p>
+                    <div className="flex flex-col max-w-[300px]">
+                      <span className="font-medium truncate">{ticket.subject}</span>
+                      <span className="text-xs text-slate-500 truncate">{ticket.message}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-500 text-sm">
-                    {format(new Date(ticket.createdAt), "MMM d, h:mm a")}
-                  </TableCell>
+                  <TableCell>{getSLABadge(ticket.createdAt)}</TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Ticket Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <a href={`mailto:${ticket.email}`}>
-                            <Mail className="w-4 h-4 mr-2" />
-                            Reply to User
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Update Status</DropdownMenuLabel>
-                        <DropdownMenuItem 
-                          className="text-red-600"
-                          onClick={() => handleUpdateStatus(ticket.id, "OPEN")}
-                        >
-                          Mark as Open
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-amber-600"
-                          onClick={() => handleUpdateStatus(ticket.id, "IN_PROGRESS")}
-                        >
-                          Mark as In Progress
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-green-600"
-                          onClick={() => handleUpdateStatus(ticket.id, "RESOLVED")}
-                        >
-                          Mark as Resolved
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button variant="ghost" size="sm" onClick={() => handleManageTicket(ticket)} className="text-primary hover:text-primary hover:bg-primary/5">
+                      Manage
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {!isLoading && filteredTickets.length === 0 && (
-            <div className="py-20 text-center">
-              <MessageSquare className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-              <p className="text-slate-500">No tickets found matching your criteria.</p>
-            </div>
-          )}
-        </div>
-      </main>
+        )}
+      </Card>
 
-      <Footer />
+      {/* Ticket Details Slide-over */}
+      {isDetailsOpen && selectedTicket && (
+        <TicketDetails
+          ticket={selectedTicket}
+          isOpen={isDetailsOpen}
+          onClose={() => setIsDetailsOpen(false)}
+          onUpdate={fetchTickets}
+        />
+      )}
     </div>
   );
 }

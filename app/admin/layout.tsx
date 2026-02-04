@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.push("/auth/login?redirect=/admin");
       } else {
         const role = user?.role?.toLowerCase();
-        if (role !== "admin") {
+        if (role !== "admin" && role !== "support") {
           router.push("/account");
         }
       }
@@ -36,7 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const role = user?.role?.toLowerCase();
-  if (!isAuthenticated || role !== "admin") {
+  if (!isAuthenticated || (role !== "admin" && role !== "support")) {
     return null;
   }
 
@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="flex">
-        <AdminSidebar role="admin" />
+        <AdminSidebar role={role as "admin" | "owner" | "watchman"} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
       </div>
     </div>
