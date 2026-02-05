@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
 import { formatCurrency } from "@/lib/data";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,335 +29,377 @@ import {
   Calendar,
   CreditCard,
   AlertCircle,
+  Loader2,
+  ExternalLink,
+  Shield
 } from "lucide-react";
-import type { RefundRequest } from "@/lib/types";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import Loading from "./loading";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function RefundsPage() {
-  const { refundRequests, processRefund } = useDataStore();
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
-  const [partialAmount, setPartialAmount] = useState(0);
+  const [statusTab, setStatusTab] = useState("all");
+  const [selectedRefund, setSelectedRefund] = useState<any>(null);
+  const [partialAmount, setPartialAmount] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [stats, setStats] = useState({
+    pending: 0,
+    totalPendingAmount: 0,
+    approved: 0,
+    processed: 0,
+    rejected: 0,
+    totalPendingApprovals: 0
+  });
 
-  const filteredRefunds = refundRequests.filter(
-    (r) =>
-      r.userName.toLowerCase().includes(search.toLowerCase()) ||
-      r.bookingId.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    fetchRefunds();
+  }, [search, statusTab]);
 
-  const pendingCount = refundRequests.filter((r) => r.status === "pending").length;
-  const approvedCount = refundRequests.filter((r) => r.status === "approved").length;
-  const totalPending = refundRequests
-    .filter((r) => r.status === "pending")
-    .reduce((sum, r) => sum + r.amount, 0);
+  const fetchRefunds = async () => {
+    try {
+      setIsLoading(true);
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.set("search", search);
+      if (statusTab !== "all") queryParams.set("status", statusTab.toUpperCase());
 
-  const handleProcess = async (action: "approve" | "partial" | "reject") => {
-    if (!selectedRefund) return;
-    setIsProcessing(true);
-    const amount = action === "partial" ? partialAmount : selectedRefund.amount;
-    await processRefund(selectedRefund.id, action, amount);
-    setSelectedRefund(null);
-    setPartialAmount(0);
-    setIsProcessing(false);
-  };
-
-  const getStatusVariant = (status: RefundRequest["status"]) => {
-    switch (status) {
-      case "pending": return "warning";
-      case "approved": return "info";
-      case "partial": return "info";
-      case "processed": return "success";
-      case "rejected": return "error";
+      const response = await fetch(`/api/admin/refunds?${queryParams.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRefunds(data.refunds);
+        
+        if (data.stats) {
+          setStats({
+            pending: data.stats.pending,
+            totalPendingAmount: data.stats.totalPendingAmount,
+            approved: data.stats.approved,
+            processed: data.stats.processed,
+            rejected: data.stats.rejected,
+            totalPendingApprovals: data.stats.totalPendingApprovals
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch refunds:", error);
+      toast.error("Failed to load refund requests");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getReasonLabel = (reason: RefundRequest["reason"]) => {
-    switch (reason) {
-      case "cancellation": return "Booking Cancellation";
-      case "service_issue": return "Service Issue";
-      case "duplicate_charge": return "Duplicate Charge";
-      case "overcharge": return "Overcharge";
-      case "no_show": return "Location No-Show";
-      case "other": return "Other";
+  const handleProcess = async (action: "APPROVED" | "REJECTED" | "PROCESSED") => {
+    if (!selectedRefund) return;
+    
+    try {
+      setIsProcessing(true);
+      const amount = (action === "APPROVED" && partialAmount) ? parseFloat(partialAmount) : selectedRefund.amount;
+      
+      const response = await fetch(`/api/admin/refunds/${selectedRefund.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: action,
+          approvedAmount: amount,
+          notes: `Handled via Refunds dashboard as ${action}`
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Refund request ${action.toLowerCase()} successfully`);
+        setSelectedRefund(null);
+        setPartialAmount("");
+        fetchRefunds();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || "Failed to process refund");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "PENDING": return "warning";
+      case "APPROVED": return "info";
+      case "PROCESSED": return "success";
+      case "REJECTED": return "error";
+      default: return "default";
     }
   };
 
   return (
-    <Suspense fallback={<Loading />}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/admin">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Refund Processing</h1>
-              <p className="text-muted-foreground">Review and process customer refund requests</p>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Refund Processing</h1>
+          <p className="text-muted-foreground mt-1">
+            Review and process customer refund requests across the platform
+          </p>
         </div>
+      </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
-                </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Card className="border-none shadow-sm bg-white border-l-4 border-l-amber-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-amber-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Amount</p>
-                  <p className="text-2xl font-bold text-foreground">{formatCurrency(totalPending)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Approved</p>
-                  <p className="text-2xl font-bold text-foreground">{approvedCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Processed</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {refundRequests.filter((r) => r.status === "processed").length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or booking ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        {/* Refunds List */}
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList>
-            <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-            <TabsTrigger value="approved">Approved ({approvedCount})</TabsTrigger>
-            <TabsTrigger value="processed">Processed</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
-
-          {["pending", "approved", "processed", "all"].map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-4">
-              <div className="space-y-4">
-                {filteredRefunds
-                  .filter((r) => tab === "all" || r.status === tab)
-                  .map((refund) => (
-                    <Card key={refund.id} className="hover:border-primary/50 transition-colors">
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          <div className="flex-1 space-y-3">
-                            <div className="flex items-start justify-between flex-wrap gap-2">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-lg text-foreground">
-                                    {formatCurrency(refund.amount)}
-                                  </h3>
-                                  <Badge variant="outline">{getReasonLabel(refund.reason)}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-1">{refund.description}</p>
-                              </div>
-                              <StatusBadge status={refund.status} variant={getStatusVariant(refund.status)} />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Customer:</span>
-                                <span className="font-medium">{refund.userName}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Booking:</span>
-                                <span className="font-medium">{refund.bookingId}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <CreditCard className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Payment:</span>
-                                <span className="font-medium">{refund.paymentMethod}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Requested:</span>
-                                <span className="font-medium">{new Date(refund.createdAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-
-                            {refund.approvedAmount !== undefined && refund.approvedAmount !== refund.amount && (
-                              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <p className="text-sm text-blue-800">
-                                  <span className="font-medium">Approved Amount:</span> {formatCurrency(refund.approvedAmount)}
-                                  <span className="text-blue-600 ml-2">
-                                    (Original: {formatCurrency(refund.amount)})
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {refund.status === "pending" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRefund(refund);
-                                setPartialAmount(refund.amount);
-                              }}
-                              className="bg-transparent"
-                            >
-                              Process
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                {filteredRefunds.filter((r) => tab === "all" || r.status === tab).length === 0 && (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground">No refunds found</h3>
-                      <p className="text-muted-foreground mt-1">
-                        {tab === "pending" ? "No pending refunds to process" : "No refunds match your criteria"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        {/* Process Refund Dialog */}
-        <Dialog open={!!selectedRefund} onOpenChange={() => setSelectedRefund(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Process Refund</DialogTitle>
-              <DialogDescription>
-                Review and decide on this refund request from {selectedRefund?.userName}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <Card>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Requested Amount</span>
-                    <span className="font-bold text-lg">{formatCurrency(selectedRefund?.amount || 0)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Reason</span>
-                    <span>{selectedRefund && getReasonLabel(selectedRefund.reason)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Booking</span>
-                    <span>{selectedRefund?.bookingId}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">{selectedRefund?.description}</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Partial Refund Amount (Optional)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    className="pl-8"
-                    value={partialAmount}
-                    onChange={(e) => setPartialAmount(Number(e.target.value))}
-                    max={selectedRefund?.amount}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Enter a partial amount or approve the full {formatCurrency(selectedRefund?.amount || 0)}
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Total Pending</p>
+                <p className="text-2xl font-bold text-foreground">
+                    {isLoading ? "..." : stats.totalPendingApprovals}
                 </p>
               </div>
             </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => handleProcess("reject")}
-                disabled={isProcessing}
-                className="w-full sm:w-auto"
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Reject
-              </Button>
-              {partialAmount !== selectedRefund?.amount && partialAmount > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleProcess("partial")}
-                  disabled={isProcessing}
-                  className="w-full sm:w-auto bg-transparent"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Partial ({formatCurrency(partialAmount)})
-                </Button>
-              )}
-              <Button
-                onClick={() => handleProcess("approve")}
-                disabled={isProcessing}
-                className="w-full sm:w-auto"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Approve Full
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Pending</p>
+                <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Volume</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalPendingAmount)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Approved</p>
+                <p className="text-2xl font-bold text-foreground">{stats.approved}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Processed</p>
+                <p className="text-2xl font-bold text-foreground">{stats.processed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <XCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Rejected</p>
+                <p className="text-2xl font-bold text-foreground">{stats.rejected}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </Suspense>
+
+      {/* Filters & Search */}
+      <Card className="border-none shadow-sm bg-white">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Booking ID, Email, Customer..."
+                className="pl-10 h-10 border-slate-200"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Tabs value={statusTab} onValueChange={setStatusTab} className="w-full md:w-auto">
+              <TabsList className="bg-slate-100 h-10">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="approved">Approved</TabsTrigger>
+                <TabsTrigger value="processed">Processed</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Refunds List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : refunds.length === 0 ? (
+          <Card className="border-dashed border-2">
+            <CardContent className="p-12 text-center">
+              <CheckCircle className="w-12 h-12 mx-auto text-slate-200 mb-4" />
+              <h3 className="text-lg font-medium text-foreground">No refunds found</h3>
+              <p className="text-muted-foreground">Everything is processed for this criteria.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          refunds.map((refund) => (
+            <Card key={refund.id} className="border-none shadow-sm bg-white hover:ring-1 hover:ring-primary/20 transition-all">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="space-y-4 flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-bold text-foreground">
+                          {formatCurrency(refund.amount)}
+                        </h3>
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-700 hover:bg-slate-100">
+                          {refund.reason}
+                        </Badge>
+                      </div>
+                      <StatusBadge status={refund.status} variant={getStatusVariant(refund.status)} />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Customer:</span>
+                        <span className="font-medium">{refund.booking.user.firstName} {refund.booking.user.lastName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Booking:</span>
+                        <span className="font-mono font-medium">{refund.booking.confirmationCode}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Requested:</span>
+                        <span className="font-medium">{format(new Date(refund.createdAt), "MMM d, yyyy")}</span>
+                      </div>
+                      {refund.dispute && (
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4 text-primary" />
+                          <Link href={`/admin/disputes?search=${refund.booking.confirmationCode}`} className="text-primary hover:underline">
+                            View Dispute
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {refund.status === "PENDING" && (
+                    <Button
+                      onClick={() => {
+                        setSelectedRefund(refund);
+                        setPartialAmount(refund.amount.toString());
+                      }}
+                      className="w-full lg:w-auto h-11 px-8"
+                    >
+                      Process Refund
+                    </Button>
+                  )}
+                  {refund.status === "APPROVED" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleProcess("PROCESSED")}
+                      className="border-primary text-primary hover:bg-primary/5 h-11 px-8"
+                    >
+                      Mark Processed
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Process Refund Dialog */}
+      <Dialog open={!!selectedRefund} onOpenChange={() => { setSelectedRefund(null); setPartialAmount(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Handle Refund Request</DialogTitle>
+            <DialogDescription>
+              Review and approve refund for {selectedRefund?.booking?.user?.firstName}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="bg-slate-50 p-4 rounded-lg space-y-2 border border-slate-100">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Original Booking Total</span>
+                <span className="font-bold">{formatCurrency(selectedRefund?.booking?.totalPrice || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Requested Amount</span>
+                <span className="font-bold text-red-600">{formatCurrency(selectedRefund?.amount || 0)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Adjust Approval Amount</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  className="pl-8"
+                  value={partialAmount}
+                  onChange={(e) => setPartialAmount(e.target.value)}
+                  max={selectedRefund?.booking?.totalPrice}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                You can approve a partial amount or the full request.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => handleProcess("REJECTED")}
+              disabled={isProcessing}
+              className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              Reject
+            </Button>
+            <Button
+              onClick={() => handleProcess("APPROVED")}
+              disabled={isProcessing}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
-
-

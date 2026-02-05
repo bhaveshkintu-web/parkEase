@@ -1,7 +1,19 @@
 import { prisma } from "./prisma";
 import nodemailer from "nodemailer";
 
+// Local enum definition until Prisma client is regenerated
+export enum NotificationType {
+  DISPUTE_CREATED = "DISPUTE_CREATED",
+  DISPUTE_UPDATED = "DISPUTE_UPDATED",
+  REFUND_REQUESTED = "REFUND_REQUESTED",
+  REFUND_PROCESSED = "REFUND_PROCESSED",
+  SUPPORT_TICKET_CREATED = "SUPPORT_TICKET_CREATED",
+  SUPPORT_TICKET_UPDATED = "SUPPORT_TICKET_UPDATED",
+  SYSTEM_ALERT = "SYSTEM_ALERT"
+}
+
 export async function notifyAdminsOfBookingRequest(requestId: string) {
+// ... existing code ...
   try {
     const request = await prisma.bookingRequest.findUnique({
       where: { id: requestId },
@@ -193,9 +205,6 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
   }
 }
 
-/**
- * Sends a support message notification to administrators.
- */
 export async function sendSupportEmail(data: {
   name: string;
   email: string;
@@ -259,5 +268,108 @@ export async function sendSupportEmail(data: {
   } catch (error) {
     console.error("❌ Failed to send support email:", error);
     return { success: false, error: "Failed to send message" };
+  }
+}
+
+export interface CreateNotificationParams {
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  metadata?: any;
+}
+
+export class NotificationService {
+  /**
+   * Create a single notification for a user
+   */
+  static async create({
+    userId,
+    title,
+    message,
+    type,
+    metadata,
+  }: CreateNotificationParams) {
+    try {
+      return await prisma.notification.create({
+        data: {
+          userId,
+          title,
+          message,
+          type,
+          metadata,
+        },
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Notify all Admins and Support agents
+   */
+  static async notifyAdmins(params: Omit<CreateNotificationParams, "userId">) {
+    try {
+      const staff = await prisma.user.findMany({
+        where: {
+          role: { in: ["ADMIN", "SUPPORT"] },
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+
+      if (staff.length === 0) return null;
+
+      const notifications = staff.map((s) => ({
+        ...params,
+        userId: s.id,
+      }));
+
+      return await prisma.notification.createMany({
+        data: notifications,
+      });
+    } catch (error) {
+      console.error("Error notifying admins:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Notify an owner about a dispute at their location
+   */
+  static async notifyOwner(
+    ownerId: string,
+    params: Omit<CreateNotificationParams, "userId">
+  ) {
+    try {
+      const owner = await prisma.ownerProfile.findUnique({
+        where: { id: ownerId },
+        select: { userId: true },
+      });
+
+      if (owner) {
+        return this.create({
+          ...params,
+          userId: owner.userId,
+        });
+      }
+    } catch (error) {
+      console.error("Error notifying owner:", error);
+    }
+    return null;
+  }
+
+  /**
+   * Notify a customer about an update to their request
+   */
+  static async notifyCustomer(
+    userId: string,
+    params: Omit<CreateNotificationParams, "userId">
+  ) {
+    return this.create({
+      ...params,
+      userId,
+    });
   }
 }

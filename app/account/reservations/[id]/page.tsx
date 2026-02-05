@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
+import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
+import { getBookingSupportStatus } from "@/lib/actions/support-actions";
+import { SupportDialogs } from "@/components/support/support-dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,8 @@ import {
   ArrowRight,
   ExternalLink,
   Loader2,
+  AlertTriangle,
+  DollarSign,
 } from "lucide-react";
 
 export default function ReservationDetailPage({
@@ -83,19 +87,36 @@ export default function ReservationDetailPage({
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const [shareEmail, setShareEmail] = React.useState("");
 
+  // Support state
+  const [showSupportDialog, setShowSupportDialog] = React.useState(false);
+  const [supportType, setSupportType] = React.useState<"DISPUTE" | "REFUND" | "TICKET">("DISPUTE");
+  const [supportStatus, setSupportStatus] = React.useState<{ disputes: any[]; refunds: any[] }>({ disputes: [], refunds: [] });
+
   React.useEffect(() => {
     async function loadBooking() {
       setIsLoading(true);
-      const response = await getBookingDetails(id);
-      if (response.success && response.data) {
-        setReservation(response.data);
+      const [bookingResponse, supportResponse] = await Promise.all([
+        getBookingDetails(id),
+        getBookingSupportStatus(id)
+      ]);
+
+      if (bookingResponse.success && bookingResponse.data) {
+        setReservation(bookingResponse.data);
       } else {
         toast({
           title: "Error",
-          description: response.error || "Failed to load reservation",
+          description: bookingResponse.error || "Failed to load reservation",
           variant: "destructive",
         });
       }
+
+      if (supportResponse.success) {
+        setSupportStatus({
+           disputes: supportResponse.disputes || [],
+           refunds: supportResponse.refunds || []
+        });
+      }
+
       setIsLoading(false);
     }
     loadBooking();
@@ -296,7 +317,8 @@ export default function ReservationDetailPage({
   };
 
   const handleContactSupport = () => {
-    window.location.href = "/support";
+    setSupportType("TICKET");
+    setShowSupportDialog(true);
   };
 
   const getStatusConfig = () => {
@@ -340,92 +362,94 @@ export default function ReservationDetailPage({
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      {/* Back button */}
-      <Link href="/account/reservations">
-        <Button variant="ghost" className="mb-2">
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Back to Reservations
-        </Button>
-      </Link>
+    <div className="h-screen flex flex-col max-w-5xl mx-auto">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 p-6 pb-0">
+        {/* Back button */}
+        <Link href="/account/reservations">
+          <Button variant="ghost" className="mb-2">
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Back to Reservations
+          </Button>
+        </Link>
 
-      {/* Status Banner */}
-      {(isActive || (isUpcoming && hoursUntilCheckIn < 24)) && (
-        <Card className={isActive ? "border-blue-200 bg-blue-50/50" : "border-amber-200 bg-amber-50/50"}>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              {isActive ? (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Car className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-blue-900">Your vehicle is currently parked</p>
-                    <p className="text-sm text-blue-700">
-                      Check-out by {formatDate(reservation.checkOut)}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-amber-900">Check-in opens soon!</p>
-                    <p className="text-sm text-amber-700">
-                      {hoursUntilCheckIn > 0 ? `${hoursUntilCheckIn} hours until check-in` : "Check-in is now available"}
-                    </p>
-                  </div>
-                  <Button size="sm">
-                    Get Directions
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </>
-              )}
+        {/* Status Banner */}
+        {(isActive || (isUpcoming && hoursUntilCheckIn < 24)) && (
+          <Card className={isActive ? "border-blue-200 bg-blue-50/50 mb-4" : "border-amber-200 bg-amber-50/50 mb-4"}>
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                {isActive ? (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Car className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-900">Your vehicle is currently parked</p>
+                      <p className="text-sm text-blue-700">
+                        Check-out by {formatDate(reservation.checkOut)}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-amber-900">Check-in opens soon!</p>
+                      <p className="text-sm text-amber-700">
+                        {hoursUntilCheckIn > 0 ? `${hoursUntilCheckIn} hours until check-in` : "Check-in is now available"}
+                      </p>
+                    </div>
+                    <Button size="sm">
+                      Get Directions
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-foreground">{reservation.location.name}</h1>
+              <Badge variant="outline" className={statusConfig.className}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {statusConfig.label}
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-foreground">{reservation.location.name}</h1>
-            <Badge variant="outline" className={statusConfig.className}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {statusConfig.label}
-            </Badge>
+            <p className="text-muted-foreground flex items-center gap-1">
+              <MapPin className="w-4 h-4" />
+              {reservation.location.address}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">{statusConfig.description}</p>
           </div>
-          <p className="text-muted-foreground flex items-center gap-1">
-            <MapPin className="w-4 h-4" />
-            {reservation.location.address}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">{statusConfig.description}</p>
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
-          {isUpcoming && (
-            <>
-              <Link href={`/account/reservations/${id}/modify`}>
-                <Button variant="outline" size="sm">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Modify
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive bg-transparent"
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            {isUpcoming && (
+              <>
+                <Link href={`/account/reservations/${id}/modify`}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modify
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive bg-transparent"
                 onClick={() => setShowCancelDialog(true)}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -435,19 +459,22 @@ export default function ReservationDetailPage({
           )}
         </div>
       </div>
+      </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="directions">Directions</TabsTrigger>
-          {(reservation.modificationHistory || []).length > 0 && (
-            <TabsTrigger value="history">History</TabsTrigger>
-          )}
-          {isPast && <TabsTrigger value="review">Leave Review</TabsTrigger>}
-        </TabsList>
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="directions">Directions</TabsTrigger>
+            {(reservation.modificationHistory || []).length > 0 && (
+              <TabsTrigger value="history">History</TabsTrigger>
+            )}
+            {isPast && <TabsTrigger value="review">Leave Review</TabsTrigger>}
+          </TabsList>
 
-        <TabsContent value="details" className="mt-6">
+          <TabsContent value="details" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
@@ -802,6 +829,38 @@ export default function ReservationDetailPage({
                 </Card>
               )}
 
+              {/* Support Status Card */}
+              {(supportStatus.disputes.length > 0 || supportStatus.refunds.length > 0) && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        Support & Refunds
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                    {supportStatus.disputes.map((d: any) => (
+                      <div key={d.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <Badge variant="outline" className="text-[10px] h-4 px-1">{d.status}</Badge>
+                          <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="font-medium line-clamp-1">{d.subject}</p>
+                      </div>
+                    ))}
+                    {supportStatus.refunds.map((r: any) => (
+                      <div key={r.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1">{r.status}</Badge>
+                          <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="font-semibold text-primary">{formatCurrency(r.amount)}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Location Contact */}
               <Card>
                 <CardHeader>
@@ -817,12 +876,15 @@ export default function ReservationDetailPage({
                     Call Location
                   </Button>
                   <Button 
-                    variant="outline" 
-                    className="w-full justify-start bg-transparent"
-                    onClick={handleContactSupport}
+                    variant="default" 
+                    className="w-full justify-start"
+                    onClick={() => {
+                        setSupportType("DISPUTE");
+                        setShowSupportDialog(true);
+                    }}
                   >
                     <MessageSquare className="w-4 h-4 mr-3" />
-                    Contact Support
+                    Get Help
                   </Button>
                 </CardContent>
               </Card>
@@ -1027,6 +1089,27 @@ export default function ReservationDetailPage({
           </TabsContent>
         )}
       </Tabs>
+
+      <SupportDialogs 
+          bookingId={reservation.id}
+          totalPrice={reservation.totalPrice}
+          isOpen={showSupportDialog}
+          onClose={async () => {
+              setShowSupportDialog(false);
+              // Refresh status
+              const res = await getBookingSupportStatus(id);
+              if (res.success) {
+                  setSupportStatus({
+                      disputes: res.disputes || [],
+                      refunds: res.refunds || []
+                  });
+              }
+          }}
+          defaultType={supportType}
+          customerEmail={reservation.user?.email || ""}
+          customerName={`${reservation.user?.firstName || ""} ${reservation.user?.lastName || ""}`.trim()}
+      />
+      </div>
 
       {/* Cancel Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

@@ -25,59 +25,85 @@ import {
   Wallet,
   Calendar,
   Clock,
+  Loader2,
 } from "lucide-react";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  const { wallet, transactions } = useDataStore(); // Using store for other items for now
-  const [locations, setLocations] = React.useState<any[]>([]);
-  const [watchmen, setWatchmen] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { wallet, transactions, initializeForOwner } = useDataStore();
 
-  // Fetch real owner data
+  const [stats, setStats] = React.useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    activeLocations: 0,
+    totalLocations: 0,
+    activeWatchmen: 0,
+    totalWatchmen: 0,
+    totalCapacity: 0,
+    totalOccupied: 0
+  });
+
+  const [dashboardData, setDashboardData] = React.useState<{
+    recentBookings: any[];
+    locations: any[];
+    watchmen: any[];
+  }>({
+    recentBookings: [],
+    locations: [],
+    watchmen: []
+  });
+
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Initialize owner data (keep for wallet/transactions for now if they are not moved yet)
   React.useEffect(() => {
-    const fetchData = async () => {
-      if (user?.id) {
-        try {
-          const [locationsResult, watchmenResult] = await Promise.all([
-            getOwnerLocations(user.id),
-            getOwnerWatchmen(user.id)
-          ]);
+    if (user?.id && typeof initializeForOwner === "function") {
+      initializeForOwner(user.id);
+    }
+  }, [user?.id, initializeForOwner]);
 
-          if (locationsResult.success && locationsResult.data) {
-            setLocations(locationsResult.data);
+  // Fetch real stats and dashboard data
+  React.useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!user?.id) return;
+
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/owner/analytics");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.stats) {
+            setStats(data.stats);
           }
-          if (watchmenResult.success && watchmenResult.data) {
-            setWatchmen(watchmenResult.data);
+          if (data.data) {
+            setDashboardData(data.data);
           }
-        } catch (error) {
-          console.error("Failed to fetch dashboard data:", error);
-        } finally {
-          setLoading(false);
         }
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchData();
+
+    fetchDashboardStats();
   }, [user?.id]);
 
-  // Calculate stats from real data
-  const activeLocations = locations.filter((l) => l.status === "ACTIVE").length;
-  const totalCapacity = locations.reduce((sum, l) => sum + l.totalSpots, 0);
-  const totalOccupied = locations.reduce((sum, l) => sum + (l.totalSpots - l.availableSpots), 0);
-  const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-
-  const totalRevenue = locations.reduce((sum, l) => sum + (l.analytics?.revenue || 0), 0);
-  const totalBookings = locations.reduce((sum, l) => sum + (l.analytics?.bookings || 0), 0);
-
-  // Use a spinner or skeleton if loading
-  if (loading) {
-    return <div className="p-8 text-center">Loading dashboard...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  // Placeholder for today's bookings until we have an API for it
-  const todayBookings: any[] = [];
+  const occupancyRate = stats.totalCapacity > 0
+    ? Math.round((stats.totalOccupied / stats.totalCapacity) * 100)
+    : 0;
 
-  const activeWatchmen = watchmen.filter((w) => w.status === "active").length;
+  const { recentBookings, locations: myLocations, watchmen } = dashboardData;
+  const todayBookings = recentBookings;
+  const { totalRevenue, totalBookings, activeLocations, totalCapacity, activeWatchmen, totalOccupied } = stats;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
@@ -121,7 +147,7 @@ export default function OwnerDashboard() {
         />
         <StatCard
           title="Active Locations"
-          value={`${activeLocations}/${locations.length}`}
+          value={`${activeLocations}/${myLocations.length}`}
           icon={MapPin}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
@@ -344,7 +370,7 @@ export default function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {locations.slice(0, 4).map((location) => (
+              {myLocations.slice(0, 4).map((location) => (
                 <div
                   key={location.id}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"

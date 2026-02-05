@@ -46,6 +46,9 @@ interface OwnerLead {
   country: string;
   status: string;
   createdAt: string;
+  isProfile?: boolean;
+  profileId?: string;
+  userId?: string;
 }
 
 export default function OwnerApprovalsPage() {
@@ -67,7 +70,7 @@ export default function OwnerApprovalsPage() {
       setIsLoading(true);
       console.log("Fetching leads from /api/admin/approvals/owners...");
       const response = await fetch("/api/admin/approvals/owners");
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log("Leads fetched successfully:", data.leads?.length || 0);
@@ -218,6 +221,11 @@ export default function OwnerApprovalsPage() {
                               <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                                 <Building2 className="w-4 h-4" />
                                 {lead.businessName} ({lead.businessType})
+                                {lead.isProfile && (
+                                  <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    Registered Profile
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                             <Badge variant={lead.status === "approved" ? "default" : lead.status === "rejected" ? "destructive" : "secondary"}>

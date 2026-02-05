@@ -49,7 +49,7 @@ function LocationDetailsContent({ id }: { id: string }) {
   const [location, setLocationData] = React.useState<any>(null);
   const [nearbyLocations, setNearbyLocations] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  
+
   const { checkIn, checkOut, setLocation } = useBooking();
 
   React.useEffect(() => {
@@ -58,11 +58,13 @@ function LocationDetailsContent({ id }: { id: string }) {
       const locResponse = await getParkingLocationById(id);
       if (locResponse.success && locResponse.data) {
         setLocationData(locResponse.data);
-        
+
         // Fetch nearby locations once we have the airport code
-        const nearbyResponse = await getNearbyParkingLocations(locResponse.data.airportCode, locResponse.data.id);
-        if (nearbyResponse.success && nearbyResponse.data) {
-          setNearbyLocations(nearbyResponse.data);
+        if (locResponse.data.airportCode) {
+          const nearbyResponse = await getNearbyParkingLocations(locResponse.data.airportCode, locResponse.data.id);
+          if (nearbyResponse.success && nearbyResponse.data) {
+            setNearbyLocations(nearbyResponse.data);
+          }
         }
       }
       setIsLoading(false);
@@ -83,7 +85,10 @@ function LocationDetailsContent({ id }: { id: string }) {
 
   const handleGetDirections = () => {
     if (!location) return;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}`;
+    const dest = (location.latitude && location.longitude)
+      ? `${location.latitude},${location.longitude}`
+      : encodeURIComponent(location.address);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
     window.open(url, "_blank");
   };
 
@@ -214,9 +219,9 @@ function LocationDetailsContent({ id }: { id: string }) {
           <div className="relative mb-8 grid gap-2 overflow-hidden rounded-xl md:grid-cols-4 md:grid-rows-2">
             <div className="relative col-span-2 row-span-2 aspect-[4/3] bg-gradient-to-br from-primary/20 to-primary/5 md:aspect-auto">
               {location.images && location.images[0] ? (
-                <img 
-                  src={location.images[0]} 
-                  alt={location.name} 
+                <img
+                  src={location.images[0]}
+                  alt={location.name}
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
@@ -245,9 +250,9 @@ function LocationDetailsContent({ id }: { id: string }) {
                 className="hidden aspect-video bg-gradient-to-br from-muted to-muted/50 md:block relative overflow-hidden"
               >
                 {location.images && location.images[i] ? (
-                  <img 
-                    src={location.images[i]} 
-                    alt={`${location.name} ${i}`} 
+                  <img
+                    src={location.images[i]}
+                    alt={`${location.name} ${i}`}
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
@@ -347,8 +352,8 @@ function LocationDetailsContent({ id }: { id: string }) {
                       {location.cancellationPolicy?.type === "free"
                         ? "Free"
                         : location.cancellationPolicy?.type === "partial"
-                        ? "Partial Refund"
-                        : "Non-refundable"}
+                          ? "Partial Refund"
+                          : "Non-refundable"}
                     </p>
                   </div>
                 </div>
@@ -393,8 +398,8 @@ function LocationDetailsContent({ id }: { id: string }) {
                       {location.cancellationPolicy?.type === "free"
                         ? "Free Cancellation"
                         : location.cancellationPolicy?.type === "partial"
-                        ? "Partial Refund Available"
-                        : "Non-Refundable"}
+                          ? "Partial Refund Available"
+                          : "Non-Refundable"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {location.cancellationPolicy?.description}
@@ -452,29 +457,38 @@ function LocationDetailsContent({ id }: { id: string }) {
                       </p>
                     </div>
                   </div>
-                  {/* Map Placeholder */}
-                  <div className="relative h-64 overflow-hidden rounded-lg bg-muted">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <Navigation className="mx-auto mb-2 h-12 w-12 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Interactive map</p>
+                  {/* Map Preview */}
+                  <div className="relative h-64 overflow-hidden rounded-lg bg-muted border">
+                    {location.latitude && location.longitude ? (
+                      <img
+                        src={`https://maps.locationiq.com/v3/staticmap?key=${process.env.NEXT_PUBLIC_LOCATIONIQ_API_KEY}&center=${location.latitude},${location.longitude}&zoom=14&size=600x400&markers=icon:large-red-cutout|${location.latitude},${location.longitude}`}
+                        alt="Location Map"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <Navigation className="mx-auto mb-2 h-12 w-12 text-muted-foreground opacity-20" />
+                          <p className="text-sm text-muted-foreground">Map preview not available</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary shadow-lg">
-                      <MapPin className="h-5 w-5 text-primary-foreground" />
-                    </div>
+                    )}
+                    {location.latitude && location.longitude && (
+                      <div className="absolute left-1/2 top-1/2 flex h-4 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary/20 animate-ping">
+                      </div>
+                    )}
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="flex-1 gap-2 bg-transparent"
                       onClick={handleGetDirections}
                     >
                       <Navigation className="h-4 w-4" />
                       Get Directions
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="flex-1 gap-2 bg-transparent"
                       onClick={() => {
                         if (location.shuttleInfo?.phone) {
@@ -490,9 +504,9 @@ function LocationDetailsContent({ id }: { id: string }) {
               </Card>
 
               {/* Reviews */}
-              <ReviewsSection 
-                rating={location.rating} 
-                reviewCount={location.reviewCount} 
+              <ReviewsSection
+                rating={location.rating}
+                reviewCount={location.reviewCount}
                 reviews={location.reviews}
               />
 
@@ -562,8 +576,8 @@ function LocationDetailsContent({ id }: { id: string }) {
               <span className="text-muted-foreground">· {quote.days} days</span>
             </div>
           </div>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             disabled={availability.status === "soldout"}
             onClick={handleReserve}
           >
@@ -580,7 +594,7 @@ function LocationDetailsContent({ id }: { id: string }) {
 export default function LocationDetailsPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   // Handle both Promise and direct object params for compatibility
   const resolvedParams = params instanceof Promise ? React.use(params) : params;
-  
+
   return (
     <LocationDetailsContent id={resolvedParams.id} />
   );
