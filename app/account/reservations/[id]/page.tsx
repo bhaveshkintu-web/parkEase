@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import QRCodeGenerator from "react-qr-code";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { getBookingSupportStatus } from "@/lib/actions/support-actions";
@@ -112,8 +113,8 @@ export default function ReservationDetailPage({
 
       if (supportResponse.success) {
         setSupportStatus({
-           disputes: supportResponse.disputes || [],
-           refunds: supportResponse.refunds || []
+          disputes: supportResponse.disputes || [],
+          refunds: supportResponse.refunds || []
         });
       }
 
@@ -145,7 +146,7 @@ export default function ReservationDetailPage({
   const now = new Date();
   const checkInDate = new Date(reservation.checkIn);
   const checkOutDate = new Date(reservation.checkOut);
-  
+
   const isUpcoming = (reservation.status === "CONFIRMED" || reservation.status === "PENDING") && checkInDate > now;
   const isActive = reservation.status === "CONFIRMED" && checkInDate <= now && checkOutDate >= now;
   const isPast = (reservation.status === "CONFIRMED" || reservation.status === "COMPLETED") && checkOutDate < now;
@@ -179,6 +180,7 @@ export default function ReservationDetailPage({
         title: "Error",
         description: error.message || "Failed to cancel reservation. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsCancelling(false);
@@ -450,15 +452,15 @@ export default function ReservationDetailPage({
                   variant="outline"
                   size="sm"
                   className="text-destructive hover:text-destructive bg-transparent"
-                onClick={() => setShowCancelDialog(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            </>
-          )}
+                  onClick={() => setShowCancelDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Scrollable Content Area */}
@@ -475,640 +477,638 @@ export default function ReservationDetailPage({
           </TabsList>
 
           <TabsContent value="details" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* QR Code Card */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row items-center gap-6">
-                    {/* QR Code */}
-                    <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm">
-                      <div className="text-center p-4">
-                        <QrCode className="w-20 h-20 mx-auto text-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground">Scan at entrance</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main content */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* QR Code Card */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      {/* QR Code */}
+                      <div className="w-44 h-44 bg-white rounded-xl flex items-center justify-center border-2 border-border shadow-sm overflow-hidden p-3">
+                        <QRCodeGenerator
+                          value={reservation.confirmationCode}
+                          size={150}
+                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                          viewBox={`0 0 256 256`}
+                        />
                       </div>
-                    </div>
 
-                    {/* Confirmation details */}
-                    <div className="flex-1 text-center md:text-left">
-                      <p className="text-sm text-muted-foreground mb-1">Confirmation Code</p>
-                      <div className="flex items-center gap-2 justify-center md:justify-start">
-                        <p className="text-3xl font-mono font-bold text-foreground tracking-wider">
-                          {reservation.confirmationCode}
-                        </p>
-                        <Button variant="ghost" size="icon" onClick={handleCopyConfirmation}>
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-4">
-                        Show this QR code or confirmation number at the parking facility entrance
-                      </p>
-                      <div className="flex gap-2 mt-4 justify-center md:justify-start">
-                        <Button variant="outline" size="sm" className="bg-transparent">
-                          <Download className="w-4 h-4 mr-2" />
-                          Add to Wallet
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="bg-transparent"
-                          onClick={handleEmailReceipt}
-                          disabled={isSendingEmail}
-                        >
-                          {isSendingEmail ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Mail className="w-4 h-4 mr-2" />
-                          )}
-                          Email Receipt
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Reservation dates */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Reservation Period
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Check-in</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {formatDate(reservation.checkIn)}
-                      </p>
-                    </div>
-                    <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Check-out</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {formatDate(reservation.checkOut)}
-                      </p>
-                    </div>
-                    <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {durationDays} {durationDays === 1 ? "day" : "days"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-foreground flex items-center gap-2">
-                      <Car className="w-4 h-4" />
-                      Vehicle Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-4 p-4 border rounded-lg">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Car className="w-6 h-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {reservation.vehicleMake} {reservation.vehicleModel}
+                      {/* Confirmation details */}
+                      <div className="flex-1 text-center md:text-left">
+                        <p className="text-sm text-muted-foreground mb-1">Confirmation Code</p>
+                        <div className="flex items-center gap-2 justify-center md:justify-start">
+                          <p className="text-3xl font-mono font-bold text-foreground tracking-wider">
+                            {reservation.confirmationCode}
                           </p>
-                          <p className="text-sm text-muted-foreground">{reservation.vehicleColor}</p>
+                          <Button variant="ghost" size="icon" onClick={handleCopyConfirmation}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-4">
+                          Show this QR code or confirmation number at the parking facility entrance
+                        </p>
+                        <div className="flex gap-2 mt-4 justify-center md:justify-start">
+                          <Button variant="outline" size="sm" className="bg-transparent">
+                            <Download className="w-4 h-4 mr-2" />
+                            Add to Wallet
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-transparent"
+                            onClick={handleEmailReceipt}
+                            disabled={isSendingEmail}
+                          >
+                            {isSendingEmail ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-2" />
+                            )}
+                            Email Receipt
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Reservation dates */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Reservation Period
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Check-in</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {formatDate(reservation.checkIn)}
+                        </p>
+                      </div>
+                      <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Check-out</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {formatDate(reservation.checkOut)}
+                        </p>
+                      </div>
+                      <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Duration</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {durationDays} {durationDays === 1 ? "day" : "days"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-foreground flex items-center gap-2">
+                        <Car className="w-4 h-4" />
+                        Vehicle Information
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-4 p-4 border rounded-lg">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Car className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {reservation.vehicleMake} {reservation.vehicleModel}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{reservation.vehicleColor}</p>
+                          </div>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">License Plate</p>
+                          <p className="font-mono text-xl font-bold text-foreground">
+                            {reservation.vehiclePlate}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Parking Features */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Info className="w-5 h-5" />
+                      Parking Features
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        {reservation.location.covered ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <span className={reservation.location.covered ? "text-foreground" : "text-muted-foreground"}>
+                          Covered Parking
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reservation.location.shuttle ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <span className={reservation.location.shuttle ? "text-foreground" : "text-muted-foreground"}>
+                          Shuttle Service
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reservation.location.selfPark ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <span className={reservation.location.selfPark ? "text-foreground" : "text-muted-foreground"}>
+                          Self Park
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="text-foreground">24/7 Security</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Shuttle Information */}
+                {reservation.location.shuttle && reservation.location.shuttleInfo && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Bus className="w-5 h-5" />
+                        Shuttle Information
+                      </CardTitle>
+                      <CardDescription>Free shuttle service to and from the airport terminal</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground">Operating Hours</p>
+                          <p className="font-medium text-foreground">{reservation.location.shuttleInfo.hours}</p>
+                        </div>
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground">Frequency</p>
+                          <p className="font-medium text-foreground">{reservation.location.shuttleInfo.frequency}</p>
                         </div>
                       </div>
                       <div className="p-4 border rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">License Plate</p>
-                        <p className="font-mono text-xl font-bold text-foreground">
-                          {reservation.vehiclePlate}
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">Pickup Instructions</p>
+                        <p className="text-foreground">{reservation.location.shuttleInfo.pickupInstructions}</p>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg">
+                        <Phone className="w-5 h-5 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Shuttle Hotline</p>
+                          <p className="font-semibold text-foreground">{reservation.location.shuttleInfo.phone}</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="ml-auto bg-transparent">
+                          <Phone className="w-4 h-4 mr-2" />
+                          Call Now
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-              {/* Parking Features */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Info className="w-5 h-5" />
-                    Parking Features
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      {reservation.location.covered ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <span className={reservation.location.covered ? "text-foreground" : "text-muted-foreground"}>
-                        Covered Parking
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      {reservation.location.shuttle ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <span className={reservation.location.shuttle ? "text-foreground" : "text-muted-foreground"}>
-                        Shuttle Service
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      {reservation.location.selfPark ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <span className={reservation.location.selfPark ? "text-foreground" : "text-muted-foreground"}>
-                        Self Park
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span className="text-foreground">24/7 Security</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Shuttle Information */}
-              {reservation.location.shuttle && reservation.location.shuttleInfo && (
+                {/* Special Instructions */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Bus className="w-5 h-5" />
-                      Shuttle Information
+                      <FileText className="w-5 h-5" />
+                      Important Instructions
                     </CardTitle>
-                    <CardDescription>Free shuttle service to and from the airport terminal</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Operating Hours</p>
-                        <p className="font-medium text-foreground">{reservation.location.shuttleInfo.hours}</p>
+                    <div className="space-y-3">
+                      <div className="flex gap-3 p-3 bg-blue-50 rounded-lg">
+                        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-blue-900">Check-in Process</p>
+                          <p className="text-sm text-blue-700">
+                            Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk.
+                            The gate will open automatically.
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Frequency</p>
-                        <p className="font-medium text-foreground">{reservation.location.shuttleInfo.frequency}</p>
+                      <div className="flex gap-3 p-3 bg-amber-50 rounded-lg">
+                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-900">Vehicle Requirements</p>
+                          <p className="text-sm text-amber-700">
+                            Ensure your vehicle matches the registered license plate. Different vehicles may be
+                            denied entry or charged additional fees.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">Pickup Instructions</p>
-                      <p className="text-foreground">{reservation.location.shuttleInfo.pickupInstructions}</p>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg">
-                      <Phone className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Shuttle Hotline</p>
-                        <p className="font-semibold text-foreground">{reservation.location.shuttleInfo.phone}</p>
+                      <div className="flex gap-3 p-3 bg-green-50 rounded-lg">
+                        <Shield className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-900">Security Notice</p>
+                          <p className="text-sm text-green-700">
+                            This facility is monitored 24/7. Please do not leave valuables visible in your vehicle.
+                            Report any concerns to facility staff.
+                          </p>
+                        </div>
                       </div>
-                      <Button variant="outline" size="sm" className="ml-auto bg-transparent">
-                        <Phone className="w-4 h-4 mr-2" />
-                        Call Now
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              </div>
 
-              {/* Special Instructions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Important Instructions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex gap-3 p-3 bg-blue-50 rounded-lg">
-                      <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-blue-900">Check-in Process</p>
-                        <p className="text-sm text-blue-700">
-                          Upon arrival, scan your QR code or enter your confirmation code at the entrance kiosk. 
-                          The gate will open automatically.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 p-3 bg-amber-50 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-amber-900">Vehicle Requirements</p>
-                        <p className="text-sm text-amber-700">
-                          Ensure your vehicle matches the registered license plate. Different vehicles may be 
-                          denied entry or charged additional fees.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 p-3 bg-green-50 rounded-lg">
-                      <Shield className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-green-900">Security Notice</p>
-                        <p className="text-sm text-green-700">
-                          This facility is monitored 24/7. Please do not leave valuables visible in your vehicle.
-                          Report any concerns to facility staff.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Price summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Payment Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Parking ({durationDays} {durationDays === 1 ? "day" : "days"})
-                    </span>
-                    <span className="text-foreground">
-                      {formatCurrency(reservation.totalPrice - reservation.taxes - reservation.fees)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Taxes</span>
-                    <span className="text-foreground">{formatCurrency(reservation.taxes)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Service fee</span>
-                    <span className="text-foreground">{formatCurrency(reservation.fees)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span className="text-foreground">Total {isCancelled ? "refunded" : "paid"}</span>
-                    <span className="text-foreground">{formatCurrency(reservation.totalPrice)}</span>
-                  </div>
-                  {!isCancelled && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-green-600" />
-                      Payment confirmed
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Contact info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Guest Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="font-medium text-foreground">
-                      {reservation.guestFirstName} {reservation.guestLastName}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium text-foreground break-all">{reservation.guestEmail}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium text-foreground">{reservation.guestPhone}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Cancellation policy */}
-              {(isUpcoming || isActive) && (
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Price summary */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5" />
-                      Cancellation Policy
+                      <CreditCard className="w-5 h-5" />
+                      Payment Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Badge
-                      variant="outline"
-                      className={
-                        reservation.location.cancellationPolicy?.type === "free"
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : reservation.location.cancellationPolicy?.type === "partial"
-                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          : "bg-red-50 text-red-700 border-red-200"
-                      }
-                    >
-                      {reservation.location.cancellationPolicy?.type === "free"
-                        ? "Free Cancellation"
-                        : reservation.location.cancellationPolicy?.type === "partial"
-                        ? "Partial Refund"
-                        : "Non-refundable"}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground">
-                      {reservation.location.cancellationPolicy?.description || "Refer to terminal instructions for cancellation details."}
-                    </p>
-                    {reservation.cancellationEligibility?.eligible && (
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm font-medium text-green-800">
-                          Eligible refund: {formatCurrency(reservation.cancellationEligibility.refundAmount)}
-                        </p>
-                        <p className="text-xs text-green-700 mt-1">
-                          Cancel before {formatDate(reservation.cancellationEligibility.deadline)}
-                        </p>
-                      </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Parking ({durationDays} {durationDays === 1 ? "day" : "days"})
+                      </span>
+                      <span className="text-foreground">
+                        {formatCurrency(reservation.totalPrice - reservation.taxes - reservation.fees)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Taxes</span>
+                      <span className="text-foreground">{formatCurrency(reservation.taxes)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Service fee</span>
+                      <span className="text-foreground">{formatCurrency(reservation.fees)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span className="text-foreground">Total {isCancelled ? "refunded" : "paid"}</span>
+                      <span className="text-foreground">{formatCurrency(reservation.totalPrice)}</span>
+                    </div>
+                    {!isCancelled && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-green-600" />
+                        Payment confirmed
+                      </p>
                     )}
                   </CardContent>
                 </Card>
-              )}
 
-              {/* Support Status Card */}
-              {(supportStatus.disputes.length > 0 || supportStatus.refunds.length > 0) && (
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-primary" />
-                        Support & Refunds
-                    </CardTitle>
+                {/* Contact info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Guest Information</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                    {supportStatus.disputes.map((d: any) => (
-                      <div key={d.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
-                        <div className="flex justify-between items-center">
-                          <Badge variant="outline" className="text-[10px] h-4 px-1">{d.status}</Badge>
-                          <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="font-medium line-clamp-1">{d.subject}</p>
-                      </div>
-                    ))}
-                    {supportStatus.refunds.map((r: any) => (
-                      <div key={r.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
-                        <div className="flex justify-between items-center">
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1">{r.status}</Badge>
-                          <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="font-semibold text-primary">{formatCurrency(r.amount)}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Location Contact */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Need Help?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start bg-transparent"
-                    onClick={handleCallLocation}
-                  >
-                    <Phone className="w-4 h-4 mr-3" />
-                    Call Location
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                        setSupportType("DISPUTE");
-                        setShowSupportDialog(true);
-                    }}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-3" />
-                    Get Help
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="directions" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Navigation className="w-5 h-5" />
-                Getting There
-              </CardTitle>
-              <CardDescription>{reservation.location.address}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="h-64 bg-muted rounded-lg overflow-hidden">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  style={{ border: 0 }}
-                  src={`https://www.google.com/maps?q=${reservation.location.latitude},${reservation.location.longitude}&z=15&output=embed`}
-                  allowFullScreen
-                ></iframe>
-              </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={handleOpenMaps}>
-                  <Navigation className="w-4 h-4 mr-2" />
-                  Open in Maps
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
-                <Button variant="outline" onClick={handleCallLocation}>
-                  <Phone className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Driving Directions</h4>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>1. Take the airport exit from the highway</p>
-                  <p>2. Follow signs for "Airport Parking"</p>
-                  <p>3. Turn right at the second traffic light</p>
-                  <p>4. The parking facility is on your left</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {(reservation.modificationHistory || []).length > 0 && (
-          <TabsContent value="history" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="w-5 h-5" />
-                  Modification History
-                </CardTitle>
-                <CardDescription>Changes made to this reservation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {(reservation.modificationHistory || []).map((mod: any, index: number) => (
-                    <div key={mod.id} className="flex gap-4">
-                      <div className="relative">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        {index < (reservation.modificationHistory || []).length - 1 && (
-                          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-foreground capitalize">
-                            {mod.type.replace("_", " ")}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(mod.createdAt)}
-                          </p>
-                        </div>
-                        {mod.priceDifference !== 0 && (
-                          <p className={`text-sm ${mod.priceDifference > 0 ? "text-red-600" : "text-green-600"}`}>
-                            {mod.priceDifference > 0 ? "+" : ""}{formatCurrency(mod.priceDifference)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Original booking */}
-                  <div className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-foreground">Original Booking</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(reservation.createdAt)}
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Reservation created
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Name</p>
+                      <p className="font-medium text-foreground">
+                        {reservation.guestFirstName} {reservation.guestLastName}
                       </p>
                     </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium text-foreground break-all">{reservation.guestEmail}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      <p className="font-medium text-foreground">{reservation.guestPhone}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Cancellation policy */}
+                {(isUpcoming || isActive) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        Cancellation Policy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Badge
+                        variant="outline"
+                        className={
+                          reservation.location.cancellationPolicy?.type === "free"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : reservation.location.cancellationPolicy?.type === "partial"
+                              ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                              : "bg-red-50 text-red-700 border-red-200"
+                        }
+                      >
+                        {reservation.location.cancellationPolicy?.type === "free"
+                          ? "Free Cancellation"
+                          : reservation.location.cancellationPolicy?.type === "partial"
+                            ? "Partial Refund"
+                            : "Non-refundable"}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        {reservation.location.cancellationPolicy?.description || "Refer to terminal instructions for cancellation details."}
+                      </p>
+                      {reservation.cancellationEligibility?.eligible && (
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <p className="text-sm font-medium text-green-800">
+                            Eligible refund: {formatCurrency(reservation.cancellationEligibility.refundAmount)}
+                          </p>
+                          <p className="text-xs text-green-700 mt-1">
+                            Cancel before {formatDate(reservation.cancellationEligibility.deadline)}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Support Status Card */}
+                {(supportStatus.disputes.length > 0 || supportStatus.refunds.length > 0) && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        Support & Refunds
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                      {supportStatus.disputes.map((d: any) => (
+                        <div key={d.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">{d.status}</Badge>
+                            <span className="text-muted-foreground">{new Date(d.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="font-medium line-clamp-1">{d.subject}</p>
+                        </div>
+                      ))}
+                      {supportStatus.refunds.map((r: any) => (
+                        <div key={r.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <Badge variant="secondary" className="text-[10px] h-4 px-1">{r.status}</Badge>
+                            <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="font-semibold text-primary">{formatCurrency(r.amount)}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Location Contact */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Need Help?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start bg-transparent"
+                      onClick={handleCallLocation}
+                    >
+                      <Phone className="w-4 h-4 mr-3" />
+                      Call Location
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start bg-transparent"
+                      onClick={handleContactSupport}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-3" />
+                      Get Help
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="directions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Navigation className="w-5 h-5" />
+                  Getting There
+                </CardTitle>
+                <CardDescription>{reservation.location.address}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-64 bg-muted rounded-lg overflow-hidden">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${reservation.location.latitude},${reservation.location.longitude}&z=15&output=embed`}
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={handleOpenMaps}>
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Open in Maps
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                  <Button variant="outline" onClick={handleCallLocation}>
+                    <Phone className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Driving Directions</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>1. Take the airport exit from the highway</p>
+                    <p>2. Follow signs for "Airport Parking"</p>
+                    <p>3. Turn right at the second traffic light</p>
+                    <p>4. The parking facility is on your left</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-        )}
 
-        {isPast && (
-          <TabsContent value="review" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5" />
-                  Leave a Review
-                </CardTitle>
-                <CardDescription>Share your experience with other travelers</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {hasSubmittedReview ? (
-                  <div className="py-8 text-center space-y-4">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
-                      <CheckCircle2 className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Review Submitted!</h3>
-                      <p className="text-muted-foreground">Thank you for your feedback. It helps our community of travelers.</p>
-                    </div>
-                    <Button variant="outline" onClick={() => setHasSubmittedReview(false)}>
-                      Write another review
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-muted-foreground">Your rating:</p>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button 
-                            key={star} 
-                            type="button"
-                            onClick={() => setReviewRating(star)}
-                            className="p-1 hover:scale-110 transition-transform focus:outline-none"
-                          >
-                            <Star 
-                              className={`w-8 h-8 ${
-                                star <= reviewRating 
-                                  ? "text-amber-400 fill-amber-400" 
-                                  : "text-muted-foreground hover:text-amber-400"
-                              }`} 
-                            />
-                          </button>
-                        ))}
+          {(reservation.modificationHistory || []).length > 0 && (
+            <TabsContent value="history" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="w-5 h-5" />
+                    Modification History
+                  </CardTitle>
+                  <CardDescription>Changes made to this reservation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(reservation.modificationHistory || []).map((mod: any, index: number) => (
+                      <div key={mod.id} className="flex gap-4">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          {index < (reservation.modificationHistory || []).length - 1 && (
+                            <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-4">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-foreground capitalize">
+                              {mod.type.replace("_", " ")}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(mod.createdAt)}
+                            </p>
+                          </div>
+                          {mod.priceDifference !== 0 && (
+                            <p className={`text-sm ${mod.priceDifference > 0 ? "text-red-600" : "text-green-600"}`}>
+                              {mod.priceDifference > 0 ? "+" : ""}{formatCurrency(mod.priceDifference)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Original booking */}
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-foreground">Original Booking</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(reservation.createdAt)}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Reservation created
+                        </p>
                       </div>
                     </div>
-                    <div>
-                      <Label htmlFor="review-title">Review Title</Label>
-                      <Input
-                        id="review-title"
-                        value={reviewTitle}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReviewTitle(e.target.value)}
-                        className="w-full mt-1"
-                        placeholder="Summarize your experience"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="review-content">Your Review</Label>
-                      <Textarea
-                        id="review-content"
-                        value={reviewContent}
-                        onChange={(e) => setReviewContent(e.target.value)}
-                        className="mt-1"
-                        rows={4}
-                        placeholder="Tell others about your parking experience..."
-                      />
-                    </div>
-                    <Button 
-                      onClick={handleSubmitReview} 
-                      disabled={isSubmittingReview || reviewRating === 0}
-                    >
-                      {isSubmittingReview ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        "Submit Review"
-                      )}
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-      <SupportDialogs 
+          {isPast && (
+            <TabsContent value="review" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="w-5 h-5" />
+                    Leave a Review
+                  </CardTitle>
+                  <CardDescription>Share your experience with other travelers</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {hasSubmittedReview ? (
+                    <div className="py-8 text-center space-y-4">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+                        <CheckCircle2 className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Review Submitted!</h3>
+                        <p className="text-muted-foreground">Thank you for your feedback. It helps our community of travelers.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => setHasSubmittedReview(false)}>
+                        Write another review
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground">Your rating:</p>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                            >
+                              <Star
+                                className={`w-8 h-8 ${star <= reviewRating
+                                  ? "text-amber-400 fill-amber-400"
+                                  : "text-muted-foreground hover:text-amber-400"
+                                  }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="review-title">Review Title</Label>
+                        <Input
+                          id="review-title"
+                          value={reviewTitle}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReviewTitle(e.target.value)}
+                          className="w-full mt-1"
+                          placeholder="Summarize your experience"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="review-content">Your Review</Label>
+                        <Textarea
+                          id="review-content"
+                          value={reviewContent}
+                          onChange={(e) => setReviewContent(e.target.value)}
+                          className="mt-1"
+                          rows={4}
+                          placeholder="Tell others about your parking experience..."
+                        />
+                      </div>
+                      <Button
+                        onClick={handleSubmitReview}
+                        disabled={isSubmittingReview || reviewRating === 0}
+                      >
+                        {isSubmittingReview ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          "Submit Review"
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+
+        <SupportDialogs
           bookingId={reservation.id}
           totalPrice={reservation.totalPrice}
           isOpen={showSupportDialog}
           onClose={async () => {
-              setShowSupportDialog(false);
-              // Refresh status
-              const res = await getBookingSupportStatus(id);
-              if (res.success) {
-                  setSupportStatus({
-                      disputes: res.disputes || [],
-                      refunds: res.refunds || []
-                  });
-              }
+            setShowSupportDialog(false);
+            // Refresh status
+            const res = await getBookingSupportStatus(id);
+            if (res.success) {
+              setSupportStatus({
+                disputes: res.disputes || [],
+                refunds: res.refunds || []
+              });
+            }
           }}
           defaultType={supportType}
           customerEmail={reservation.user?.email || ""}
           customerName={`${reservation.user?.firstName || ""} ${reservation.user?.lastName || ""}`.trim()}
-      />
+        />
       </div>
 
       {/* Cancel Dialog */}
@@ -1172,14 +1172,14 @@ export default function ReservationDetailPage({
             <div className="space-y-2">
               <Label htmlFor="share-email">Email Address</Label>
               <div className="flex gap-2">
-                <Input 
-                  id="share-email" 
-                  placeholder="friend@example.com" 
+                <Input
+                  id="share-email"
+                  placeholder="friend@example.com"
                   value={shareEmail}
                   onChange={(e) => setShareEmail(e.target.value)}
                 />
-                <Button 
-                  onClick={handleShareEmail} 
+                <Button
+                  onClick={handleShareEmail}
                   disabled={isSendingEmail || !shareEmail}
                 >
                   {isSendingEmail ? (

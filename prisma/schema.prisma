@@ -552,32 +552,36 @@ enum DisputePriority {
 }
 
 model BookingRequest {
-  id               String               @id @default(cuid())
-  customerId       String?
-  customerName     String
-  customerPhone    String?
-  vehiclePlate     String
-  vehicleType      String
-  parkingId        String
-  parkingName      String
-  spotNumber       String?
-  requestType      RequestType
+  id                String                 @id @default(cuid())
+  customerId        String?
+  customerName      String
+  customerEmail     String?
+  customerPhone     String?
+  vehiclePlate      String
+  vehicleType       String
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleColor      String?
+  parkingId         String
+  parkingName       String
+  spotNumber        String?
+  requestType       BookingRequestType     @default(WALK_IN)
   originalBookingId String?
-  requestedStart   DateTime
-  requestedEnd     DateTime
-  estimatedAmount  Float
-  status           BookingRequestStatus @default(PENDING)
-  priority         String               @default("normal")
-  notes            String?
-  requestedById    String
-  requestedBy      User                 @relation("RequestedBy", fields: [requestedById], references: [id])
-  requestedAt      DateTime             @default(now())
-  processedById    String?
-  processedBy      User?                @relation("ProcessedBy", fields: [processedById], references: [id])
-  processedAt      DateTime?
-  rejectionReason  String?
-  bookingId        String?              @unique
-  location         ParkingLocation      @relation(fields: [parkingId], references: [id])
+  requestedStart    DateTime
+  requestedEnd      DateTime
+  estimatedAmount   Float
+  status            BookingRequestStatus   @default(PENDING)
+  priority          BookingRequestPriority @default(NORMAL)
+  notes             String?
+  rejectionReason   String?
+  requestedById     String
+  requestedBy       User                   @relation("RequestedBy", fields: [requestedById], references: [id])
+  requestedAt       DateTime               @default(now())
+  processedById     String?
+  processedBy       User?                  @relation("ProcessedBy", fields: [processedById], references: [id])
+  processedAt       DateTime?
+  bookingId         String?                @unique
+  location          ParkingLocation        @relation(fields: [parkingId], references: [id])
 
   @@index([parkingId])
   @@index([requestedById])
@@ -591,11 +595,16 @@ enum BookingRequestStatus {
   CANCELLED
 }
 
-enum RequestType {
+enum BookingRequestType {
   WALK_IN
   EXTENSION
   MODIFICATION
   EARLY_CHECKOUT
+}
+
+enum BookingRequestPriority {
+  NORMAL
+  URGENT
 }
 
 model SupportTicket {

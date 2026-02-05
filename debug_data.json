@@ -1,0 +1,39 @@
+{
+  "locs": [
+    {
+      "id": "cml68fmmh0004u1e44c9lqfyi",
+      "name": "JFK Airport Long Term Parking",
+      "ownerId": "cml68fmlz0002u1e4b5n2k1qo"
+    }
+  ],
+  "reqs": [
+    {
+      "id": "cml6bqv2b0001u1p8gvgs17bd",
+      "parkingId": "cml68fmmh0004u1e44c9lqfyi",
+      "status": "PENDING",
+      "customerName": "Amit"
+    },
+    {
+      "id": "cml6c1agx0003u1p8jyzqak73",
+      "parkingId": "cml68fmmh0004u1e44c9lqfyi",
+      "status": "PENDING",
+      "customerName": "Smit"
+    },
+    {
+      "id": "cml6eoo0z0005u1p8l7ceyosm",
+      "parkingId": "cml68fmmh0004u1e44c9lqfyi",
+      "status": "PENDING",
+      "customerName": "Vihaan"
+    }
+  ],
+  "owners": [
+    {
+      "id": "cml68fmlz0002u1e4b5n2k1qo",
+      "userId": "cml6833ve0000u1bwj8lqmwhi"
+    },
+    {
+      "id": "cml6ch6ur0001u1wcw485nw6u",
+      "userId": "cml68u8cq0000u1m8wzu6tvbo"
+    }
+  ]
+}

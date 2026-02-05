@@ -1,0 +1,824 @@
+﻿node.exe : 
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+At C:\Program 
+Files\nodejs\npx.ps1:29 
+char:3
++   & $NODE_EXE $NPX_CLI_JS 
+$args
++   ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([base  
+  line-brows...ping@lates   
+ t -D`:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+   Γû▓ Next.js 16.0.10 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] 
+The data in this module is 
+over two months old.  To 
+ensure accurate Baseline 
+data, please update: `npm i 
+baseline-browser-mapping@lat
+est -D`
+
+> Build error occurred
+Error: Turbopack build 
+failed with 4 errors:
+./app/api/user/avatar/route.
+js:5:31
+Parsing ecmascript source 
+code failed
+[0m [90m 3 |[39m 
+[36mimport[39m { prisma } 
+[36mfrom[39m [32m"@/lib/p
+risma"[39m[33m;[39m
+ [90m 4 |[39m
+[31m[1m>[22m[39m[90m 5 
+|[39m [36mexport[39m 
+[36masync[39m 
+[36mfunction[39m [33mPOST
+[39m(req[33m:[39m 
+[33mRequest[39m) {
+ [90m   |[39m             
+                  
+[31m[1m^[22m[39m
+ [90m 6 |[39m   
+[36mconst[39m formData 
+[33m=[39m [36mawait[39m 
+req[33m.[39mformData()[33
+m;[39m
+ [90m 7 |[39m   
+[36mconst[39m file 
+[33m=[39m formData[33m.[
+39m[36mget[39m([32m"avata
+r"[39m) [36mas[39m 
+[33mFile[39m[33m;[39m
+ [90m 8 |[39m   
+[36mconst[39m userId 
+[33m=[39m formData[33m.[
+39m[36mget[39m([32m"userI
+d"[39m) [36mas[39m 
+string[33m;[39m[0m
+
+Expected ',', got ':'
+
+
+./lib/workflow/engine.ts:56:
+34
+Parsing ecmascript source 
+code failed
+[0m [90m  54 |[39m       
+      [36mconst[39m 
+handler [33m=[39m [36mthi
+s[39m[33m.[39mmodules[33
+m.[39m[36mget[39m(step[3
+3m.[39mmodule)[33m;[39m
+ [90m  55 |[39m           
+  [36mif[39m 
+([33m![39mhandler) {
+[31m[1m>[22m[39m[90m  
+56 |[39m                 
+[36mthrow[39m 
+[36mnew[39m [33mError[39
+m([37m[41m[1m\[22m[49m
+[39m[32m`Module 
+'\${step.module}' not 
+found\`);[39m
+ [90m     |[39m           
+                       [31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+57 |[39m [32m      }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+58 |[39m [32m[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+59 |[39m [32m      // 
+Resolve inputs (simple 
+variable substitution)[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+60 |[39m [32m      const 
+resolvedInputs = this.resolv
+eInputs(step.inputs || {}, 
+context);[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+61 |[39m [32m      [39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+62 |[39m [32m      const 
+{ output } = await 
+handler(resolvedInputs, 
+context);[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+63 |[39m [32m      [39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+64 |[39m [32m      
+result.output = output;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+65 |[39m [32m      
+result.status = 
+'COMPLETED';[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+66 |[39m [32m    } catch 
+(error: any) {[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+67 |[39m [32m      
+result.status = 
+'FAILED';[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+68 |[39m [32m      
+result.error = 
+error.message || 
+String(error);[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+69 |[39m [32m      
+result.logs.push(\`Error: 
+\${result.error}\`);[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+70 |[39m [32m    } 
+finally {[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+71 |[39m [32m      
+result.endTime = 
+Date.now();[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+72 |[39m [32m    }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+73 |[39m [32m[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+74 |[39m [32m    return 
+result;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+75 |[39m [32m  }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+76 |[39m [32m[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+77 |[39m [32m  // Simple 
+helper to replace 
+{{stepId.output.key}} with 
+actual values[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+78 |[39m [32m  private 
+resolveInputs(inputs: 
+Record<string, any>, 
+context: ExecutionContext): 
+any {[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+79 |[39m [32m    const 
+resolved: any = {};[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+80 |[39m [32m    for 
+(const [key, value] of 
+Object.entries(inputs)) 
+{[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+81 |[39m [32m      if 
+(typeof value === 'string' 
+&& value.startsWith('{{') 
+&& value.endsWith('}}')) 
+{[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+82 |[39m [32m        
+const path = value.slice(2, 
+-2).trim(); // e.g. 
+"step1.output.id"[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+83 |[39m [32m        
+resolved[key] = 
+this.getValueByPath(path, 
+context);[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+84 |[39m [32m      } else 
+{[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+85 |[39m [32m        
+resolved[key] = value;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+86 |[39m [32m      }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+87 |[39m [32m    }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+88 |[39m [32m    return 
+resolved;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+89 |[39m [32m  }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+90 |[39m [32m[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+91 |[39m [32m  private 
+getValueByPath(path: 
+string, context: 
+ExecutionContext): any 
+{[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+92 |[39m [32m    // Check 
+initial data[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+93 |[39m [32m    if (path.
+startsWith('initial.')) 
+{[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+94 |[39m [32m      return 
+context.initialData?.[path.s
+plit('.')[1]];[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+95 |[39m [32m    }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+96 |[39m [32m    [39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+97 |[39m [32m    const 
+parts = path.split('.'); // 
+[stepId, 'output', key][39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+98 |[39m [32m    const 
+stepResult = context.steps[p
+arts[0]];[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  
+99 |[39m [32m    if 
+(!stepResult?.output) 
+return null;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 
+100 |[39m [32m    [39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 
+101 |[39m [32m    return 
+stepResult.output[parts[2]] 
+|| stepResult.output;[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 
+102 |[39m [32m  }[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 
+103 |[39m [32m}[39m
+ [90m     |[39m [31m[1m^
+[22m[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m[
+31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 
+104 |[39m [32m[39m
+ [90m     |[39m 
+[31m[1m^[22m[39m[0m
+
+Unterminated template
+
+Import trace:
+  App Route:
+    ./lib/workflow/engine.ts
+    ./app/api/workflows/[id]
+/execute/route.ts
+
+
+./app/demo/page.tsx:6:1
+Export DEMO_ACCOUNTS 
+doesn't exist in target 
+module
+[0m [90m 4 |[39m 
+[36mimport[39m { 
+useRouter } [36mfrom[39m 
+[32m"next/navigation"[39m[
+33m;[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+[33mLink[39m 
+[36mfrom[39m [32m"next/li
+nk"[39m[33m;[39m
+[31m[1m>[22m[39m[90m 6 
+|[39m [36mimport[39m { 
+useAuth[33m,[39m 
+[33mDEMO_ACCOUNTS[39m } 
+[36mfrom[39m [32m"@/lib/a
+uth-context"[39m[33m;[39m
+ [90m   |[39m [31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m
+ [90m 7 |[39m 
+[36mimport[39m { 
+[33mButton[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/button"[39m[33m;
+[39m
+ [90m 8 |[39m 
+[36mimport[39m { 
+[33mCard[39m[33m,[39m [
+33mCardContent[39m[33m,[3
+9m [33mCardDescription[39m
+[33m,[39m [33mCardFooter
+[39m[33m,[39m [33mCardHea
+der[39m[33m,[39m 
+[33mCardTitle[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/card"[39m[33m;[3
+9m
+ [90m 9 |[39m 
+[36mimport[39m { 
+[33mBadge[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/badge"[39m[33m;[
+39m[0m
+
+The export DEMO_ACCOUNTS 
+was not found in module [pro
+ject]/lib/auth-context.tsx 
+[app-client] (ecmascript).
+Did you mean to import 
+getDashboardUrlForRole?
+All exports of the module 
+are statically known (It 
+doesn't have dynamic 
+exports). So it's known 
+statically that the 
+requested export doesn't 
+exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/demo/page.tsx 
+[Client Component Browser]
+    ./app/demo/page.tsx 
+[Server Component]
+
+  Client Component SSR:
+    ./app/demo/page.tsx 
+[Client Component SSR]
+    ./app/demo/page.tsx 
+[Server Component]
+
+
+./app/demo/page.tsx:6:1
+Export DEMO_ACCOUNTS 
+doesn't exist in target 
+module
+[0m [90m 4 |[39m 
+[36mimport[39m { 
+useRouter } [36mfrom[39m 
+[32m"next/navigation"[39m[
+33m;[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+[33mLink[39m 
+[36mfrom[39m [32m"next/li
+nk"[39m[33m;[39m
+[31m[1m>[22m[39m[90m 6 
+|[39m [36mimport[39m { 
+useAuth[33m,[39m 
+[33mDEMO_ACCOUNTS[39m } 
+[36mfrom[39m [32m"@/lib/a
+uth-context"[39m[33m;[39m
+ [90m   |[39m [31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[1
+m^[22m[39m
+ [90m 7 |[39m 
+[36mimport[39m { 
+[33mButton[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/button"[39m[33m;
+[39m
+ [90m 8 |[39m 
+[36mimport[39m { 
+[33mCard[39m[33m,[39m [
+33mCardContent[39m[33m,[3
+9m [33mCardDescription[39m
+[33m,[39m [33mCardFooter
+[39m[33m,[39m [33mCardHea
+der[39m[33m,[39m 
+[33mCardTitle[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/card"[39m[33m;[3
+9m
+ [90m 9 |[39m 
+[36mimport[39m { 
+[33mBadge[39m } 
+[36mfrom[39m [32m"@/compo
+nents/ui/badge"[39m[33m;[
+39m[0m
+
+The export DEMO_ACCOUNTS 
+was not found in module [pro
+ject]/lib/auth-context.tsx 
+[app-ssr] (ecmascript).
+Did you mean to import 
+getDashboardUrlForRole?
+All exports of the module 
+are statically known (It 
+doesn't have dynamic 
+exports). So it's known 
+statically that the 
+requested export doesn't 
+exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/demo/page.tsx 
+[Client Component Browser]
+    ./app/demo/page.tsx 
+[Server Component]
+
+  Client Component SSR:
+    ./app/demo/page.tsx 
+[Client Component SSR]
+    ./app/demo/page.tsx 
+[Server Component]
+
+
+    at <unknown> (./app/api/
+user/avatar/route.js:5:31)
+    at <unknown> (./lib/work
+flow/engine.ts:56:34)
+    at <unknown> 
+(./app/demo/page.tsx:6:1)
+    at <unknown> 
+(./app/demo/page.tsx:6:1)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
@@ -98,6 +98,33 @@ export const DEMO_ACCOUNTS = {
 };
 
 const AUTH_STORAGE_KEY = "parkease_auth";
+
+export const DEMO_ACCOUNTS = {
+  customer: {
+    email: "customer@example.com",
+    password: "password123",
+    dashboardUrl: "/account",
+    description: "Search and book parking spots, manage your vehicles and reservations.",
+  },
+  owner: {
+    email: "owner@example.com",
+    password: "password123",
+    dashboardUrl: "/owner",
+    description: "Manage your parking locations, watchmen staff, and track earnings.",
+  },
+  watchman: {
+    email: "watchman@example.com",
+    password: "password123",
+    dashboardUrl: "/watchman",
+    description: "Scan QR codes, manage vehicle check-ins and check-outs at locations.",
+  },
+  admin: {
+    email: "admin@example.com",
+    password: "password123",
+    dashboardUrl: "/admin",
+    description: "Full platform oversight, user management, and system-wide analytics.",
+  },
+};
 
 /* =======================
    HELPERS

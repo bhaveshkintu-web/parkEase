@@ -2,71 +2,71 @@
 export type StepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
 
 export interface WorkflowStep {
-    id: string;
-    module: string; // Name of the registered module
-    name?: string;
-    inputs?: Record<string, any>; // Static inputs or dynamic references like "{{step1.output.id}}"
-    next?: string | Record<string, string>; // ID of next step or conditional map
+  id: string;
+  module: string; // Name of the registered module
+  name?: string;
+  inputs?: Record<string, any>; // Static inputs or dynamic references like "{{step1.output.id}}"
+  next?: string | Record<string, string>; // ID of next step or conditional map
 }
 
 export interface StepResult {
-    stepId: string;
-    status: StepStatus;
-    output?: any;
-    error?: string;
-    startTime: number;
-    endTime?: number;
-    logs: string[];
+  stepId: string;
+  status: StepStatus;
+  output?: any;
+  error?: string;
+  startTime: number;
+  endTime?: number;
+  logs: string[];
 }
 
 export interface ExecutionContext {
-    workflowId: string;
-    executionId: string;
-    initialData: any;
-    steps: Record<string, StepResult>; // Results of previous steps
+  workflowId: string;
+  executionId: string;
+  initialData: any;
+  steps: Record<string, StepResult>; // Results of previous steps
 }
 
 export type ModuleHandler = (
-    inputs: any,
-    context: ExecutionContext
+  inputs: any,
+  context: ExecutionContext
 ) => Promise<{ output?: any; nextStep?: string }>;
 
 export class WorkflowEngine {
-    private modules: Map<string, ModuleHandler> = new Map();
+  private modules: Map<string, ModuleHandler> = new Map();
 
-    registerModule(name: string, handler: ModuleHandler) {
-        this.modules.set(name, handler);
-    }
+  registerModule(name: string, handler: ModuleHandler) {
+    this.modules.set(name, handler);
+  }
 
-    async executeStep(
-        step: WorkflowStep,
-        context: ExecutionContext
-    ): Promise<StepResult> {
-        const startTime = Date.now();
-        const result: StepResult = {
-            stepId: step.id,
-            status: 'RUNNING',
-            startTime,
-            logs: [],
-        };
+  async executeStep(
+    step: WorkflowStep,
+    context: ExecutionContext
+  ): Promise<StepResult> {
+    const startTime = Date.now();
+    const result: StepResult = {
+      stepId: step.id,
+      status: 'RUNNING',
+      startTime,
+      logs: [],
+    };
 
-        try {
-            const handler = this.modules.get(step.module);
-            if (!handler) {
-                throw new Error(\`Module '\${step.module}' not found\`);
+    try {
+      const handler = this.modules.get(step.module);
+      if (!handler) {
+        throw new Error(`Module '${step.module}' not found`);
       }
 
       // Resolve inputs (simple variable substitution)
       const resolvedInputs = this.resolveInputs(step.inputs || {}, context);
-      
+
       const { output } = await handler(resolvedInputs, context);
-      
+
       result.output = output;
       result.status = 'COMPLETED';
     } catch (error: any) {
       result.status = 'FAILED';
       result.error = error.message || String(error);
-      result.logs.push(\`Error: \${result.error}\`);
+      result.logs.push(`Error: ${result.error}`);
     } finally {
       result.endTime = Date.now();
     }
@@ -93,11 +93,11 @@ export class WorkflowEngine {
     if (path.startsWith('initial.')) {
       return context.initialData?.[path.split('.')[1]];
     }
-    
+
     const parts = path.split('.'); // [stepId, 'output', key]
     const stepResult = context.steps[parts[0]];
     if (!stepResult?.output) return null;
-    
+
     return stepResult.output[parts[2]] || stepResult.output;
   }
 }

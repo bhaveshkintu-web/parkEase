@@ -51,6 +51,7 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const fees = 2.99; // Service fee
   const totalPrice = basePrice + taxes + fees;
 
+
   const originalPrice = location.originalPrice || location.pricePerDay;
   const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
 
@@ -71,39 +72,51 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return "N/A";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (isNaN(d.getTime())) return "N/A";
+export function formatDate(date: Date | string | number | null | undefined): string {
+  if (date === null || date === undefined) return "N/A";
+  try {
+    const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Date";
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(d);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "Invalid Date";
+  }
 }
 
-export function formatDateShort(date: Date | string | null | undefined): string {
-  if (!date) return "N/A";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (isNaN(d.getTime())) return "N/A";
+export function formatDateShort(date: Date | string | number | null | undefined): string {
+  if (date === null || date === undefined) return "N/A";
+  try {
+    const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Date";
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(d);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "Invalid Date";
+  }
 }
 
-export function formatTime(date: Date | string | null | undefined): string {
-  if (!date) return "N/A";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (isNaN(d.getTime())) return "N/A";
+export function formatTime(date: Date | string | number | null | undefined): string {
+  if (date === null || date === undefined) return "N/A";
+  try {
+    const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "Invalid Time";
 
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(d);
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(d);
+  } catch (e) {
+    return "Invalid Time";
+  }
 }
 
 export function generateConfirmationCode(): string {

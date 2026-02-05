@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import Loading from "./loading"; // Import the Loading component
+import Loading from "./loading";
 import {
   Car,
   Clock,
@@ -26,33 +25,32 @@ import {
 import { RequestDialog } from "@/components/watchman/request-dialog";
 
 export default function WatchmanSessionsPage() {
-  const { fetchBookingRequests } = useDataStore();
   const { toast } = useToast();
-  
+
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
-  
+
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
-  
-  const searchParams = useSearchParams();
 
   const fetchSessions = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const statusParam = activeTab === "all" ? "" : `?status=${activeTab}`;
-      const res = await fetch(`/api/watchman/sessions${statusParam}`);
+      // Always fetch all sessions to keep stats cards accurate
+      const res = await fetch(`/api/watchman/sessions`);
       if (res.ok) {
         const data = await res.json();
-        setSessions(data);
+        // Handle both structure formats (array or object with sessions property)
+        setSessions(Array.isArray(data) ? data : (data.sessions || []));
       }
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     fetchSessions();
@@ -65,7 +63,7 @@ export default function WatchmanSessionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action })
       });
-      
+
       if (res.ok) {
         toast({
           title: "Success",
@@ -73,24 +71,17 @@ export default function WatchmanSessionsPage() {
         });
         fetchSessions();
       } else {
-        throw new Error("Failed to update session");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Failed to update session");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update session status.",
+        description: error.message || "Failed to update session status.",
         variant: "destructive"
       });
     }
   };
-
-  const searchedSessions = search
-    ? sessions.filter(
-        (s) =>
-          s.booking.vehiclePlate.toLowerCase().includes(search.toLowerCase()) ||
-          s.bookingId.toLowerCase().includes(search.toLowerCase())
-      )
-    : sessions;
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -122,8 +113,22 @@ export default function WatchmanSessionsPage() {
     }
   };
 
+  const searchedSessions = sessions.filter((s) => {
+    // 1. Status Filter (Tab)
+    const matchesTab = activeTab === "all" || s.status === activeTab;
+    if (!matchesTab) return false;
+
+    // 2. Search Filter
+    if (!search) return true;
+
+    const plate = s.booking?.vehiclePlate || s.vehiclePlate || "";
+    const bookingId = s.bookingId || "";
+    return plate.toLowerCase().includes(search.toLowerCase()) ||
+      bookingId.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
-    <Suspense fallback={<Loading />}> {/* Wrap the component in a Suspense boundary */}
+    <Suspense fallback={<Loading />}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -214,39 +219,38 @@ export default function WatchmanSessionsPage() {
                 </div>
               ) : (
                 searchedSessions.map((session) => {
-                  const booking = session.booking;
+                  const booking = session.booking || {};
+
                   return (
                     <div
                       key={session.id}
-                      className={`p-4 border rounded-lg ${
-                        session.status === "overstay" ? "border-red-200 bg-red-50/50" : ""
-                      }`}
+                      className={`p-4 border rounded-lg ${session.status === "overstay" ? "border-red-200 bg-red-50/50" : ""
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              session.status === "checked_in"
-                                ? "bg-green-100"
-                                : session.status === "overstay"
+                            className={`w-12 h-12 rounded-full flex items-center justify-center ${session.status === "checked_in"
+                              ? "bg-green-100"
+                              : session.status === "overstay"
                                 ? "bg-red-100"
                                 : session.status === "pending"
-                                ? "bg-amber-100"
-                                : "bg-blue-100"
-                            }`}
+                                  ? "bg-amber-100"
+                                  : "bg-blue-100"
+                              }`}
                           >
                             {getStatusIcon(session.status)}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-foreground">{session.booking.vehiclePlate}</p>
+                              <p className="font-bold text-foreground">{booking.vehiclePlate || session.vehiclePlate}</p>
                               <StatusBadge
                                 status={session.status.replace("_", " ")}
                                 variant={getStatusVariant(session.status)}
                               />
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {session.booking.vehicleType} - Booking #{session.bookingId.slice(-6)}
+                              {booking.vehicleType || session.vehicleType} - Booking #{session.bookingId.slice(-6)}
                             </p>
                           </div>
                         </div>
@@ -266,7 +270,7 @@ export default function WatchmanSessionsPage() {
                               <span className="font-medium">{formatTime(session.checkOutTime)}</span>
                             </div>
                           )}
-                          {booking && !session.checkInTime && (
+                          {booking.checkIn && !session.checkInTime && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4 text-amber-600" />
                               <span className="text-muted-foreground">Expected:</span>
@@ -280,8 +284,8 @@ export default function WatchmanSessionsPage() {
                       {(session.status === "pending" || session.status === "checked_in" || session.status === "overstay") && (
                         <div className="flex gap-2 mt-3 pt-3 border-t">
                           {session.status === "pending" && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
                               onClick={() => handleAction(session.id, "check-in")}
                             >
@@ -293,11 +297,10 @@ export default function WatchmanSessionsPage() {
                             <div className="flex flex-1 gap-2">
                               <Button
                                 size="sm"
-                                className={`flex-1 sm:flex-none ${
-                                  session.status === "overstay"
-                                    ? "bg-red-600 hover:bg-red-700"
-                                    : "bg-blue-600 hover:bg-blue-700"
-                                }`}
+                                className={`flex-1 sm:flex-none ${session.status === "overstay"
+                                  ? "bg-red-600 hover:bg-red-700"
+                                  : "bg-blue-600 hover:bg-blue-700"
+                                  }`}
                                 onClick={() => handleAction(session.id, "check-out")}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
@@ -308,8 +311,8 @@ export default function WatchmanSessionsPage() {
                                 size="sm"
                                 className="flex-1 sm:flex-none"
                                 onClick={() => {
-                                   setSelectedSession(session);
-                                   setIsRequestOpen(true);
+                                  setSelectedSession(session);
+                                  setIsRequestOpen(true);
                                 }}
                               >
                                 <Timer className="w-4 h-4 mr-2" />
@@ -341,8 +344,8 @@ export default function WatchmanSessionsPage() {
             onOpenChange={setIsRequestOpen}
             initialData={{
               customerName: "Current Customer",
-              vehiclePlate: selectedSession.booking.vehiclePlate,
-              vehicleType: selectedSession.booking.vehicleType,
+              vehiclePlate: selectedSession.booking?.vehiclePlate || selectedSession.vehiclePlate,
+              vehicleType: selectedSession.booking?.vehicleType || selectedSession.vehicleType,
               parkingId: selectedSession.locationId,
               requestType: "EXTENSION",
               originalBookingId: selectedSession.bookingId
