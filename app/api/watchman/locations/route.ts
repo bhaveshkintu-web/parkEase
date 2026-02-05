@@ -17,6 +17,7 @@ export async function GET() {
         });
 
         if (!watchman) {
+            console.error(`Watchman profile not found for user ${session.user.id}`);
             return NextResponse.json({ error: "Watchman profile not found" }, { status: 404 });
         }
 
