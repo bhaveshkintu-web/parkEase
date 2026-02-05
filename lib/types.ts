@@ -487,6 +487,10 @@ export interface OwnerReply {
 // Admin Review Types
 export interface AdminReview extends Review {
   status: "pending" | "approved" | "rejected" | "flagged";
+  locationName?: string;
+  airportCode?: string;
+  ownerId?: string;
+  ownerName?: string;
   flagReason?: string;
   moderatorNotes?: string;
   moderatedBy?: string;

@@ -142,3 +142,53 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || (session.user.role?.toUpperCase() !== "OWNER" && session.user.role?.toUpperCase() !== "ADMIN")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    const ownerProfile = await prisma.ownerProfile.findUnique({
+      where: { userId },
+      include: {
+        locations: {
+          include: {
+            analytics: true
+          }
+        },
+      }
+    });
+
+    if (!ownerProfile) {
+      return NextResponse.json([]);
+    }
+
+    // Map to AdminParkingLocation format expected by frontend
+    const locations = ownerProfile.locations.map(l => ({
+      ...l,
+      airport: l.airportCode || "Unknown",
+      coordinates: { lat: l.latitude || 0, lng: l.longitude || 0 },
+      distance: "N/A",
+      analytics: l.analytics ? {
+        totalBookings: l.analytics.totalBookings,
+        revenue: l.analytics.revenue,
+        averageRating: l.analytics.averageRating,
+        occupancyRate: l.analytics.occupancyRate
+      } : {
+        totalBookings: 0,
+        revenue: 0,
+        averageRating: 0,
+        occupancyRate: 0
+      }
+    }));
+
+    return NextResponse.json(locations);
+  } catch (error) {
+    console.error("[OWNER_LOCATIONS_GET]", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

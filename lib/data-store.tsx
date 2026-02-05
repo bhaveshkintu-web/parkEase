@@ -561,7 +561,7 @@ function generateMockUsers(): User[] {
 function generateMockOwnerProfiles(): OwnerProfile[] {
   const users = generateMockUsers();
   const ownerUsers = users.filter(u => u.role === "owner");
-  
+
   return [
     {
       id: "owner_1",
@@ -759,6 +759,7 @@ interface DataStoreContextType {
 
   // Admin: Reviews
   adminReviews: AdminReview[];
+  setReviewData: (reviews: AdminReview[]) => void;
   moderateReview: (id: string, action: "approve" | "reject" | "flag", notes?: string) => Promise<void>;
   deleteReview: (id: string) => Promise<void>;
   addOwnerReply: (reviewId: string, content: string, ownerId: string, ownerName: string) => Promise<void>;
@@ -799,7 +800,7 @@ interface DataStoreContextType {
   // Admin: Refunds
   refundRequests: RefundRequest[];
   processRefund: (id: string, action: "approve" | "partial" | "reject", amount?: number) => Promise<void>;
-  
+
   // Watchman: Booking Requests
   bookingRequests: WatchmanBookingRequest[];
   fetchBookingRequests: (parkingId?: string) => Promise<void>;
@@ -846,9 +847,9 @@ interface DataStoreContextType {
 
   // Loading states
   isLoading: boolean;
-  initializeForUser: (userId: string) => void;
-  initializeForOwner: (ownerId: string) => void;
-  initializeForWatchman: (watchmanId: string) => void;
+  initializeForUser: (userId: string) => void | Promise<void>;
+  initializeForOwner: (ownerId: string) => void | Promise<void>;
+  initializeForWatchman: (watchmanId: string) => void | Promise<void>;
   currentOwnerProfile: OwnerProfile | null;
 }
 
@@ -878,22 +879,98 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const initializeForUser = useCallback((userId: string) => {
+  const initializeForUser = useCallback(async (userId: string) => {
     if (currentUserId === userId) return;
     setIsLoading(true);
     setCurrentUserId(userId);
-    setVehicles(generateMockVehicles(userId));
-    setPayments(generateMockPayments(userId));
-    setReservations(generateMockReservations(userId));
-    setIsLoading(false);
+    try {
+      setVehicles(generateMockVehicles(userId));
+      setPayments(generateMockPayments(userId));
+
+      const res = await fetch("/api/bookings");
+      if (res.ok) {
+        const bookingsData = await res.json();
+        const formattedBookings = bookingsData.map((b: any) => ({
+          ...b,
+          checkIn: new Date(b.checkIn),
+          checkOut: new Date(b.checkOut),
+          createdAt: new Date(b.createdAt),
+          cancellationEligibility: {
+            ...b.cancellationEligibility,
+            deadline: new Date(b.cancellationEligibility.deadline)
+          }
+        }));
+        setReservations(formattedBookings);
+      } else {
+        setReservations([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user bookings:", error);
+      setReservations([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentUserId]);
 
-  const initializeForOwner = useCallback((ownerId: string) => {
+  const initializeForOwner = useCallback(async (ownerId: string) => {
     setIsLoading(true);
-    setWatchmen(generateMockWatchmen(ownerId));
-    setWallet(generateMockWallet(ownerId));
-    setTransactions(generateMockTransactions(`wallet_${ownerId}`));
-    setIsLoading(false);
+    try {
+      // Fetch Locations
+      const locationsRes = await fetch("/api/owner/locations");
+      if (locationsRes.ok) {
+        const locationsData = await locationsRes.json();
+        setAdminLocations(locationsData);
+      }
+
+      // Fetch Bookings
+      const bookingsRes = await fetch("/api/owner/bookings");
+      if (bookingsRes.ok) {
+        const bookingsData = await bookingsRes.json();
+        // Convert date strings back to Date objects
+        const formattedBookings = bookingsData.map((b: any) => ({
+          ...b,
+          checkIn: new Date(b.checkIn),
+          checkOut: new Date(b.checkOut),
+          createdAt: new Date(b.createdAt),
+          cancellationEligibility: {
+            ...b.cancellationEligibility,
+            deadline: new Date(b.cancellationEligibility.deadline)
+          }
+        }));
+        setReservations(formattedBookings);
+      }
+
+      // Fetch Reviews
+      const reviewsRes = await fetch("/api/owner/reviews");
+      if (reviewsRes.ok) {
+        const reviewsData = await reviewsRes.json();
+        const formattedReviews = reviewsData.map((r: any) => ({
+          ...r,
+          date: new Date(r.date)
+        }));
+        setAdminReviews(formattedReviews);
+      }
+
+      // Fetch Wallet & Transactions
+      const walletRes = await fetch("/api/owner/wallet");
+      if (walletRes.ok) {
+        const walletData = await walletRes.json();
+        setWallet(walletData);
+        if (walletData.transactions) {
+          const formattedTransactions = walletData.transactions.map((t: any) => ({
+            ...t,
+            date: new Date(t.createdAt)
+          }));
+          setTransactions(formattedTransactions);
+        }
+      }
+
+      setWatchmen(generateMockWatchmen(ownerId));
+    } catch (error) {
+      console.error("Failed to initialize owner data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const initializeForWatchman = useCallback((_watchmanId: string) => {
@@ -1010,6 +1087,10 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     return { refundAmount };
   }, []);
 
+  const setReviewData = useCallback((reviews: AdminReview[]) => {
+    setAdminReviews(reviews);
+  }, []);
+
   // Admin review operations
   const moderateReview = useCallback(async (id: string, action: "approve" | "reject" | "flag", notes?: string) => {
     await new Promise((r) => setTimeout(r, 500));
@@ -1017,12 +1098,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
-              moderatorNotes: notes,
-              moderatedAt: new Date(),
-              moderatedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "flagged",
+            moderatorNotes: notes,
+            moderatedAt: new Date(),
+            moderatedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1040,15 +1121,15 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId
           ? {
-              ...review,
-              ownerReply: {
-                id: `reply_${Date.now()}`,
-                content,
-                createdAt: new Date(),
-                ownerId,
-                ownerName,
-              },
-            }
+            ...review,
+            ownerReply: {
+              id: `reply_${Date.now()}`,
+              content,
+              createdAt: new Date(),
+              ownerId,
+              ownerName,
+            },
+          }
           : review
       )
     );
@@ -1060,13 +1141,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((review) =>
         review.id === reviewId && review.ownerReply
           ? {
-              ...review,
-              ownerReply: {
-                ...review.ownerReply,
-                content,
-                updatedAt: new Date(),
-              },
-            }
+            ...review,
+            ownerReply: {
+              ...review.ownerReply,
+              content,
+              updatedAt: new Date(),
+            },
+          }
           : review
       )
     );
@@ -1205,13 +1286,13 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((a) =>
         a.id === id
           ? {
-              ...a,
-              status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
-              reviewNotes: notes,
-              requiredChanges: changes,
-              reviewedAt: new Date(),
-              reviewedBy: currentUserId || undefined,
-            }
+            ...a,
+            status: action === "approve" ? "approved" : action === "reject" ? "rejected" : "requires_changes",
+            reviewNotes: notes,
+            requiredChanges: changes,
+            reviewedAt: new Date(),
+            reviewedBy: currentUserId || undefined,
+          }
           : a
       )
     );
@@ -1224,12 +1305,12 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) =>
         r.id === id
           ? {
-              ...r,
-              status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
-              approvedAmount: action === "reject" ? 0 : amount || r.amount,
-              processedAt: new Date(),
-              processedBy: currentUserId || undefined,
-            }
+            ...r,
+            status: action === "reject" ? "rejected" : action === "partial" ? "partial" : "approved",
+            approvedAmount: action === "reject" ? 0 : amount || r.amount,
+            processedAt: new Date(),
+            processedBy: currentUserId || undefined,
+          }
           : r
       )
     );
@@ -1390,18 +1471,18 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       prev.map((p) =>
         p.id === ownerId
           ? {
-              ...p,
-              documents: p.documents.map((d) =>
-                d.id === documentId
-                  ? {
-                      ...d,
-                      status: action === "verify" ? "verified" : "rejected",
-                      verifiedAt: action === "verify" ? new Date() : undefined,
-                      rejectionReason: action === "reject" ? reason : undefined,
-                    }
-                  : d
-              ),
-            }
+            ...p,
+            documents: p.documents.map((d) =>
+              d.id === documentId
+                ? {
+                  ...d,
+                  status: action === "verify" ? "verified" : "rejected",
+                  verifiedAt: action === "verify" ? new Date() : undefined,
+                  rejectionReason: action === "reject" ? reason : undefined,
+                }
+                : d
+            ),
+          }
           : p
       )
     );
@@ -1460,7 +1541,9 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         addReservation,
         updateReservation,
         cancelReservation,
+        // Admin: Reviews
         adminReviews,
+        setReviewData,
         moderateReview,
         deleteReview,
         addOwnerReply,

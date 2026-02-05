@@ -72,10 +72,10 @@ export default function OwnerBookingsPage() {
 
   // Initialize data
   React.useEffect(() => {
-    if (user?.ownerId) {
-      initializeForOwner(user.ownerId);
+    if (user?.id) {
+      initializeForOwner(user.id);
     }
-  }, [user?.ownerId, initializeForOwner]);
+  }, [user?.id, initializeForOwner]);
 
   // State
   const [activeTab, setActiveTab] = useState("bookings");
@@ -551,11 +551,10 @@ export default function OwnerBookingsPage() {
                                 {[...Array(5)].map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating
+                                    className={`w-4 h-4 ${i < review.rating
                                         ? "text-amber-500 fill-amber-500"
                                         : "text-muted-foreground"
-                                    }`}
+                                      }`}
                                   />
                                 ))}
                               </div>
@@ -746,11 +745,10 @@ export default function OwnerBookingsPage() {
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-3 h-3 ${
-                              i < selectedReview.rating
+                            className={`w-3 h-3 ${i < selectedReview.rating
                                 ? "text-amber-500 fill-amber-500"
                                 : "text-muted-foreground"
-                            }`}
+                              }`}
                           />
                         ))}
                       </div>

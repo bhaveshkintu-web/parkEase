@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import {
   Search,
   Star,
@@ -66,25 +66,23 @@ import type { AdminReview } from "@/lib/types";
 
 const ITEMS_PER_PAGE = 10;
 
-// Mock location mapping
-const locationNames: Record<string, string> = {
-  "1": "LAX Airport Parking",
-  "2": "Downtown Secure Lot",
-  "3": "JFK Premium Parking",
-  "4": "SFO Express Park",
-};
 
 const Loading = () => null;
 
 export default function OwnerReviewsPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { adminReviews, addOwnerReply, updateOwnerReply, deleteOwnerReply } = useDataStore();
+  const { adminReviews, setReviewData, addOwnerReply, updateOwnerReply, deleteOwnerReply } = useDataStore();
+
+  // Explicit filters data
+  const [filterAirports, setFilterAirports] = useState<string[]>([]);
+  const [filterLocations, setFilterLocations] = useState<{ id: string, name: string, airportCode?: string }[]>([]);
 
   // Filters and state
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [replyFilter, setReplyFilter] = useState<string>("all");
+  const [airportFilter, setAirportFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date-desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,6 +95,28 @@ export default function OwnerReviewsPage() {
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch reviews and filters
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("/api/owner/reviews");
+        if (res.ok) {
+          const data = await res.json();
+          // Assuming useDataStore has a way to set bulk data, or we just set it directly if the store doesn't support the full structure yet.
+          // For now, we update the store review data if the method exists.
+          if (setReviewData) {
+            setReviewData(data.reviews);
+          }
+          setFilterLocations(data.locations);
+          setFilterAirports(data.airports);
+        }
+      } catch (error) {
+        console.error("Failed to fetch reviews data", error);
+      }
+    };
+    fetchData();
+  }, [setReviewData]);
 
   // Filter and sort reviews
   const filteredReviews = useMemo(() => {
@@ -123,6 +143,11 @@ export default function OwnerReviewsPage() {
         return false;
       }
       if (replyFilter === "unreplied" && review.ownerReply) {
+        return false;
+      }
+
+      // Airport filter
+      if (airportFilter !== "all" && review.airportCode !== airportFilter) {
         return false;
       }
 
@@ -164,7 +189,7 @@ export default function OwnerReviewsPage() {
     });
 
     return filtered;
-  }, [adminReviews, searchQuery, ratingFilter, replyFilter, locationFilter, sortBy, activeTab]);
+  }, [adminReviews, searchQuery, ratingFilter, replyFilter, locationFilter, sortBy, activeTab, airportFilter]); // Added airportFilter to dependencies
 
   // Pagination
   const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
@@ -185,11 +210,14 @@ export default function OwnerReviewsPage() {
     return { total, avgRating, replied, unreplied, positive, negative };
   }, [adminReviews]);
 
-  // Unique locations for filter
+  // Unique airports and locations for filter
+  const airports = filterAirports;
+
   const locations = useMemo(() => {
-    const uniqueLocations = [...new Set(adminReviews.map((r) => r.locationId))];
-    return uniqueLocations.map((id) => ({ id, name: locationNames[id] || `Location ${id}` }));
-  }, [adminReviews]);
+    return filterLocations.filter(loc =>
+      airportFilter === "all" || loc.airportCode === airportFilter
+    ).map(loc => ({ id: loc.id, name: loc.name }));
+  }, [filterLocations, airportFilter]);
 
   // Handlers
   const handleAddReply = async () => {
@@ -458,8 +486,22 @@ export default function OwnerReviewsPage() {
                   </SelectContent>
                 </Select>
 
+                <Select value={airportFilter} onValueChange={(v) => { setAirportFilter(v); setLocationFilter("all"); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Airport" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Airports</SelectItem>
+                    {airports.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={locationFilter} onValueChange={(v) => { setLocationFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-[180px]">
                     <MapPin className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Location" />
                   </SelectTrigger>
@@ -516,9 +558,8 @@ export default function OwnerReviewsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"
-                              }`}
+                              className={`h-4 w-4 ${i < review.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"
+                                }`}
                             />
                           ))}
                         </div>
@@ -527,7 +568,7 @@ export default function OwnerReviewsPage() {
                         </span>
                         <Badge variant="outline" className="text-xs">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {locationNames[review.locationId] || `Location ${review.locationId}`}
+                          {review.locationName || `Location ${review.locationId}`}
                         </Badge>
                         {!review.ownerReply && (
                           <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
@@ -676,11 +717,10 @@ export default function OwnerReviewsPage() {
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-3 w-3 ${
-                            i < selectedReview.rating
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-gray-300"
-                          }`}
+                          className={`h-3 w-3 ${i < selectedReview.rating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-gray-300"
+                            }`}
                         />
                       ))}
                     </div>
@@ -741,11 +781,10 @@ export default function OwnerReviewsPage() {
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-3 w-3 ${
-                            i < selectedReview.rating
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-gray-300"
-                          }`}
+                          className={`h-3 w-3 ${i < selectedReview.rating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-gray-300"
+                            }`}
                         />
                       ))}
                     </div>
