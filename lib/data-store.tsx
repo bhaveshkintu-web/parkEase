@@ -1416,9 +1416,20 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       let url = "/api/watchman/requests";
       if (parkingId) url += `?parkingId=${parkingId}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch requests");
-      const data = await res.json();
-      setBookingRequests(data);
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error(`Fetch requests failed (${res.status}):`, text.substring(0, 200));
+        return; // Don't throw, just log
+      }
+
+      try {
+        const data = JSON.parse(text);
+        setBookingRequests(data);
+      } catch (parseError) {
+        console.error("Failed to parse booking requests JSON. Response start:", text.substring(0, 100));
+        // Don't re-throw
+      }
     } catch (error) {
       console.error(error);
     }
@@ -1427,9 +1438,20 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   const fetchWatchmanLocations = useCallback(async () => {
     try {
       const res = await fetch("/api/watchman/locations");
-      if (!res.ok) throw new Error("Failed to fetch watchman locations");
-      const data = await res.json();
-      setAdminLocations(data);
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error(`Fetch locations failed (${res.status}):`, text.substring(0, 200));
+        return; // Don't throw
+      }
+
+      try {
+        const data = JSON.parse(text);
+        setAdminLocations(data);
+      } catch (parseError) {
+        console.error("Failed to parse watchman locations JSON. Response start:", text.substring(0, 100));
+        // Don't re-throw
+      }
     } catch (error) {
       console.error(error);
     }

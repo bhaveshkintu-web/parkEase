@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-options";
+import { prisma } from "@/lib/prisma";
+import { startOfDay, endOfDay } from "date-fns";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== "WATCHMAN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 0 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -16,100 +17,67 @@ export async function GET(request: Request) {
       include: { assignedLocations: true }
     });
 
-    if (!watchman) {
-      return NextResponse.json({ error: "Watchman profile not found" }, { status: 404 });
+    if (!watchman || watchman.assignedLocations.length === 0) {
+      return NextResponse.json({
+        stats: { todayCheckIns: 0, todayCheckOuts: 0, pendingArrivals: 0, overstays: 0, pendingRequestsCount: 0 },
+        occupancy: { totalCapacity: 0, totalOccupied: 0, locations: [] },
+        schedule: [],
+        recentActivity: []
+      });
     }
 
-    const parkingIds = watchman.assignedLocations.map(p => p.id);
-
+    const locationIds = watchman.assignedLocations.map(l => l.id);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // 1. Stats
-    const [todayCheckIns, todayCheckOuts, pendingSessions, overstaySessions] = await Promise.all([
+    const [todayCheckIns, todayCheckOuts, pendingSessions, overstaySessions, pendingRequests] = await Promise.all([
       prisma.parkingSession.count({
         where: {
-          locationId: { in: parkingIds },
-          checkInTime: { gte: today, lt: tomorrow }
+          locationId: { in: locationIds },
+          checkInTime: { gte: startOfDay(today), lte: endOfDay(today) }
         }
       }),
       prisma.parkingSession.count({
         where: {
-          locationId: { in: parkingIds },
-          checkOutTime: { gte: today, lt: tomorrow }
+          locationId: { in: locationIds },
+          checkOutTime: { gte: startOfDay(today), lte: endOfDay(today) }
+        }
+      }),
+      prisma.booking.count({
+        where: {
+          locationId: { in: locationIds },
+          status: "CONFIRMED",
+          checkIn: { lte: endOfDay(today) },
+          parkingSession: null
         }
       }),
       prisma.parkingSession.count({
         where: {
-          locationId: { in: parkingIds },
-          status: "pending"
+          locationId: { in: locationIds },
+          status: "ACTIVE",
+          booking: { checkOut: { lt: today } }
         }
       }),
-      prisma.parkingSession.count({
+      prisma.bookingRequest.count({
         where: {
-          locationId: { in: parkingIds },
-          status: "overstay"
+          parkingId: { in: locationIds },
+          status: "PENDING"
         }
       })
     ]);
 
-    // 2. Schedule (Today's check-ins and check-outs)
-    const todaySchedule = await prisma.booking.findMany({
-      where: {
-        locationId: { in: parkingIds },
-        OR: [
-          { checkIn: { gte: today, lt: tomorrow } },
-          { checkOut: { gte: today, lt: tomorrow } }
-        ],
-        status: "CONFIRMED"
-      },
-      orderBy: { checkIn: "asc" },
-      take: 5
+    const sessions = await prisma.parkingSession.findMany({
+      where: { locationId: { in: locationIds } },
+      include: { booking: true, location: true },
+      orderBy: { updatedAt: "desc" },
+      take: 10
     });
 
-    // 3. Occupancy Calculation
-    const locations = await prisma.parkingLocation.findMany({
-      where: { id: { in: parkingIds } },
-      select: {
-        id: true,
-        name: true,
-        totalSpots: true,
-        availableSpots: true
-      }
-    });
-
-    const totalCapacity = locations.reduce((sum, l) => sum + l.totalSpots, 0);
-    const totalAvailable = locations.reduce((sum, l) => sum + l.availableSpots, 0);
-    const totalOccupied = totalCapacity - totalAvailable;
-
-    // 4. Recent Activity
-    const recentActivity = await prisma.parkingSession.findMany({
-      where: {
-        locationId: { in: parkingIds },
-        status: { in: ["checked_in", "checked_out"] }
-      },
-      orderBy: { 
-        updatedAt: "desc" // Assuming there's an updatedAt or use checkInTime/checkOutTime
-      },
-      take: 4,
-      include: {
-        booking: {
-          select: {
-            vehiclePlate: true
-          }
-        }
-      }
-    });
-
-    // 5. Pending Booking Requests Count
-    const pendingRequestsCount = await prisma.bookingRequest.count({
-      where: {
-        parkingId: { in: parkingIds },
-        status: "PENDING"
-      }
-    });
+    const locations = watchman.assignedLocations.map(loc => ({
+      id: loc.id,
+      name: loc.name,
+      totalSpots: loc.totalSpots,
+      occupiedSpots: loc.totalSpots - loc.availableSpots
+    }));
 
     return NextResponse.json({
       stats: {
@@ -117,27 +85,22 @@ export async function GET(request: Request) {
         todayCheckOuts,
         pendingArrivals: pendingSessions,
         overstays: overstaySessions,
-        pendingRequestsCount
+        pendingRequestsCount: pendingRequests
       },
       occupancy: {
-        totalCapacity,
-        totalOccupied,
-        locations: locations.map(l => ({
-          id: l.id,
-          name: l.name,
-          total: l.totalSpots,
-          available: l.availableSpots
-        }))
+        totalCapacity: locations.reduce((sum, l) => sum + l.totalSpots, 0),
+        totalOccupied: locations.reduce((sum, l) => sum + l.occupiedSpots, 0),
+        locations
       },
-      schedule: todaySchedule,
-      recentActivity: recentActivity.map(s => ({
+      schedule: [],
+      recentActivity: sessions.map(s => ({
         id: s.id,
+        status: s.status === "ACTIVE" ? "checked_in" : "checked_out",
         vehiclePlate: s.booking.vehiclePlate,
-        status: s.status,
-        time: s.status === "checked_in" ? s.checkInTime : s.checkOutTime
+        time: s.updatedAt,
+        location: s.location.name
       }))
     });
-
   } catch (error) {
     console.error("Dashboard API Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

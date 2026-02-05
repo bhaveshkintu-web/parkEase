@@ -36,13 +36,18 @@ export function NotificationCenter() {
 
     try {
       const response = await fetch("/api/notifications");
+      const text = await response.text();
+
       if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        try {
+          const data = JSON.parse(text);
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        } catch (parseError) {
+          console.error("Failed to parse notifications JSON. Response start:", text.substring(0, 100));
+        }
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.warn(`Failed to fetch notifications: ${response.status}`, errorData);
+        console.warn(`Failed to fetch notifications (${response.status}):`, text.substring(0, 100));
       }
     } catch (error) {
       // Only log as error if it's not a fetch abort or similar expected failure during navigation

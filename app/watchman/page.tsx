@@ -29,16 +29,24 @@ import {
 export default function WatchmanDashboard() {
   const { user } = useAuth();
   const { fetchBookingRequests } = useDataStore();
-  
+
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       const res = await fetch("/api/watchman/dashboard");
+      const text = await res.text();
+
       if (res.ok) {
-        const data = await res.json();
-        setDashboardData(data);
+        try {
+          const data = JSON.parse(text);
+          setDashboardData(data);
+        } catch (parseError) {
+          console.error("Failed to parse dashboard JSON. Response start:", text.substring(0, 100));
+        }
+      } else {
+        console.error(`Dashboard fetch failed (${res.status}):`, text.substring(0, 200));
       }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -75,8 +83,8 @@ export default function WatchmanDashboard() {
     recentActivity: []
   };
 
-  const occupancyRate = occupancy.totalCapacity > 0 
-    ? Math.round((occupancy.totalOccupied / occupancy.totalCapacity) * 100) 
+  const occupancyRate = occupancy.totalCapacity > 0
+    ? Math.round((occupancy.totalOccupied / occupancy.totalCapacity) * 100)
     : 0;
 
   const today = new Date();
@@ -268,9 +276,8 @@ export default function WatchmanDashboard() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            isCheckIn ? "bg-green-100" : "bg-blue-100"
-                          }`}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${isCheckIn ? "bg-green-100" : "bg-blue-100"
+                            }`}
                         >
                           {isCheckIn ? (
                             <CheckCircle className="w-5 h-5 text-green-600" />
@@ -350,47 +357,46 @@ export default function WatchmanDashboard() {
         <CardContent>
           <div className="space-y-3">
             {recentActivity.map((session: any) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        session.status === "checked_in" ? "bg-green-100" : "bg-blue-100"
+              <div
+                key={session.id}
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${session.status === "checked_in" ? "bg-green-100" : "bg-blue-100"
                       }`}
-                    >
-                      {session.status === "checked_in" ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-blue-600" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground text-sm">
-                        {session.vehiclePlate}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {session.status === "checked_in"
-                          ? `Checked in ${formatTime(new Date(session.time))}`
-                          : `Checked out ${formatTime(new Date(session.time))}`}
-                      </p>
-                    </div>
+                  >
+                    {session.status === "checked_in" ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-blue-600" />
+                    )}
                   </div>
-                  <StatusBadge
-                    status={session.status.replace("_", " ")}
-                    variant={
-                      session.status === "checked_in"
-                        ? "success"
-                        : session.status === "checked_out"
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground text-sm">
+                      {session.vehiclePlate}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.status === "checked_in"
+                        ? `Checked in ${formatTime(new Date(session.time))}`
+                        : `Checked out ${formatTime(new Date(session.time))}`}
+                    </p>
+                  </div>
+                </div>
+                <StatusBadge
+                  status={(session.status || "").replace("_", " ")}
+                  variant={
+                    session.status === "checked_in"
+                      ? "success"
+                      : session.status === "checked_out"
                         ? "info"
                         : session.status === "overstay"
-                        ? "error"
-                        : "warning"
-                    }
-                  />
-                </div>
-              ))}
+                          ? "error"
+                          : "warning"
+                  }
+                />
+              </div>
+            ))}
             {recentActivity.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 No recent activity
