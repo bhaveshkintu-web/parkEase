@@ -308,14 +308,24 @@ export async function createBooking(data: any) {
 /**
  * Cancels a booking and initiates a refund request.
  */
+/**
+ * Cancels a booking and initiates a refund request based on policy.
+ */
 export async function cancelBooking(bookingId: string, reason: string) {
   try {
     const userId = await getAuthUserId();
 
-    // Verify ownership and get locationId
+    // Verify ownership and get locationId with policy
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { userId: true, status: true, totalPrice: true, locationId: true },
+      include: {
+        location: {
+          select: {
+            id: true,
+            cancellationPolicy: true,
+          }
+        }
+      }
     });
 
     if (!booking) {
@@ -330,6 +340,50 @@ export async function cancelBooking(bookingId: string, reason: string) {
       return { success: false, error: "Booking is already cancelled" };
     }
 
+    // --- Cancellation Policy Logic ---
+    const now = new Date();
+    const checkIn = new Date(booking.checkIn);
+    const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    let refundAmount = 0;
+    const policy = booking.location?.cancellationPolicy as any;
+    let policyType = "standard";
+
+    // Default policy if missing (fallback)
+    if (!policy) {
+      // If no policy set, assume user gets full refund if > 24h (safe fallback) or 0 (strict)
+      // Choosing to return 0 to be safe and let admin decide, but marking as 'manual review'
+      refundAmount = 0;
+    } else {
+      const deadlineHours = policy.hours || 24; // Default to 24 if parsing failed
+
+      switch (policy.type) {
+        case "free":
+          if (hoursUntilCheckIn >= deadlineHours) {
+            refundAmount = booking.totalPrice;
+          } else {
+            refundAmount = 0; // Past deadline
+          }
+          break;
+        case "moderate":
+          if (hoursUntilCheckIn >= deadlineHours) {
+            refundAmount = booking.totalPrice * 0.5;
+          } else {
+            refundAmount = 0;
+          }
+          break;
+        case "strict":
+          refundAmount = 0;
+          break;
+        default:
+          refundAmount = 0;
+      }
+      policyType = policy.type;
+    }
+
+    // Round to 2 decimals
+    refundAmount = Math.round(refundAmount * 100) / 100;
+
     // Update booking status, create refund request, and restore spot in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const updatedBooking = await tx.booking.update({
@@ -337,12 +391,19 @@ export async function cancelBooking(bookingId: string, reason: string) {
         data: { status: BookingStatus.CANCELLED },
       });
 
+      // Status logic:
+      // If it's a guaranteed free cancellation, we might want to Auto-Approve (if system allows)
+      // or set to PENDING but with approvedAmount pre-filled.
+      // For this system, we'll keep it PENDING so Admin reviews it, but we set the expected amount.
+
       await tx.refundRequest.create({
         data: {
           bookingId,
-          amount: booking.totalPrice, // Default to full refund for now
-          reason,
+          amount: refundAmount, // Calculated amount eligible for refund
+          reason: `${reason} (Policy: ${policyType}, Eligible: ${hoursUntilCheckIn.toFixed(1)}h before)`,
+          description: `Cancellation Policy: ${policyType?.toUpperCase()}. \nHours before check-in: ${hoursUntilCheckIn.toFixed(1)}. \nOriginal Price: ${booking.totalPrice}`,
           status: "PENDING",
+          approvedAmount: refundAmount, // Suggest this amount to admin
         },
       });
 

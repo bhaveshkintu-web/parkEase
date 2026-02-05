@@ -108,6 +108,16 @@ export async function POST(req: NextRequest) {
           totalSpots: data.totalSpots,
           availableSpots: data.totalSpots, // Initial state
           status: "PENDING", // Requires admin approval
+          cancellationPolicy: {
+            type: data.cancellationPolicy,
+            hours: parseInt(data.cancellationDeadline) || 0,
+            deadline: data.cancellationPolicy === "strict" ? "No refunds" : `${data.cancellationDeadline} hours before check-in`,
+            description: data.cancellationPolicy === "free"
+              ? `Free cancellation up to ${data.cancellationDeadline} hours before check-in`
+              : data.cancellationPolicy === "moderate"
+                ? `50% refund up to ${data.cancellationDeadline} hours before check-in`
+                : "Non-refundable"
+          },
         },
       });
 

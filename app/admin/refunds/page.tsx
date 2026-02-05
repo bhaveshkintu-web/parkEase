@@ -68,7 +68,7 @@ export default function RefundsPage() {
       if (response.ok) {
         const data = await response.json();
         setRefunds(data.refunds);
-        
+
         if (data.stats) {
           setStats({
             pending: data.stats.pending,
@@ -90,15 +90,15 @@ export default function RefundsPage() {
 
   const handleProcess = async (action: "APPROVED" | "REJECTED" | "PROCESSED") => {
     if (!selectedRefund) return;
-    
+
     try {
       setIsProcessing(true);
       const amount = (action === "APPROVED" && partialAmount) ? parseFloat(partialAmount) : selectedRefund.amount;
-      
+
       const response = await fetch(`/api/admin/refunds/${selectedRefund.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: action,
           approvedAmount: amount,
           notes: `Handled via Refunds dashboard as ${action}`
@@ -155,7 +155,7 @@ export default function RefundsPage() {
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Total Pending</p>
                 <p className="text-2xl font-bold text-foreground">
-                    {isLoading ? "..." : stats.totalPendingApprovals}
+                  {isLoading ? "..." : stats.totalPendingApprovals}
                 </p>
               </div>
             </div>
@@ -317,7 +317,8 @@ export default function RefundsPage() {
                     <Button
                       onClick={() => {
                         setSelectedRefund(refund);
-                        setPartialAmount(refund.amount.toString());
+                        // Use suggested amount if calculated by backend, otherwise default to full or 0 based on older logic
+                        setPartialAmount(refund.approvedAmount?.toString() || refund.amount.toString());
                       }}
                       className="w-full lg:w-auto h-11 px-8"
                     >
@@ -360,6 +361,23 @@ export default function RefundsPage() {
                 <span className="text-sm text-muted-foreground">Requested Amount</span>
                 <span className="font-bold text-red-600">{formatCurrency(selectedRefund?.amount || 0)}</span>
               </div>
+              {selectedRefund?.booking?.location?.cancellationPolicy && (
+                <div className="mt-2 pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="w-3 h-3 text-primary" />
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">Policy: {selectedRefund.booking.location.cancellationPolicy.type}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(selectedRefund.booking.location.cancellationPolicy as any).description}
+                  </p>
+                  {selectedRefund.approvedAmount !== undefined && selectedRefund.status === "PENDING" && (
+                    <div className="mt-2 bg-green-50 text-green-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Suggested Refund: {formatCurrency(selectedRefund.approvedAmount)}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

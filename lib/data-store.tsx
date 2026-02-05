@@ -944,7 +944,10 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
       const reviewsRes = await fetch("/api/owner/reviews");
       if (reviewsRes.ok) {
         const reviewsData = await reviewsRes.json();
-        const formattedReviews = reviewsData.map((r: any) => ({
+        // Handle new response structure { reviews, locations, airports }
+        const reviews = Array.isArray(reviewsData) ? reviewsData : reviewsData.reviews || [];
+
+        const formattedReviews = reviews.map((r: any) => ({
           ...r,
           date: new Date(r.date)
         }));
