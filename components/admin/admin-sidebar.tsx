@@ -38,7 +38,7 @@ const systemAdminNav: NavSection[] = [
       { label: "Owners", href: "/admin/owners", icon: Building2 },
       { label: "Owner Lead Approvals", href: "/admin/approvals/owners", icon: Building2 },
       // { label: "Locations", href: "/admin/locations", icon: MapPin },
-      { label: "Location Approvals", href: "/admin/approvals", icon: Shield },      
+      { label: "Location Approvals", href: "/admin/approvals", icon: Shield },
       { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     ],
   },
@@ -139,22 +139,25 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   const [counts, setCounts] = useState<any>({});
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && (user.role?.toLowerCase() === "admin" || user.role?.toLowerCase() === "support")) {
       fetchCounts();
       // Refresh counts every 30 seconds
       const interval = setInterval(fetchCounts, 30000);
       return () => clearInterval(interval);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.role]);
 
   const fetchCounts = async () => {
     if (!user?.id) return;
-    
+
     try {
       const response = await fetch("/api/admin/analytics/dashboard");
       if (response.ok) {
-        const data = await response.json();
-        setCounts(data.stats || {});
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          setCounts(data.stats || {});
+        }
       } else {
         console.warn(`Failed to fetch sidebar counts: ${response.status}`);
       }
@@ -180,15 +183,15 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   const navigation =
     role === "admin" || role === "support"
       ? systemAdminNav.map(section => ({
-          ...section,
-          items: section.items.map(item => ({
-            ...item,
-            badge: getNavBadge(item.label)
-          }))
+        ...section,
+        items: section.items.map(item => ({
+          ...item,
+          badge: getNavBadge(item.label)
         }))
+      }))
       : role === "owner"
-      ? ownerAdminNav
-      : watchmanAdminNav;
+        ? ownerAdminNav
+        : watchmanAdminNav;
 
   const roleLabels = {
     admin: "System Admin",

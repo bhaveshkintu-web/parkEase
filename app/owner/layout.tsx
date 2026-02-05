@@ -19,8 +19,13 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         try {
           const response = await fetch("/api/owner/profile");
           if (response.ok) {
-            const profile = await response.json();
-            setHasProfile(!!profile);
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const profile = await response.json();
+              setHasProfile(!!profile);
+            } else {
+              setHasProfile(false);
+            }
           } else {
             setHasProfile(false);
           }
