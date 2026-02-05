@@ -398,12 +398,11 @@ export default function RefundsPage() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
             <Button
-              variant="outline"
               onClick={() => handleProcess("REJECTED")}
               disabled={isProcessing}
-              className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="flex-1 bg-red-600 text-white hover:bg-red-700"
             >
               Reject
             </Button>
