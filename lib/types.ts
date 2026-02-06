@@ -671,3 +671,58 @@ export interface OwnerStats {
   resolvedDisputes: number;
   watchmenCount: number;
 }
+
+// Platform Settings Types
+export interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  termsOfServiceUrl: string;
+  privacyPolicyUrl: string;
+  maintenanceMode: boolean;
+  allowRegistrations: boolean;
+  requireEmailVerification: boolean;
+}
+
+export interface NotificationSettings {
+  emailEnabled: boolean;
+  bookingConfirmations: boolean;
+  bookingReminders: boolean;
+  marketingEmails: boolean;
+  smsEnabled: boolean;
+  checkInReminders: boolean;
+  checkOutAlerts: boolean;
+}
+
+export interface SettingsAuditEntry {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  previousValue: any;
+  newValue: any;
+  changedBy: string;
+  changedByName?: string;
+  changedAt: Date;
+}
+
+export interface CommissionResult {
+  ruleId: string;
+  ruleName: string;
+  commissionAmount: number;
+  commissionRate: number;
+  appliedType: "percentage" | "fixed";
+}
+
+export interface PromoValidationResult {
+  valid: boolean;
+  error?: string;
+  promotion?: {
+    id: string;
+    code: string;
+    name: string;
+    type: string;
+    value: number;
+    discountAmount: number;
+    maxDiscount?: number | null;
+  };
+}

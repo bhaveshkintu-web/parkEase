@@ -450,9 +450,41 @@ model CommissionRule {
   appliesTo       String
   minBookingValue Float?
   maxCommission   Float?
+  priority        Int      @default(0)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model PlatformSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string")
+  category    String
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  version     Int      @default(1)
+
+  @@index([category])
+}
+
+model SettingsAuditLog {
+  id            String   @id @default(cuid())
+  entityType    String
+  entityId      String
+  action        String
+  previousValue Json?
+  newValue      Json?
+  changedBy     String
+  changedAt     DateTime @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  @@index([entityType, entityId])
+  @@index([changedBy])
+  @@index([changedAt])
 }
 
 model Workflow {
