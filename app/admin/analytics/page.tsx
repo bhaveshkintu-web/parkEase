@@ -275,7 +275,6 @@ function BookingDistributionChart({
                     }}
                   />
                   <Legend content={() => null} />
-                  {/* @ts-expect-error - Custom label component */}
                   <text>
                     <CustomLabel viewBox={{ cx: 100, cy: 150 }} value={totalBookings} />
                   </text>
