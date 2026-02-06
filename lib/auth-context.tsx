@@ -236,6 +236,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (sessionData?.user) {
           setUser(normalizeUser(sessionData.user));
+        } else {
+          // Fallback: manually update local state if session refresh fails or returns stale data
+          setUser(prev => prev ? { ...prev, ...data } : null);
         }
 
         return { success: true };
@@ -298,11 +301,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 🔁 refresh session
-        const sessionRes = await fetch("/api/auth/session");
-        const sessionData = await sessionRes.json();
-
-        if (sessionData?.user) {
-          setUser(normalizeUser(sessionData.user));
+        if (result.avatar) {
+          setUser(prev => prev ? { ...prev, avatar: result.avatar } : null);
         }
 
         return { success: true };
@@ -336,12 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 🔁 refresh session
-      const sessionRes = await fetch("/api/auth/session");
-      const sessionData = await sessionRes.json();
-
-      if (sessionData?.user) {
-        setUser(normalizeUser(sessionData.user));
-      }
+      setUser(prev => prev ? { ...prev, avatar: null } : null);
 
       return { success: true };
     } catch (err) {
