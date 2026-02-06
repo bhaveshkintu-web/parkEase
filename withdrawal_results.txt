@@ -1,0 +1,10 @@
+﻿Withdrawal Status Counts:
+[
+  {
+    "_count": 1,
+    "status": "APPROVED"
+  }
+]
+
+Latest Withdrawals:
+ID: cmlapx2sa0001lkxggnr4fw2n, Owner: UrbanSpace Parking Group LLC, Amount: 10, Status: APPROVED, Bank: Linked Bank

@@ -6281,3 +6281,19 @@ The column `OwnerProfile.website` does not exist in the current database.
 [2026-02-06T04:44:26.058Z] OWNER-API: Target Locations: ["cml68fmmh0004u1e44c9lqfyi"]
 [2026-02-06T04:44:26.058Z] OWNER-API: Attempting RAW SQL query for booking requests...
 [2026-02-06T04:44:26.064Z] OWNER-API: Successfully fetched 16 requests
+[2026-02-06T10:03:19.925Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-06T10:03:19.936Z] OWNER-API: --- START GET /api/owner/booking-requests ---
+[2026-02-06T10:03:19.948Z] OWNER-API: IDENTIFIED: owner2@yopmail.com [OWNER]
+[2026-02-06T10:03:19.950Z] OWNER-API: Fetching owner profile for userId: cml7x5vsz0001lkuwhmwp8njn
+[2026-02-06T10:03:19.957Z] OWNER-API: IDENTIFIED: owner2@yopmail.com [OWNER]
+[2026-02-06T10:03:19.958Z] OWNER-API: Fetching owner profile for userId: cml7x5vsz0001lkuwhmwp8njn
+[2026-02-06T10:03:19.968Z] OWNER-API: Found owner profile ID: cml7x5vta0003lkuwrarhcjas
+[2026-02-06T10:03:19.971Z] OWNER-API: Found owner profile ID: cml7x5vta0003lkuwrarhcjas
+[2026-02-06T10:03:19.974Z] OWNER-API: Found 2 locations via raw SQL
+[2026-02-06T10:03:19.975Z] OWNER-API: Target Locations: ["cml816cvt0001lkxwweldrwnr","cml87seav0001lkpo5qkprg9l"]
+[2026-02-06T10:03:19.976Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-06T10:03:19.980Z] OWNER-API: Found 2 locations via raw SQL
+[2026-02-06T10:03:19.981Z] OWNER-API: Target Locations: ["cml816cvt0001lkxwweldrwnr","cml87seav0001lkpo5qkprg9l"]
+[2026-02-06T10:03:19.983Z] OWNER-API: Attempting RAW SQL query for booking requests...
+[2026-02-06T10:03:20.000Z] OWNER-API: Successfully fetched 0 requests
+[2026-02-06T10:03:20.006Z] OWNER-API: Successfully fetched 0 requests

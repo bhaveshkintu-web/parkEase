@@ -9,7 +9,12 @@ export enum NotificationType {
   REFUND_PROCESSED = "REFUND_PROCESSED",
   SUPPORT_TICKET_CREATED = "SUPPORT_TICKET_CREATED",
   SUPPORT_TICKET_UPDATED = "SUPPORT_TICKET_UPDATED",
-  SYSTEM_ALERT = "SYSTEM_ALERT"
+  SYSTEM_ALERT = "SYSTEM_ALERT",
+  EARNINGS_CREDITED = "EARNINGS_CREDITED",
+  WITHDRAWAL_REQUESTED = "WITHDRAWAL_REQUESTED",
+  WITHDRAWAL_PROCESSED = "WITHDRAWAL_PROCESSED",
+  WITHDRAWAL_REJECTED = "WITHDRAWAL_REJECTED",
+  REFUND_DEDUCTION = "REFUND_DEDUCTION",
 }
 
 export async function notifyAdminsOfBookingRequest(requestId: string) {
@@ -296,7 +301,7 @@ export class NotificationService {
           userId,
           title,
           message,
-          type,
+          type: type as any,
           metadata,
         },
       });
