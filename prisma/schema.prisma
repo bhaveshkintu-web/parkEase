@@ -37,6 +37,7 @@ model User {
   paymentMethods    PaymentMethod[]
   reviews           Review[]
   savedVehicles     SavedVehicle[]
+  trustedDevices    TrustedDevice[]
   watchmanProfile   Watchman?
 }
 
@@ -336,6 +337,7 @@ model DisputeAuditLog {
 model SavedVehicle {
   id           String   @id @default(cuid())
   userId       String
+  nickname     String?
   make         String
   model        String
   year         Int
@@ -507,6 +509,23 @@ model SettingsAuditLog {
   @@index([entityType, entityId])
   @@index([changedBy])
   @@index([changedAt])
+}
+
+model TrustedDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  type       String
+  browser    String
+  os         String
+  ipAddress  String?
+  location   String?
+  lastActive DateTime @default(now())
+  isCurrent  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Workflow {

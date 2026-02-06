@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useDataStore } from "@/lib/data-store";
@@ -64,10 +64,11 @@ import {
   Globe,
   Moon,
   Sun,
+  LogOut,
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, updatePreferences, changePassword, deleteAccount, logout } = useAuth();
+  const { user, updatePreferences, changePassword, deleteAccount, logout, revokeAllSessions } = useAuth();
   const { vehicles, payments } = useDataStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -86,6 +87,19 @@ export default function SettingsPage() {
   const [defaultPaymentId, setDefaultPaymentId] = useState(
     user?.preferences?.defaultPaymentId || "no-default"
   );
+  
+  // Sync state with user preferences when they load or change
+  useEffect(() => {
+    if (user?.preferences) {
+      setNotifications({
+        email: user.preferences.notifications?.email ?? true,
+        sms: user.preferences.notifications?.sms ?? false,
+        marketing: user.preferences.notifications?.marketing ?? false,
+      });
+      setDefaultVehicleId(user.preferences.defaultVehicleId || "no-default");
+      setDefaultPaymentId(user.preferences.defaultPaymentId || "no-default");
+    }
+  }, [user?.preferences]);
 
   // Password change
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -252,6 +266,40 @@ export default function SettingsPage() {
       toast({
         title: "Error",
         description: result.error || "Failed to delete account.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle data export
+  const handleExportData = async () => {
+    if (!user) return;
+    toast({
+      title: "Exporting data...",
+      description: "We are preparing your data for download.",
+    });
+
+    const { exportUserData } = await import("@/lib/actions/user-settings");
+    const result = await exportUserData(user.id);
+
+    if (result.success) {
+      const dataStr = JSON.stringify(result.data, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = 'parkease-user-data.json';
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+
+      toast({
+        title: "Export complete",
+        description: "Your data has been downloaded successfully.",
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: result.error || "Failed to export data.",
         variant: "destructive",
       });
     }
@@ -443,14 +491,14 @@ export default function SettingsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no-default">No default</SelectItem>
-                    {vehicles.map((vehicle) => (
+                    {vehicles.map((vehicle: any) => (
                       <SelectItem key={vehicle.id} value={vehicle.id}>
                         <div className="flex items-center gap-2">
-                          <span>
-                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          <span className="font-medium">
+                            {vehicle.nickname || `${vehicle.year} ${vehicle.make}`}
                           </span>
-                          <span className="text-muted-foreground">
-                            ({vehicle.licensePlate})
+                          <span className="text-muted-foreground text-xs">
+                            {vehicle.model} ({vehicle.licensePlate})
                           </span>
                         </div>
                       </SelectItem>
@@ -500,9 +548,9 @@ export default function SettingsPage() {
                     {payments.map((payment) => (
                       <SelectItem key={payment.id} value={payment.id}>
                         <div className="flex items-center gap-2">
-                          <span className="capitalize">{payment.brand}</span>
-                          <span className="text-muted-foreground">
-                            ending in {payment.last4}
+                          <span className="capitalize font-medium">{payment.brand}</span>
+                          <span className="text-muted-foreground text-xs">
+                            •••• {payment.last4}
                           </span>
                         </div>
                       </SelectItem>
@@ -545,7 +593,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium">Current password</p>
                   <p className="text-sm text-muted-foreground">
-                    Last changed: Never
+                    Last changed: {user?.preferences?.lastRevokedAt ? new Date(user.preferences.lastRevokedAt).toLocaleDateString() : "Never"}
                   </p>
                 </div>
                 <Button
@@ -578,55 +626,55 @@ export default function SettingsPage() {
                     Protect your account with 2FA
                   </p>
                 </div>
-                <Button variant="outline" disabled>
-                  Enable 2FA
+                <Button variant="outline" onClick={() => router.push("/account/security")}>
+                  Configure 2FA
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                Two-factor authentication is coming soon. We'll notify you when it's available.
-              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
+                <LogOut className="w-5 h-5" />
                 Active Sessions
               </CardTitle>
               <CardDescription>
-                Manage devices where you're currently logged in
+                Manage your active sessions and sign out of other devices
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Current Session</p>
-                      <p className="text-xs text-muted-foreground">
-                        Web Browser - Active now
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                    This device
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Other devices</p>
+                  <p className="text-sm text-muted-foreground">
+                    Sign out of all other active sessions except this one
+                  </p>
                 </div>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={async () => {
+                   try {
+                    const result = await revokeAllSessions();
+                    if (result.success) {
+                      toast({
+                        title: "Sessions revoked",
+                        description: "You have been signed out of all other devices.",
+                      });
+                    }
+                   } catch (err) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to revoke sessions",
+                      variant: "destructive",
+                    });
+                   }
+                  }}
+                >
+                  Sign Out All Devices
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                className="w-full mt-4 bg-transparent"
-                onClick={() => {
-                  logout();
-                  router.push("/login");
-                }}
-              >
-                Sign out of all devices
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -694,7 +742,7 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleExportData}>
                 Download My Data
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
@@ -848,22 +896,24 @@ export default function SettingsPage() {
               <AlertTriangle className="w-5 h-5" />
               Delete Account Permanently
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4">
-              <p>
-                This action cannot be undone. This will permanently delete your
-                account and remove all your data from our servers.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="delete-confirmation">
-                  Type <span className="font-mono font-bold">DELETE</span> to confirm
-                </Label>
-                <Input
-                  id="delete-confirmation"
-                  value={deleteConfirmation}
-                  onChange={(e) => setDeleteConfirmation(e.target.value)}
-                  placeholder="Type DELETE to confirm"
-                  className="font-mono"
-                />
+            <AlertDialogDescription className="space-y-4" asChild>
+              <div className="space-y-4">
+                <p>
+                  This action cannot be undone. This will permanently delete your
+                  account and remove all your data from our servers.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirmation">
+                    Type <span className="font-mono font-bold">DELETE</span> to confirm
+                  </Label>
+                  <Input
+                    id="delete-confirmation"
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="Type DELETE to confirm"
+                    className="font-mono"
+                  />
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -62,7 +62,7 @@ export const vehicleSchema = z.object({
     .min(1900, "Invalid year")
     .max(new Date().getFullYear() + 1, "Invalid year"),
   color: z.string().min(1, "Color is required"),
-  licensePlate: z.string().min(2, "License plate is required").max(10),
+  licensePlate: z.string().min(2, "License plate is required").max(20),
   state: z.string().length(2, "Use 2-letter state code"),
   isDefault: z.boolean().optional(),
 });

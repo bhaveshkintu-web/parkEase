@@ -10,6 +10,7 @@ export async function addVehicle(_: any, formData: FormData) {
     const userId = await getAuthUserId();
 
     const rawData = {
+      nickname: formData.get("nickname"),
       make: formData.get("make"),
       model: formData.get("model"),
       year: Number(formData.get("year")),

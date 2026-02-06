@@ -885,8 +885,23 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setCurrentUserId(userId);
     try {
-      setVehicles(generateMockVehicles(userId));
-      setPayments(generateMockPayments(userId));
+      // Fetch Vehicles
+      const vehiclesRes = await fetch("/api/user/vehicles");
+      if (vehiclesRes.ok) {
+        const vehiclesData = await vehiclesRes.json();
+        setVehicles(vehiclesData);
+      } else {
+        setVehicles([]);
+      }
+
+      // Fetch Payments
+      const paymentsRes = await fetch("/api/user/payments");
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json();
+        setPayments(paymentsData);
+      } else {
+        setPayments([]);
+      }
 
       const res = await fetch("/api/bookings");
       if (res.ok) {
