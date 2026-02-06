@@ -1,33 +1,24 @@
 "use client";
 
-import React from "react"
-
-import { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   Calendar,
   MapPin,
-  Users,
   Car,
-  Clock,
   Download,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -36,94 +27,77 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
+  Legend,
 } from "recharts";
+import type {
+  OverviewMetrics,
+  RevenueTrendDataPoint,
+  BookingCategory,
+  TopLocationData,
+  DateRangePeriod,
+} from "@/lib/types/analytics.types";
 
-// Mock data for charts
-const revenueData = [
-  { date: "Jan", revenue: 45000, bookings: 890, commissions: 4500 },
-  { date: "Feb", revenue: 52000, bookings: 1020, commissions: 5200 },
-  { date: "Mar", revenue: 48000, bookings: 940, commissions: 4800 },
-  { date: "Apr", revenue: 61000, bookings: 1180, commissions: 6100 },
-  { date: "May", revenue: 55000, bookings: 1070, commissions: 5500 },
-  { date: "Jun", revenue: 67000, bookings: 1290, commissions: 6700 },
-  { date: "Jul", revenue: 72000, bookings: 1380, commissions: 7200 },
-];
-
-const occupancyData = [
-  { hour: "6am", rate: 15 },
-  { hour: "8am", rate: 45 },
-  { hour: "10am", rate: 72 },
-  { hour: "12pm", rate: 85 },
-  { hour: "2pm", rate: 78 },
-  { hour: "4pm", rate: 65 },
-  { hour: "6pm", rate: 88 },
-  { hour: "8pm", rate: 70 },
-  { hour: "10pm", rate: 45 },
-];
-
-const bookingsByType = [
-  { name: "Airport", value: 45, color: "#0d9488" },
-  { name: "Daily", value: 25, color: "#f59e0b" },
-  { name: "Monthly", value: 20, color: "#6366f1" },
-  { name: "Event", value: 10, color: "#ec4899" },
-];
-
-const topLocations = [
-  { name: "LAX Economy Parking", bookings: 2340, revenue: 87500, occupancy: 92 },
-  { name: "JFK Terminal Parking", bookings: 1890, revenue: 72300, occupancy: 88 },
-  { name: "SFO Airport Lot", bookings: 1650, revenue: 61200, occupancy: 85 },
-  { name: "ORD Express Park", bookings: 1420, revenue: 53100, occupancy: 79 },
-  { name: "DFW Value Parking", bookings: 1180, revenue: 44600, occupancy: 74 },
-];
-
-const ownerPerformance = [
-  { name: "Michael Chen", locations: 5, bookings: 3240, revenue: 125000, rating: 4.8, responseRate: 98 },
-  { name: "Sarah Williams", locations: 3, bookings: 1890, revenue: 72000, rating: 4.6, responseRate: 95 },
-  { name: "David Kim", locations: 4, bookings: 2100, revenue: 89000, rating: 4.9, responseRate: 99 },
-  { name: "Lisa Chen", locations: 2, bookings: 980, revenue: 38000, rating: 4.5, responseRate: 92 },
-];
-
-const watchmanActivity = [
-  { name: "Robert Garcia", checkIns: 456, checkOuts: 421, violations: 3, avgResponse: "2.3 min", shifts: 28 },
-  { name: "Maria Santos", checkIns: 389, checkOuts: 367, violations: 1, avgResponse: "1.8 min", shifts: 26 },
-  { name: "James Wilson", checkIns: 312, checkOuts: 298, violations: 5, avgResponse: "3.1 min", shifts: 24 },
-  { name: "Emily Davis", checkIns: 278, checkOuts: 265, violations: 2, avgResponse: "2.5 min", shifts: 22 },
-];
-
-const heatmapData = [
-  { day: "Mon", hours: [20, 35, 55, 72, 85, 78, 65, 88, 70, 45, 30, 15] },
-  { day: "Tue", hours: [18, 32, 52, 68, 82, 75, 62, 85, 68, 42, 28, 12] },
-  { day: "Wed", hours: [22, 38, 58, 75, 88, 80, 68, 90, 72, 48, 32, 18] },
-  { day: "Thu", hours: [25, 42, 62, 78, 90, 82, 70, 92, 75, 50, 35, 20] },
-  { day: "Fri", hours: [30, 48, 68, 85, 95, 88, 78, 96, 82, 58, 42, 28] },
-  { day: "Sat", hours: [35, 52, 72, 88, 92, 85, 75, 90, 78, 55, 40, 25] },
-  { day: "Sun", hours: [28, 45, 65, 80, 88, 80, 70, 85, 72, 48, 35, 20] },
-];
-
-function StatCard({ title, value, change, changeType, icon: Icon, prefix = "" }: {
+// Stat Card Component
+function StatCard({
+  title,
+  value,
+  change,
+  changeType,
+  icon: Icon,
+  prefix = "",
+  suffix = "",
+  loading = false,
+}: {
   title: string;
   value: string | number;
   change: number;
   changeType: "positive" | "negative";
   icon: React.ElementType;
   prefix?: string;
+  suffix?: string;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-32 mb-2" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <Skeleton className="h-12 w-12 rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card className="hover:shadow-lg transition-all duration-300 border-border/50 bg-gradient-to-br from-card to-card/80">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold mt-1">{prefix}{typeof value === "number" ? value.toLocaleString() : value}</p>
-            <div className={`flex items-center gap-1 mt-1 text-sm ${changeType === "positive" ? "text-green-600" : "text-red-600"}`}>
-              {changeType === "positive" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-              <span>{Math.abs(change)}% vs last period</span>
+            <p className="text-sm text-muted-foreground font-medium">{title}</p>
+            <p className="text-2xl lg:text-3xl font-bold mt-1 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              {prefix}{typeof value === "number" ? value.toLocaleString() : value}{suffix}
+            </p>
+            <div
+              className={`flex items-center gap-1 mt-2 text-sm font-medium ${
+                changeType === "positive" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+              }`}
+            >
+              {changeType === "positive" ? (
+                <ArrowUpRight className="h-4 w-4" />
+              ) : (
+                <ArrowDownRight className="h-4 w-4" />
+              )}
+              <span>{changeType === "positive" ? "+" : ""}{Math.abs(change).toFixed(1)}% vs previous period</span>
             </div>
           </div>
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Icon className="h-6 w-6 text-primary" />
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-inner">
+            <Icon className="h-7 w-7 text-primary" />
           </div>
         </div>
       </CardContent>
@@ -131,39 +105,426 @@ function StatCard({ title, value, change, changeType, icon: Icon, prefix = "" }:
   );
 }
 
-function HeatmapCell({ value }: { value: number }) {
-  const getColor = (val: number) => {
-    if (val >= 90) return "bg-primary";
-    if (val >= 70) return "bg-primary/80";
-    if (val >= 50) return "bg-primary/60";
-    if (val >= 30) return "bg-primary/40";
-    return "bg-primary/20";
+// Revenue Trend Chart Component
+function RevenueTrendChart({
+  data,
+  loading,
+}: {
+  data: RevenueTrendDataPoint[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-60" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatCurrency = (value: number) => {
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+    return `$${value}`;
   };
+
   return (
-    <div
-      className={`w-6 h-6 sm:w-8 sm:h-8 rounded ${getColor(value)} flex items-center justify-center text-[10px] sm:text-xs font-medium text-primary-foreground`}
-      title={`${value}% occupancy`}
-    >
-      {value}
-    </div>
+    <Card className="hover:shadow-lg transition-all duration-300">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Revenue Trend</CardTitle>
+        <CardDescription>Monthly revenue and bookings overview</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px]">
+          {data.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+              No revenue data available for the selected period
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                <XAxis
+                  dataKey="monthLabel"
+                  className="text-xs"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <YAxis
+                  className="text-xs"
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={formatCurrency}
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "12px",
+                    boxShadow: "0 10px 40px -10px rgba(0,0,0,0.2)",
+                  }}
+                  formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#0d9488"
+                  strokeWidth={3}
+                  fill="url(#colorRevenue)"
+                  dot={{ fill: "#0d9488", strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#0d9488" }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
+// Booking Distribution Chart Component
+function BookingDistributionChart({
+  data,
+  totalBookings,
+  loading,
+}: {
+  data: BookingCategory[];
+  totalBookings: number;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-60" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const CustomLabel = ({ viewBox, value }: { viewBox?: { cx: number; cy: number }; value: number }) => {
+    if (!viewBox) return null;
+    const { cx, cy } = viewBox;
+    return (
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+        <tspan x={cx} y={cy - 10} className="fill-foreground text-2xl font-bold">
+          {value.toLocaleString()}
+        </tspan>
+        <tspan x={cx} y={cy + 14} className="fill-muted-foreground text-sm">
+          Total
+        </tspan>
+      </text>
+    );
+  };
+
+  return (
+    <Card className="hover:shadow-lg transition-all duration-300">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Bookings by Type</CardTitle>
+        <CardDescription>Distribution of parking types</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px] flex items-center">
+          {totalBookings === 0 ? (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              No booking data available for the selected period
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="60%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, name: string) => [`${value}%`, name]}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "12px",
+                    }}
+                  />
+                  <Legend content={() => null} />
+                  {/* @ts-expect-error - Custom label component */}
+                  <text>
+                    <CustomLabel viewBox={{ cx: 100, cy: 150 }} value={totalBookings} />
+                  </text>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-3 flex-1">
+                {data.map((item) => (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <div
+                      className="w-4 h-4 rounded-full shadow-sm"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm text-foreground font-medium">{item.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">({item.count})</span>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{item.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Top Locations Table Component
+function TopLocationsTable({
+  data,
+  loading,
+}: {
+  data: TopLocationData[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-6 flex-1" />
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="hover:shadow-lg transition-all duration-300">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Top Performing Locations</CardTitle>
+        <CardDescription>Locations ranked by revenue and bookings</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.length === 0 ? (
+          <div className="py-12 text-center text-muted-foreground">
+            No location data available for the selected period
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">Location</th>
+                  <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Bookings</th>
+                  <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Revenue</th>
+                  <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Occupancy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((location) => (
+                  <tr
+                    key={location.id}
+                    className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-primary bg-primary/10 w-8 h-8 rounded-full flex items-center justify-center">
+                          #{location.rank}
+                        </span>
+                        <div>
+                          <span className="font-medium text-foreground">{location.name}</span>
+                          <p className="text-xs text-muted-foreground">
+                            {location.city}{location.state ? `, ${location.state}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-right py-4 px-4 font-medium">
+                      {location.bookings.toLocaleString()}
+                    </td>
+                    <td className="text-right py-4 px-4 font-medium text-emerald-600 dark:text-emerald-400">
+                      ${location.revenue.toLocaleString()}
+                    </td>
+                    <td className="text-right py-4 px-4">
+                      <div className="flex items-center justify-end gap-3">
+                        <Progress value={location.occupancy} className="w-20 h-2" />
+                        <span className="text-sm font-medium w-12 text-right">{location.occupancy}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// CSV Export Utility
+function exportToCSV(
+  overview: OverviewMetrics | null,
+  revenueTrend: RevenueTrendDataPoint[],
+  bookingDistribution: BookingCategory[],
+  topLocations: TopLocationData[]
+) {
+  let csv = "Admin Analytics Report\n\n";
+
+  // Overview Section
+  csv += "OVERVIEW METRICS\n";
+  csv += "Metric,Current Value,Previous Value,Change %\n";
+  if (overview) {
+    csv += `Total Revenue,$${overview.totalRevenue.current.toLocaleString()},$${overview.totalRevenue.previous.toLocaleString()},${overview.totalRevenue.change.percentage}%\n`;
+    csv += `Total Bookings,${overview.totalBookings.current},${overview.totalBookings.previous},${overview.totalBookings.change.percentage}%\n`;
+    csv += `Active Locations,${overview.activeLocations.current},${overview.activeLocations.previous},${overview.activeLocations.change.percentage}%\n`;
+    csv += `Average Occupancy,${overview.averageOccupancy.current}%,${overview.averageOccupancy.previous}%,${overview.averageOccupancy.change.percentage}%\n`;
+  }
+
+  // Revenue Trend Section
+  csv += "\nREVENUE TREND\n";
+  csv += "Month,Revenue,Bookings\n";
+  revenueTrend.forEach((item) => {
+    csv += `${item.monthLabel} ${item.year},$${item.revenue.toLocaleString()},${item.bookings}\n`;
+  });
+
+  // Booking Distribution Section
+  csv += "\nBOOKING DISTRIBUTION\n";
+  csv += "Category,Count,Percentage\n";
+  bookingDistribution.forEach((item) => {
+    csv += `${item.name},${item.count},${item.value}%\n`;
+  });
+
+  // Top Locations Section
+  csv += "\nTOP PERFORMING LOCATIONS\n";
+  csv += "Rank,Location,City,Revenue,Bookings,Occupancy %\n";
+  topLocations.forEach((loc) => {
+    csv += `${loc.rank},${loc.name},${loc.city},$${loc.revenue.toLocaleString()},${loc.bookings},${loc.occupancy}%\n`;
+  });
+
+  // Download
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `analytics-report-${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+}
+
+// Main Analytics Page Component
 export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState("30d");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [dateRange, setDateRange] = useState<DateRangePeriod>("30d");
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  // Data states
+  const [overviewData, setOverviewData] = useState<OverviewMetrics | null>(null);
+  const [revenueTrendData, setRevenueTrendData] = useState<RevenueTrendDataPoint[]>([]);
+  const [bookingDistributionData, setBookingDistributionData] = useState<BookingCategory[]>([]);
+  const [totalBookings, setTotalBookings] = useState(0);
+  const [topLocationsData, setTopLocationsData] = useState<TopLocationData[]>([]);
+
+  // Fetch all analytics data
+  const fetchAnalyticsData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch all data in parallel
+      const [overviewRes, trendRes, distributionRes, locationsRes] = await Promise.all([
+        fetch(`/api/admin/analytics/overview?period=${dateRange}`),
+        fetch(`/api/admin/analytics/revenue-trend?period=${dateRange}`),
+        fetch(`/api/admin/analytics/booking-distribution?period=${dateRange}`),
+        fetch(`/api/admin/analytics/top-locations?period=${dateRange}&limit=5`),
+      ]);
+
+      if (overviewRes.ok) {
+        const overviewJson = await overviewRes.json();
+        setOverviewData(overviewJson.data);
+      }
+
+      if (trendRes.ok) {
+        const trendJson = await trendRes.json();
+        setRevenueTrendData(trendJson.data || []);
+      }
+
+      if (distributionRes.ok) {
+        const distributionJson = await distributionRes.json();
+        setBookingDistributionData(distributionJson.categories || []);
+        setTotalBookings(distributionJson.totalBookings || 0);
+      }
+
+      if (locationsRes.ok) {
+        const locationsJson = await locationsRes.json();
+        setTopLocationsData(locationsJson.locations || []);
+      }
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
+
+  // Handle export
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      exportToCSV(overviewData, revenueTrendData, bookingDistributionData, topLocationsData);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analytics & Reports</h1>
+          <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
           <p className="text-muted-foreground">Comprehensive insights and performance metrics</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[140px]">
+          <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangePeriod)}>
+            <SelectTrigger className="w-[150px] bg-background">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -173,383 +534,71 @@ export default function AnalyticsPage() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="bg-transparent">
-            <Download className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting || loading}
+            className="bg-transparent"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
             Export
           </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
-          <TabsTrigger value="occupancy">Occupancy</TabsTrigger>
-          <TabsTrigger value="owners">Owners</TabsTrigger>
-          <TabsTrigger value="watchmen">Watchmen</TabsTrigger>
-        </TabsList>
+      {/* Overview Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Revenue"
+          value={overviewData ? `$${overviewData.totalRevenue.current.toLocaleString()}` : "$0"}
+          change={overviewData?.totalRevenue.change.percentage || 0}
+          changeType={overviewData?.totalRevenue.change.isPositive ? "positive" : "negative"}
+          icon={DollarSign}
+          loading={loading}
+        />
+        <StatCard
+          title="Total Bookings"
+          value={overviewData?.totalBookings.current || 0}
+          change={overviewData?.totalBookings.change.percentage || 0}
+          changeType={overviewData?.totalBookings.change.isPositive ? "positive" : "negative"}
+          icon={Calendar}
+          loading={loading}
+        />
+        <StatCard
+          title="Active Locations"
+          value={overviewData?.activeLocations.current || 0}
+          change={overviewData?.activeLocations.change.percentage || 0}
+          changeType={overviewData?.activeLocations.change.isPositive ? "positive" : "negative"}
+          icon={MapPin}
+          loading={loading}
+        />
+        <StatCard
+          title="Avg Occupancy"
+          value={overviewData?.averageOccupancy.current || 0}
+          suffix="%"
+          change={overviewData?.averageOccupancy.change.percentage || 0}
+          changeType={overviewData?.averageOccupancy.change.isPositive ? "positive" : "negative"}
+          icon={Car}
+          loading={loading}
+        />
+      </div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Revenue"
-              value="$400,000"
-              change={12.5}
-              changeType="positive"
-              icon={DollarSign}
-            />
-            <StatCard
-              title="Total Bookings"
-              value={7770}
-              change={8.3}
-              changeType="positive"
-              icon={Calendar}
-            />
-            <StatCard
-              title="Active Locations"
-              value={156}
-              change={5.2}
-              changeType="positive"
-              icon={MapPin}
-            />
-            <StatCard
-              title="Avg Occupancy"
-              value="78%"
-              change={-2.1}
-              changeType="negative"
-              icon={Car}
-            />
-          </div>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RevenueTrendChart data={revenueTrendData} loading={loading} />
+        <BookingDistributionChart
+          data={bookingDistributionData}
+          totalBookings={totalBookings}
+          loading={loading}
+        />
+      </div>
 
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue Trend</CardTitle>
-                <CardDescription>Monthly revenue and bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#0d9488"
-                        fill="#0d9488"
-                        fillOpacity={0.2}
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Booking Types Pie */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Bookings by Type</CardTitle>
-                <CardDescription>Distribution of parking types</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] flex items-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={bookingsByType}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                      >
-                        {bookingsByType.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="space-y-2 min-w-[120px]">
-                    {bookingsByType.map((item) => (
-                      <div key={item.name} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-sm text-muted-foreground">{item.name}</span>
-                        <span className="text-sm font-medium ml-auto">{item.value}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Top Locations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Performing Locations</CardTitle>
-              <CardDescription>Locations ranked by bookings and revenue</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Location</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Bookings</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Revenue</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Occupancy</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topLocations.map((location, index) => (
-                      <tr key={location.name} className="border-b border-border last:border-0">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
-                            <span className="font-medium">{location.name}</span>
-                          </div>
-                        </td>
-                        <td className="text-right py-3 px-4">{location.bookings.toLocaleString()}</td>
-                        <td className="text-right py-3 px-4">{`$${location.revenue.toLocaleString()}`}</td>
-                        <td className="text-right py-3 px-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Progress value={location.occupancy} className="w-20 h-2" />
-                            <span className="text-sm w-10">{location.occupancy}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard title="Gross Revenue" value="$400,000" change={12.5} changeType="positive" icon={DollarSign} />
-            <StatCard title="Commissions Earned" value="$40,000" change={15.2} changeType="positive" icon={TrendingUp} />
-            <StatCard title="Avg Order Value" value="$51.48" change={3.1} changeType="positive" icon={BarChart3} />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue & Commissions</CardTitle>
-              <CardDescription>Monthly breakdown of revenue and platform commissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar dataKey="revenue" fill="#0d9488" radius={[4, 4, 0, 0]} name="Revenue" />
-                    <Bar dataKey="commissions" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Commissions" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Occupancy Tab */}
-        <TabsContent value="occupancy" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard title="Avg Occupancy" value="78%" change={-2.1} changeType="negative" icon={Car} />
-            <StatCard title="Peak Hours" value="12pm-2pm" change={0} changeType="positive" icon={Clock} />
-            <StatCard title="Total Spots" value={12450} change={8.5} changeType="positive" icon={MapPin} />
-          </div>
-
-          {/* Hourly Occupancy */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Hourly Occupancy Rate</CardTitle>
-              <CardDescription>Average occupancy throughout the day</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={occupancyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="hour" className="text-xs" />
-                    <YAxis className="text-xs" domain={[0, 100]} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="rate"
-                      stroke="#0d9488"
-                      strokeWidth={3}
-                      dot={{ fill: "#0d9488", strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Booking Heatmap */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Heatmap</CardTitle>
-              <CardDescription>Occupancy rates by day and time (6am - 6pm)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <div className="min-w-[500px]">
-                  <div className="flex gap-1 mb-2 ml-12">
-                    {["6am", "8am", "10am", "12pm", "2pm", "4pm", "6pm", "8pm", "10pm", "12am"].map((hour) => (
-                      <div key={hour} className="w-6 sm:w-8 text-center text-xs text-muted-foreground">
-                        {hour}
-                      </div>
-                    ))}
-                  </div>
-                  {heatmapData.map((row) => (
-                    <div key={row.day} className="flex items-center gap-1 mb-1">
-                      <div className="w-10 text-sm text-muted-foreground">{row.day}</div>
-                      {row.hours.slice(0, 10).map((val, i) => (
-                        <HeatmapCell key={i} value={val} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Owners Tab */}
-        <TabsContent value="owners" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard title="Active Owners" value={89} change={12.3} changeType="positive" icon={Users} />
-            <StatCard title="Total Locations" value={156} change={8.5} changeType="positive" icon={MapPin} />
-            <StatCard title="Avg Rating" value="4.7" change={0.2} changeType="positive" icon={TrendingUp} />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Owner Performance</CardTitle>
-              <CardDescription>Top performing parking lot owners</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Owner</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Locations</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Bookings</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Revenue</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Rating</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Response</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ownerPerformance.map((owner) => (
-                      <tr key={owner.name} className="border-b border-border last:border-0">
-                        <td className="py-3 px-4 font-medium">{owner.name}</td>
-                        <td className="text-center py-3 px-4">{owner.locations}</td>
-                        <td className="text-right py-3 px-4">{owner.bookings.toLocaleString()}</td>
-                        <td className="text-right py-3 px-4">{`$${owner.revenue.toLocaleString()}`}</td>
-                        <td className="text-center py-3 px-4">
-                          <Badge variant={owner.rating >= 4.7 ? "default" : "secondary"}>
-                            {owner.rating}
-                          </Badge>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className={owner.responseRate >= 95 ? "text-green-600" : "text-muted-foreground"}>
-                            {owner.responseRate}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Watchmen Tab */}
-        <TabsContent value="watchmen" className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard title="Active Watchmen" value={45} change={5.0} changeType="positive" icon={Users} />
-            <StatCard title="Total Check-ins" value={1435} change={12.1} changeType="positive" icon={Car} />
-            <StatCard title="Avg Response Time" value="2.4 min" change={-8.3} changeType="positive" icon={Clock} />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Watchman Activity Log</CardTitle>
-              <CardDescription>Performance metrics for parking attendants</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Watchman</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Check-ins</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Check-outs</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Violations</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Avg Response</th>
-                      <th className="text-center py-3 px-4 font-medium text-muted-foreground">Shifts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {watchmanActivity.map((watchman) => (
-                      <tr key={watchman.name} className="border-b border-border last:border-0">
-                        <td className="py-3 px-4 font-medium">{watchman.name}</td>
-                        <td className="text-right py-3 px-4">{watchman.checkIns}</td>
-                        <td className="text-right py-3 px-4">{watchman.checkOuts}</td>
-                        <td className="text-center py-3 px-4">
-                          <Badge variant={watchman.violations > 3 ? "destructive" : "secondary"}>
-                            {watchman.violations}
-                          </Badge>
-                        </td>
-                        <td className="text-center py-3 px-4">{watchman.avgResponse}</td>
-                        <td className="text-center py-3 px-4">{watchman.shifts}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Top Locations Table */}
+      <TopLocationsTable data={topLocationsData} loading={loading} />
     </div>
   );
 }
