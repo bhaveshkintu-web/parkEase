@@ -478,53 +478,6 @@ model WorkflowExecution {
   workflow    Workflow  @relation(fields: [workflowId], references: [id])
 }
 
-model BookingRequest {
-  id                String               @id @default(cuid())
-  customerId        String?
-  customerName      String
-  customerPhone     String?
-  vehiclePlate      String
-  vehicleType       String
-  parkingId         String
-  parkingName       String
-  spotNumber        String?
-  requestType       RequestType
-  originalBookingId String?
-  requestedStart    DateTime
-  requestedEnd      DateTime
-  estimatedAmount   Float
-  status            BookingRequestStatus @default(PENDING)
-  priority          String               @default("normal")
-  notes             String?
-  requestedById     String
-  requestedAt       DateTime             @default(now())
-  processedById     String?
-  processedAt       DateTime?
-  rejectionReason   String?
-  bookingId         String?              @unique
-  location          ParkingLocation      @relation(fields: [parkingId], references: [id])
-  processedBy       User?                @relation("ProcessedBy", fields: [processedById], references: [id])
-  requestedBy       User                 @relation("RequestedBy", fields: [requestedById], references: [id])
-
-  @@index([parkingId])
-  @@index([requestedById])
-  @@index([status])
-}
-
-model SupportTicket {
-  id            String       @id @default(cuid())
-  name          String
-  email         String
-  subject       String
-  message       String
-  status        TicketStatus @default(OPEN)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  internalNotes String?
-
-  @@index([email])
-  @@index([status])
-}
 
 model Notification {
   id        String           @id @default(cuid())
