@@ -82,7 +82,57 @@ export const authOptions: NextAuthOptions = {
             token.ownerId = profile.id;
           }
         }
+        
+        // Fetch preferences
+        const prefSettings = await prisma.platformSettings.findMany({
+          where: { key: { startsWith: `user:${user.id}:` } }
+        });
+
+        const preferences: any = {
+          notifications: { email: true, sms: false, marketing: false },
+          defaultVehicleId: "no-default",
+          defaultPaymentId: "no-default",
+          lastRevokedAt: null as string | null
+        };
+
+        prefSettings.forEach((s: any) => {
+          if (s.key.endsWith("notifications.email")) preferences.notifications.email = s.value === "true";
+          if (s.key.endsWith("notifications.sms")) preferences.notifications.sms = s.value === "true";
+          if (s.key.endsWith("notifications.marketing")) preferences.notifications.marketing = s.value === "true";
+          if (s.key.endsWith("security.lastRevokedAt")) preferences.lastRevokedAt = s.value;
+        });
+
+        // Fetch default vehicle/payment from their models
+        const defaultVehicle = await prisma.savedVehicle.findFirst({
+          where: { userId: user.id, isDefault: true },
+          select: { id: true }
+        });
+        if (defaultVehicle) preferences.defaultVehicleId = defaultVehicle.id;
+
+        const defaultPayment = await prisma.paymentMethod.findFirst({
+          where: { userId: user.id, isDefault: true },
+          select: { id: true }
+        });
+        if (defaultPayment) preferences.defaultPaymentId = defaultPayment.id;
+
+        token.preferences = preferences;
       }
+
+      // Session Revocation Check
+      const revocationKey = `user:${token.id}:security.lastRevokedAt`;
+      const lastRevokedAt = await prisma.platformSettings.findUnique({
+        where: { key: revocationKey },
+        select: { value: true },
+      });
+
+      if (lastRevokedAt && token.iat) {
+        const revokedTime = new Date(lastRevokedAt.value).getTime();
+        const issuedTime = (token.iat as number) * 1000; // JWT iat is in seconds
+        if (issuedTime < revokedTime) {
+          throw new Error("Session revoked");
+        }
+      }
+
       return token;
     },
 
@@ -95,6 +145,7 @@ export const authOptions: NextAuthOptions = {
         session.user.phone = token.phone as string | null;
         session.user.avatar = token.avatar as string | null;
         (session.user as any).ownerId = token.ownerId as string | undefined;
+        (session.user as any).preferences = token.preferences;
       }
       return session;
     },

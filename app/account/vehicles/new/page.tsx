@@ -40,14 +40,19 @@ export default function AddVehiclePage() {
         fd.append("color", data.color);
         fd.append("licensePlate", data.licensePlate);
         fd.append("state", data.state);
-        fd.append("isDefault", data.isDefault ? "true" : "false");
-        fd.append("userId", user.id);
+        fd.append("isDefault", data.isDefault ? "on" : "off");
         fd.append("userId", user.id);
 
         const res = await addVehicle(null, fd);
         if (res.success) {
           toast({ title: "Vehicle added" });
           router.push("/account/vehicles/");
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to save vehicle. Please check your data and try again.",
+            variant: "destructive",
+          });
         }
       }}
     />

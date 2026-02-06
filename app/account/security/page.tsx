@@ -148,9 +148,21 @@ export default function SecurityPage() {
 
   // Load trusted devices and login activity
   useEffect(() => {
-    setTrustedDevices(getTrustedDevices());
-    setLoginActivity(getLoginActivity());
-  }, [getTrustedDevices, getLoginActivity]);
+    const fetchData = async () => {
+        setIsLoading(true);
+        const [devices, activity] = await Promise.all([
+            getTrustedDevices(),
+            getLoginActivity()
+        ]);
+        setTrustedDevices(devices);
+        setLoginActivity(activity);
+        setIsLoading(false);
+    };
+    
+    if (user) {
+        fetchData();
+    }
+  }, [user, getTrustedDevices, getLoginActivity]);
 
   // Redirect if not authenticated
   useEffect(() => {

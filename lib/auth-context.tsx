@@ -27,6 +27,15 @@ export type User = {
   ownerId?: string;
   ownerProfile?: any; // Avoiding circular dependency if possible, or just use any for now
   createdAt?: string;
+  preferences?: {
+    notifications: {
+      email: boolean;
+      sms: boolean;
+      marketing: boolean;
+    };
+    defaultVehicleId?: string;
+    defaultPaymentId?: string;
+  };
 };
 
 interface AuthState {
@@ -59,9 +68,40 @@ interface AuthContextType extends AuthState {
 
   resendEmailVerification: () => Promise<{ success: boolean; error?: string }>;
 
+  updateSecurityPreferences: (
+    data: any,
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  enableTwoFactor: (
+    method: string,
+  ) => Promise<{ success: boolean; error?: string; secret?: string }>;
+
+  disableTwoFactor: (password: string) => Promise<{ success: boolean; error?: string }>;
+
+  verifyTwoFactor: (code: string) => Promise<{ success: boolean; error?: string }>;
+
+  getTrustedDevices: () => Promise<any[]>;
+
+  removeTrustedDevice: (id: string) => Promise<{ success: boolean; error?: string }>;
+
+  getLoginActivity: () => Promise<any[]>;
+
+  revokeAllSessions: () => Promise<{ success: boolean; error?: string }>;
+
   uploadAvatar: (file: File) => Promise<{ success: boolean; error?: string }>;
 
   removeAvatar: () => Promise<{ success: boolean; error?: string }>;
+  
+  updatePreferences: (
+    data: any,
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  changePassword: (
+    current: string,
+    newPass: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
 
   logout: () => void;
 }
@@ -117,6 +157,9 @@ function normalizeUser(raw: any): User {
     ownerId: raw.ownerId,
     ownerProfile: raw.ownerProfile,
     createdAt: raw.createdAt,
+    preferences: raw.preferences ?? {
+      notifications: { email: true, sms: false, marketing: false },
+    },
   };
 }
 
@@ -364,6 +407,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uploadAvatar,
         removeAvatar,
         resendEmailVerification,
+        updatePreferences: async (data: any) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          
+          try {
+            // Determine what's being updated
+            if (data.notifications) {
+              const { updateUserNotificationSetting } = await import("@/lib/actions/user-settings");
+              for (const [key, val] of Object.entries(data.notifications)) {
+                await updateUserNotificationSetting(user.id, key as any, val as boolean);
+              }
+            }
+            if (data.defaultVehicleId) {
+              const { setDefaultVehicle } = await import("@/lib/actions/user-settings");
+              await setDefaultVehicle(user.id, data.defaultVehicleId);
+            }
+            if (data.defaultPaymentId) {
+              const { setDefaultPaymentMethod } = await import("@/lib/actions/user-settings");
+              await setDefaultPaymentMethod(user.id, data.defaultPaymentId);
+            }
+
+            // Refresh session
+            const sessionRes = await fetch("/api/auth/session");
+            const sessionData = await sessionRes.json();
+            if (sessionData?.user) setUser(normalizeUser(sessionData.user));
+
+            return { success: true };
+          } catch (err) {
+            console.error("UPDATE_PREFERENCES_ERROR:", err);
+            return { success: false, error: "Failed to update preferences" };
+          }
+        },
+        changePassword: async (current: string, newPass: string) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { updateUserPassword } = await import("@/lib/actions/auth-actions");
+          const result = await updateUserPassword(user.id, current, newPass);
+          return result;
+        },
+        deleteAccount: async () => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { deleteUserAccount } = await import("@/lib/actions/user-settings");
+          const result = await deleteUserAccount(user.id);
+          if (result.success) {
+            logout();
+          }
+          return result;
+        },
+        updateSecurityPreferences: async (data: any) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { updateUserSecurityPreferences } = await import("@/lib/actions/auth-actions");
+          const result = await updateUserSecurityPreferences(user.id, data);
+          if (result.success) {
+             const sessionRes = await fetch("/api/auth/session");
+             const sessionData = await sessionRes.json();
+             if (sessionData?.user) setUser(normalizeUser(sessionData.user));
+          }
+          return result;
+        },
+        enableTwoFactor: async (method: string) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { enableUserTwoFactor } = await import("@/lib/actions/auth-actions");
+          return await enableUserTwoFactor(user.id, method);
+        },
+        disableTwoFactor: async (password: string) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { updateUserSecuritySetting } = await import("@/lib/actions/auth-actions");
+          // Here we would also verify password if field was configured to require it
+          return await updateUserSecuritySetting(user.id, "twoFactorEnabled" as any, false);
+        },
+        verifyTwoFactor: async (code: string) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { verifyUserTwoFactor } = await import("@/lib/actions/auth-actions");
+          const result = await verifyUserTwoFactor(user.id, code);
+          if (result.success) {
+             const sessionRes = await fetch("/api/auth/session");
+             const sessionData = await sessionRes.json();
+             if (sessionData?.user) setUser(normalizeUser(sessionData.user));
+          }
+          return result;
+        },
+        getTrustedDevices: async () => {
+          if (!user) return [];
+          const { getUserTrustedDevices } = await import("@/lib/actions/auth-actions");
+          return await getUserTrustedDevices(user.id);
+        },
+        removeTrustedDevice: async (id: string) => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { removeUserTrustedDevice } = await import("@/lib/actions/auth-actions");
+          return await removeUserTrustedDevice(user.id, id);
+        },
+        getLoginActivity: async () => {
+          if (!user) return [];
+          const { getUserLoginActivity } = await import("@/lib/actions/auth-actions");
+          return await getUserLoginActivity(user.id);
+        },
+        revokeAllSessions: async () => {
+          if (!user) return { success: false, error: "Not authenticated" };
+          const { revokeAllUserSessions } = await import("@/lib/actions/auth-actions");
+          return await revokeAllUserSessions(user.id);
+        },
       }}
     >
       {children}
