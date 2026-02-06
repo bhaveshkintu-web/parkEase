@@ -15,35 +15,30 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     let avatarUrl = "";
 
-    // 1. Try Cloudinary if configured
-    if (process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET) {
-      try {
-        const upload = await new Promise<any>((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream({ folder: "avatars" }, (err, res) => {
-              if (err) reject(err);
-              resolve(res);
-            })
-            .end(buffer);
-        });
-        if (upload?.secure_url) avatarUrl = upload.secure_url;
-      } catch (cloudinaryError) {
-        console.error("CLOUDINARY_UPLOAD_FAILED, tried local fallback:", cloudinaryError);
-      }
+    // Check Cloudinary configuration
+    if (!process.env.CLOUDINARY_NAME || !process.env.CLOUDINARY_KEY || !process.env.CLOUDINARY_SECRET) {
+      throw new Error("Cloudinary configuration is missing. Please check your .env file.");
     }
 
-    // 2. Fallback to Local Storage if Cloudinary is missing or failed
-    if (!avatarUrl) {
-      const fs = require("fs/promises");
-      const path = require("path");
+    // Upload to Cloudinary
+    try {
+      const upload = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream({ folder: "avatars" }, (err, res) => {
+            if (err) reject(err);
+            resolve(res);
+          })
+          .end(buffer);
+      });
 
-      const fileName = `${userId}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-
-      await fs.mkdir(uploadDir, { recursive: true });
-      await fs.writeFile(path.join(uploadDir, fileName), buffer);
-
-      avatarUrl = `/uploads/${fileName}`;
+      if (upload?.secure_url) {
+        avatarUrl = upload.secure_url;
+      } else {
+        throw new Error("Failed to get secure URL from Cloudinary");
+      }
+    } catch (cloudinaryError: any) {
+      console.error("CLOUDINARY_UPLOAD_ERROR:", cloudinaryError);
+      throw new Error(`Cloudinary upload failed: ${cloudinaryError.message}`);
     }
 
     await prisma.user.update({

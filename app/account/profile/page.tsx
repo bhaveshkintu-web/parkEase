@@ -106,8 +106,10 @@ export default function ProfilePage() {
         <CardContent>
           <div className="flex items-center gap-6">
             <div className="relative">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={user?.avatar || "/placeholder.svg"} />
+              <Avatar className="w-24 h-24" key={user?.avatar || "no-photo"}>
+                <AvatarImage
+                  src={user?.avatar ? `${user.avatar}?t=${Date.now()}` : "/placeholder.svg"}
+                />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -152,6 +154,7 @@ export default function ProfilePage() {
                         });
                       }
                     }
+                    e.target.value = "";
                   }}
                 />
                 <Button
