@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -51,109 +51,86 @@ import type { AdminReview } from "@/lib/types";
 
 const ITEMS_PER_PAGE = 10;
 
-// Mock reviews data
-const mockReviews: AdminReview[] = [
-  {
-    id: "r1",
-    locationId: "1",
-    author: "John D.",
-    rating: 5,
-    comment: "Excellent service! The shuttle was quick and the staff was friendly. Will definitely use again.",
-    date: "2024-01-15",
-    helpful: 12,
-    status: "approved",
-    reportCount: 0,
-  },
-  {
-    id: "r2",
-    locationId: "1",
-    author: "Sarah M.",
-    rating: 4,
-    comment: "Good parking spot, easy to find. Shuttle took a bit longer than expected but overall good experience.",
-    date: "2024-01-14",
-    helpful: 8,
-    status: "approved",
-    reportCount: 0,
-  },
-  {
-    id: "r3",
-    locationId: "2",
-    author: "Mike T.",
-    rating: 2,
-    comment: "The lot was full when I arrived even though I had a reservation. Very frustrating experience.",
-    date: "2024-01-13",
-    helpful: 3,
-    status: "pending",
-    reportCount: 2,
-    flagReason: "Customer complaint - needs follow up",
-  },
-  {
-    id: "r4",
-    locationId: "3",
-    author: "Emily R.",
-    rating: 5,
-    comment: "Best airport parking I've ever used. Clean, secure, and the shuttle was waiting for us.",
-    date: "2024-01-12",
-    helpful: 15,
-    status: "approved",
-    reportCount: 0,
-  },
-  {
-    id: "r5",
-    locationId: "2",
-    author: "Anonymous",
-    rating: 1,
-    comment: "This place is a scam! They charged me extra fees not mentioned anywhere.",
-    date: "2024-01-11",
-    helpful: 1,
-    status: "flagged",
-    reportCount: 5,
-    flagReason: "Potential false review - no matching reservation",
-  },
-  {
-    id: "r6",
-    locationId: "1",
-    author: "David L.",
-    rating: 4,
-    comment: "Convenient location and fair price. Would recommend for anyone flying out of LAX.",
-    date: "2024-01-10",
-    helpful: 6,
-    status: "pending",
-    reportCount: 0,
-  },
-];
+// Mock reviews removed
+const mockReviews: any[] = [];
 
 const Loading = () => null;
 
 export default function AdminReviewsPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [reviews, setReviews] = useState<AdminReview[]>(mockReviews);
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [allOwners, setAllOwners] = useState<{ id: string, name: string }[]>([]);
+  const [allLocations, setAllLocations] = useState<{ id: string, name: string, ownerId: string, airportCode: string }[]>([]);
+  const [allAirports, setAllAirports] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [ratingFilter, setRatingFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [airportFilter, setAirportFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const [selectedReviews, setSelectedReviews] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
   const [responseDialogOpen, setResponseDialogOpen] = useState(false);
   const [responseText, setResponseText] = useState("");
 
+  const fetchReviews = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/reviews");
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews);
+        setAllOwners(data.owners);
+        setAllLocations(data.locations);
+        setAllAirports(data.airports);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch reviews.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Fetch reviews error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  // Computed options
+  const owners = allOwners;
+
+  const locations = useMemo(() => {
+    return allLocations.filter(loc =>
+      (ownerFilter === "all" || loc.ownerId === ownerFilter) &&
+      (airportFilter === "all" || loc.airportCode === airportFilter)
+    );
+  }, [allLocations, ownerFilter, airportFilter]);
+
   // Filter reviews
   const filteredReviews = useMemo(() => {
     return reviews.filter((review) => {
-      if (searchQuery && !review.comment.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !review.author.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      if (statusFilter !== "all" && review.status !== statusFilter) {
-        return false;
-      }
-      if (ratingFilter !== "all" && review.rating !== parseInt(ratingFilter)) {
-        return false;
-      }
-      return true;
+      const contentMatch = review.content?.toLowerCase().includes(searchQuery.toLowerCase());
+      const authorMatch = review.author?.toLowerCase().includes(searchQuery.toLowerCase());
+      const locationSearchMatch = review.locationName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const basicMatch = searchQuery ? (contentMatch || authorMatch || locationSearchMatch) : true;
+      const statusMatch = statusFilter === "all" || review.status === statusFilter;
+      const ratingMatch = ratingFilter === "all" || review.rating === parseInt(ratingFilter);
+      const ownerMatch = ownerFilter === "all" || review.ownerId === ownerFilter;
+      const airportMatch = airportFilter === "all" || review.airportCode === airportFilter;
+      const locationMatch = locationFilter === "all" || review.locationId === locationFilter;
+
+      return basicMatch && statusMatch && ratingMatch && ownerMatch && airportMatch && locationMatch;
     });
-  }, [reviews, searchQuery, statusFilter, ratingFilter]);
+  }, [reviews, searchQuery, statusFilter, ratingFilter, ownerFilter, airportFilter, locationFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
@@ -163,12 +140,14 @@ export default function AdminReviewsPage() {
   );
 
   // Stats
-  const stats = useMemo(() => ({
-    total: reviews.length,
-    pending: reviews.filter((r) => r.status === "pending").length,
-    flagged: reviews.filter((r) => r.status === "flagged").length,
-    avgRating: (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1),
-  }), [reviews]);
+  const stats = useMemo(() => {
+    if (reviews.length === 0) return { total: 0, pending: 0, flagged: 0, avgRating: "0.0" };
+    const total = reviews.length;
+    const pending = reviews.filter((r) => r.status === "pending").length;
+    const flagged = reviews.filter((r) => r.status === "flagged").length;
+    const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+    return { total, pending, flagged, avgRating };
+  }, [reviews]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -186,41 +165,96 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const updateReviewStatus = (id: string, status: AdminReview["status"]) => {
-    setReviews((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-    toast({
-      title: "Review updated",
-      description: `Review has been ${status}.`,
-    });
+  const updateReviewStatus = async (id: string, status: AdminReview["status"]) => {
+    try {
+      const res = await fetch("/api/admin/reviews", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+
+      if (res.ok) {
+        setReviews((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status } : r))
+        );
+        toast({
+          title: "Review updated",
+          description: `Review has been ${status}.`,
+        });
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update review status.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleBulkAction = (action: "approve" | "reject" | "flag") => {
+  const handleBulkAction = async (action: "approve" | "reject" | "flag") => {
     const statusMap = { approve: "approved", reject: "rejected", flag: "flagged" } as const;
-    setReviews((prev) =>
-      prev.map((r) =>
-        selectedReviews.includes(r.id) ? { ...r, status: statusMap[action] } : r
-      )
+    const newStatus = statusMap[action];
+
+    // Process bulk updates
+    const promises = selectedReviews.map(id =>
+      fetch("/api/admin/reviews", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      })
     );
-    toast({
-      title: "Bulk action completed",
-      description: `${selectedReviews.length} reviews have been ${statusMap[action]}.`,
-    });
-    setSelectedReviews([]);
+
+    try {
+      await Promise.all(promises);
+      setReviews((prev) =>
+        prev.map((r) =>
+          selectedReviews.includes(r.id) ? { ...r, status: newStatus } : r
+        )
+      );
+      toast({
+        title: "Bulk action completed",
+        description: `${selectedReviews.length} reviews have been ${newStatus}.`,
+      });
+      setSelectedReviews([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Some reviews failed to update.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteReview = (id: string) => {
-    setReviews((prev) => prev.filter((r) => r.id !== id));
-    toast({
-      title: "Review deleted",
-      description: "The review has been permanently removed.",
-    });
+  const handleDeleteReview = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/reviews?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setReviews((prev) => prev.filter((r) => r.id !== id));
+        toast({
+          title: "Review deleted",
+          description: "The review has been permanently removed.",
+        });
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete review.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveResponse = () => {
     if (!selectedReview) return;
-    
+
+    // In a real app, this would also call an API to save the response
     toast({
       title: "Response saved",
       description: "Your response has been published.",
@@ -239,6 +273,14 @@ export default function AdminReviewsPage() {
     };
     return <Badge className={styles[status]}>{status}</Badge>;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <Suspense fallback={<Loading />}>
@@ -293,6 +335,54 @@ export default function AdminReviewsPage() {
                     className="pl-9"
                   />
                 </div>
+                <Select
+                  value={ownerFilter}
+                  onValueChange={(val) => {
+                    setOwnerFilter(val);
+                    setLocationFilter("all"); // Reset location when owner changes
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Owners" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Owners</SelectItem>
+                    {owners.map(owner => (
+                      <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={airportFilter}
+                  onValueChange={(val) => {
+                    setAirportFilter(val);
+                    setLocationFilter("all");
+                  }}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="All Airports" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Airports</SelectItem>
+                    {allAirports.map(airport => (
+                      <SelectItem key={airport} value={airport}>{airport}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Status" />
@@ -355,6 +445,7 @@ export default function AdminReviewsPage() {
                       />
                     </th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Review</th>
+                    <th className="p-4 text-left text-sm font-medium text-muted-foreground">Location</th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Rating</th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Status</th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Date</th>
@@ -373,26 +464,30 @@ export default function AdminReviewsPage() {
                       <td className="p-4">
                         <div className="max-w-md">
                           <p className="font-medium text-foreground">{review.author}</p>
-                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{review.comment}</p>
+                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{review.content}</p>
                           {review.flagReason && (
                             <p className="mt-1 text-xs text-orange-600">Flag: {review.flagReason}</p>
                           )}
                         </div>
                       </td>
                       <td className="p-4">
+                        <span className="text-sm font-medium text-foreground">{review.locationName}</span>
+                      </td>
+                      <td className="p-4">
                         <div className="flex items-center gap-1">
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating ? "fill-accent text-accent" : "text-muted"
-                              }`}
+                              className={`h-4 w-4 ${i < review.rating ? "fill-accent text-accent" : "text-muted"
+                                }`}
                             />
                           ))}
                         </div>
                       </td>
                       <td className="p-4">{getStatusBadge(review.status)}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{review.date}</td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {new Date(review.date).toLocaleDateString()}
+                      </td>
                       <td className="p-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -442,7 +537,9 @@ export default function AdminReviewsPage() {
 
             {paginatedReviews.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                No reviews found matching your criteria.
+                {ownerFilter !== "all" || locationFilter !== "all"
+                  ? "No reviews yet for the selected criteria."
+                  : "No reviews found matching your criteria."}
               </div>
             )}
 
@@ -497,14 +594,13 @@ export default function AdminReviewsPage() {
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-3 w-3 ${
-                            i < selectedReview.rating ? "fill-accent text-accent" : "text-muted"
-                          }`}
+                          className={`h-3 w-3 ${i < selectedReview.rating ? "fill-accent text-accent" : "text-muted"
+                            }`}
                         />
                       ))}
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{selectedReview.comment}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{selectedReview.content}</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="response">Your Response</Label>

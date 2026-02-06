@@ -139,7 +139,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   const [counts, setCounts] = useState<any>({});
 
   useEffect(() => {
-    if (user?.id && (user.role?.toUpperCase() === "ADMIN" || user.role?.toUpperCase() === "SUPPORT")) {
+    if (user?.id && (user.role?.toLowerCase() === "admin" || user.role?.toLowerCase() === "support")) {
       fetchCounts();
       // Refresh counts every 30 seconds
       const interval = setInterval(fetchCounts, 30000);
@@ -153,8 +153,11 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
     try {
       const response = await fetch("/api/admin/analytics/dashboard");
       if (response.ok) {
-        const data = await response.json();
-        setCounts(data.stats || {});
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          setCounts(data.stats || {});
+        }
       } else {
         console.warn(`Failed to fetch sidebar counts: ${response.status}`);
       }

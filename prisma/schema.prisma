@@ -9,35 +9,35 @@ datasource db {
 }
 
 model User {
-  id               String          @id @default(cuid())
-  email            String          @unique
-  firstName        String
-  lastName         String
-  phone            String?
-  avatar           String?
-  emailVerified    Boolean         @default(false)
-  role             UserRole        @default(CUSTOMER)
-  status           UserStatus      @default(ACTIVE)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  password         String
-  verifyToken      String?
-  tokenExpiry     DateTime?
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  moderatedReviews AdminReview[]
-  bookings         Booking[]
-  ownerProfile     OwnerProfile?
-  paymentMethods   PaymentMethod[]
-  reviews          Review[]
-  savedVehicles    SavedVehicle[]
-  watchmanProfile  Watchman?
-  requestedBookings BookingRequest[] @relation("RequestedBy")
-  processedBookings BookingRequest[] @relation("ProcessedBy")
-  disputes         Dispute[]
-  assignedDisputes Dispute[]        @relation("AssignedDisputes")
-  disputeAuditLogs DisputeAuditLog[]
-  notifications    Notification[]
+  id                String            @id @default(cuid())
+  email             String            @unique
+  firstName         String
+  lastName          String
+  phone             String?
+  avatar            String?
+  emailVerified     Boolean           @default(false)
+  role              UserRole          @default(CUSTOMER)
+  status            UserStatus        @default(ACTIVE)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  password          String
+  verifyToken       String?
+  tokenExpiry       DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  moderatedReviews  AdminReview[]
+  bookings          Booking[]
+  processedBookings BookingRequest[]  @relation("ProcessedBy")
+  requestedBookings BookingRequest[]  @relation("RequestedBy")
+  assignedDisputes  Dispute[]         @relation("AssignedDisputes")
+  disputes          Dispute[]
+  disputeAuditLogs  DisputeAuditLog[]
+  notifications     Notification[]
+  ownerProfile      OwnerProfile?
+  paymentMethods    PaymentMethod[]
+  reviews           Review[]
+  savedVehicles     SavedVehicle[]
+  watchmanProfile   Watchman?
 }
 
 model OwnerProfile {
@@ -52,17 +52,17 @@ model OwnerProfile {
   state              String
   zipCode            String
   country            String
-  website            String?
-  description        String?
-  taxStatus          String?
   status             String            @default("pending")
   verificationStatus String            @default("unverified")
-  bankAccountName    String?
-  bankName          String?
-  accountNumber      String?
-  routingNumber      String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  accountNumber      String?
+  bankAccountName    String?
+  bankName           String?
+  description        String?
+  routingNumber      String?
+  taxStatus          String?
+  website            String?
   documents          OwnerDocument[]
   user               User              @relation(fields: [userId], references: [id])
   parkingApprovals   ParkingApproval[]
@@ -72,47 +72,47 @@ model OwnerProfile {
 }
 
 model ParkingLocation {
-  id             String             @id @default(cuid())
-  ownerId        String
-  name           String
-  address        String
-  city           String
-  state          String?
-  country        String
-  zipCode        String?
-  airportCode    String?
-  latitude       Float
-  longitude      Float
-  description    String?
-  pricePerDay    Float
-  originalPrice  Float?
-  amenities      String[]
-  images         String[]
-  shuttle        Boolean            @default(false)
-  covered        Boolean            @default(false)
-  selfPark       Boolean            @default(true)
-  valet          Boolean            @default(false)
-  open24Hours    Boolean            @default(false)
-  availableSpots Int
-  totalSpots     Int
-  cancellationPolicy Json?
-  shuttleInfo        Json?
-  redeemSteps        Json?
+  id                  String             @id @default(cuid())
+  ownerId             String
+  name                String
+  address             String
+  city                String
+  state               String?
+  country             String
+  zipCode             String?
+  airportCode         String?
+  latitude            Float
+  longitude           Float
+  description         String?
+  pricePerDay         Float
+  originalPrice       Float?
+  amenities           String[]
+  images              String[]
+  shuttle             Boolean            @default(false)
+  covered             Boolean            @default(false)
+  selfPark            Boolean            @default(true)
+  valet               Boolean            @default(false)
+  open24Hours         Boolean            @default(false)
+  availableSpots      Int
+  totalSpots          Int
+  cancellationPolicy  Json?
+  shuttleInfo         Json?
+  redeemSteps         Json?
   specialInstructions String[]
-  heightLimit        String?
-  securityFeatures   String[]
-  status         ParkingStatus      @default(PENDING)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  bookings       Booking[]
-  analytics      LocationAnalytics?
-  owner          OwnerProfile       @relation(fields: [ownerId], references: [id])
-  sessions       ParkingSession[]
-  pricingRules   PricingRule[]
-  reviews        Review[]
-  watchmanShifts WatchmanShift[]
-  watchmen       Watchman[]
-  bookingRequests BookingRequest[]
+  status              ParkingStatus      @default(PENDING)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  heightLimit         String?
+  securityFeatures    String[]
+  bookings            Booking[]
+  bookingRequests     BookingRequest[]
+  analytics           LocationAnalytics?
+  owner               OwnerProfile       @relation(fields: [ownerId], references: [id])
+  sessions            ParkingSession[]
+  pricingRules        PricingRule[]
+  reviews             Review[]
+  watchmanShifts      WatchmanShift[]
+  watchmen            Watchman[]         @relation("ParkingLocationToWatchman")
 }
 
 model Booking {
@@ -139,10 +139,10 @@ model Booking {
   updatedAt        DateTime        @updatedAt
   location         ParkingLocation @relation(fields: [locationId], references: [id])
   user             User?           @relation(fields: [userId], references: [id])
+  disputes         Dispute[]
   parkingSession   ParkingSession?
   payment          Payment?
   refunds          RefundRequest[]
-  disputes         Dispute[]
 }
 
 model Payment {
@@ -153,8 +153,8 @@ model Payment {
   provider        String
   transactionId   String
   status          String
-  paymentMethodId String?
   createdAt       DateTime       @default(now())
+  paymentMethodId String?
   booking         Booking        @relation(fields: [bookingId], references: [id])
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 }
@@ -197,17 +197,17 @@ model WithdrawalRequest {
 }
 
 model Watchman {
-  id           String                @id @default(cuid())
-  userId       String                @unique
-  ownerId      String
-  status       String                @default("active")
-  shift        String?
-  createdAt    DateTime              @default(now())
-  owner        OwnerProfile          @relation(fields: [ownerId], references: [id])
-  user         User                  @relation(fields: [userId], references: [id])
-  assignedLocations ParkingLocation[]
-  activityLogs WatchmanActivityLog[]
-  shifts       WatchmanShift[]
+  id                String                @id @default(cuid())
+  userId            String                @unique
+  ownerId           String
+  status            String                @default("active")
+  createdAt         DateTime              @default(now())
+  shift             String?
+  owner             OwnerProfile          @relation(fields: [ownerId], references: [id])
+  user              User                  @relation(fields: [userId], references: [id])
+  activityLogs      WatchmanActivityLog[]
+  shifts            WatchmanShift[]
+  assignedLocations ParkingLocation[]     @relation("ParkingLocationToWatchman")
 }
 
 model WatchmanShift {
@@ -272,7 +272,6 @@ model AdminReview {
 model RefundRequest {
   id             String       @id @default(cuid())
   bookingId      String
-  disputeId      String?      @unique
   amount         Float
   reason         String
   description    String?
@@ -280,32 +279,32 @@ model RefundRequest {
   approvedAmount Float?
   processedAt    DateTime?
   createdAt      DateTime     @default(now())
+  disputeId      String?      @unique
   updatedAt      DateTime     @updatedAt
   booking        Booking      @relation(fields: [bookingId], references: [id])
   dispute        Dispute?     @relation(fields: [disputeId], references: [id])
 }
 
 model Dispute {
-  id               String          @id @default(cuid())
-  bookingId        String
-  userId           String
-  subject          String
-  description      String
-  type             DisputeType
-  status           DisputeStatus   @default(OPEN)
-  priority         DisputePriority @default(MEDIUM)
-  internalNotes    String?
-  resolutionNotes  String?
-  assignedAdminId  String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  isDeleted        Boolean         @default(false)
-
-  booking          Booking         @relation(fields: [bookingId], references: [id])
-  user             User            @relation(fields: [userId], references: [id])
-  assignedAdmin    User?           @relation("AssignedDisputes", fields: [assignedAdminId], references: [id])
-  refundRequest    RefundRequest?
-  auditLogs        DisputeAuditLog[]
+  id              String            @id @default(cuid())
+  bookingId       String
+  userId          String
+  subject         String
+  description     String
+  type            DisputeType
+  status          DisputeStatus     @default(OPEN)
+  priority        DisputePriority   @default(MEDIUM)
+  internalNotes   String?
+  resolutionNotes String?
+  assignedAdminId String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  isDeleted       Boolean           @default(false)
+  assignedAdmin   User?             @relation("AssignedDisputes", fields: [assignedAdminId], references: [id])
+  booking         Booking           @relation(fields: [bookingId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  auditLogs       DisputeAuditLog[]
+  refundRequest   RefundRequest?
 
   @@index([bookingId])
   @@index([userId])
@@ -313,17 +312,16 @@ model Dispute {
 }
 
 model DisputeAuditLog {
-  id          String   @id @default(cuid())
-  disputeId   String
-  adminId     String?
-  action      String
+  id            String   @id @default(cuid())
+  disputeId     String
+  adminId       String?
+  action        String
   previousValue Json?
   newValue      Json?
-  notes       String?
-  createdAt   DateTime @default(now())
-
-  dispute     Dispute  @relation(fields: [disputeId], references: [id])
-  admin       User?    @relation(fields: [adminId], references: [id])
+  notes         String?
+  createdAt     DateTime @default(now())
+  admin         User?    @relation(fields: [adminId], references: [id])
+  dispute       Dispute  @relation(fields: [disputeId], references: [id])
 }
 
 model SavedVehicle {
@@ -341,18 +339,18 @@ model SavedVehicle {
 }
 
 model PaymentMethod {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
-  type           String   @default("card")
+  type           String    @default("card")
   last4          String
   brand          String
   expiryMonth    Int
   expiryYear     Int
-  cardholderName String?
-  isDefault      Boolean  @default(false)
+  isDefault      Boolean   @default(false)
   createdAt      DateTime  @default(now())
-  user           User      @relation(fields: [userId], references: [id])
+  cardholderName String?
   payments       Payment[]
+  user           User      @relation(fields: [userId], references: [id])
 }
 
 model OwnerDocument {
@@ -376,19 +374,19 @@ model ParkingApproval {
 }
 
 model OwnerLead {
-  id              String   @id @default(cuid())
-  fullName        String
-  email           String   @unique
-  phone           String   @unique
-  businessName    String
-  businessType    String
-  city            String
-  state           String
-  country         String
-  status          String   @default("pending") // pending, approved, rejected
-  adminNotes      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String   @unique
+  phone        String   @unique
+  businessName String
+  businessType String
+  city         String
+  state        String
+  country      String
+  status       String   @default("pending")
+  adminNotes   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model LocationAnalytics {
@@ -409,10 +407,10 @@ model PricingRule {
   multiplier Float
   startDate  DateTime?
   endDate    DateTime?
-  daysOfWeek Int[]
   isActive   Boolean          @default(true)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  daysOfWeek Int[]
   location   ParkingLocation? @relation(fields: [locationId], references: [id])
 }
 
@@ -450,9 +448,9 @@ model CommissionRule {
   type            String
   value           Float
   appliesTo       String
-  isActive        Boolean  @default(true)
   minBookingValue Float?
   maxCommission   Float?
+  isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -478,6 +476,23 @@ model WorkflowExecution {
   startedAt   DateTime  @default(now())
   completedAt DateTime?
   workflow    Workflow  @relation(fields: [workflowId], references: [id])
+}
+
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  status    String           @default("UNREAD")
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
 }
 
 enum UserRole {
@@ -627,23 +642,6 @@ enum TicketStatus {
   OPEN
   IN_PROGRESS
   RESOLVED
-}
-
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType
-  status    String           @default("UNREAD") // UNREAD, READ, ARCHIVED
-  metadata  Json?            // For storing links, IDs, etc.
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  user      User             @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([status])
 }
 
 enum NotificationType {

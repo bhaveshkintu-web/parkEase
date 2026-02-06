@@ -57,8 +57,13 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+
+    // Ensure dates are actual Date objects and enums are correctly formatted
     const requestData = {
       ...body,
+      requestedStart: new Date(body.requestedStart),
+      requestedEnd: new Date(body.requestedEnd),
+      priority: body.priority?.toUpperCase() || "NORMAL",
       requestedById: session.user.id,
       status: "PENDING"
     };

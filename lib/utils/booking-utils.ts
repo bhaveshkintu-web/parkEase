@@ -27,25 +27,26 @@ export async function checkLocationAvailability(
 }
 
 /**
- * Calculates dynamic pricing based on base rate and active pricing rules.
+ * Calculates dynamic pricing based on base rate, active pricing rules, promotions, and commissions.
  */
 export function calculatePricing(
   basePrice: number,
   rules: PricingRule[],
   checkIn: Date,
-  checkOut: Date
+  checkOut: Date,
+  promotion?: { type: string; value: number } | null,
+  commissionRule?: { type: string; value: number } | null
 ) {
   const durationInHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
   const durationInDays = Math.ceil(durationInHours / 24);
 
-  // Apply highest multiplier from active rules
+  // 1. Apply Dynamic Pricing Rules
   let multiplier = 1.0;
-  const now = new Date();
-
   const activeRules = rules.filter(rule => {
     if (!rule.isActive) return false;
     if (rule.startDate && rule.startDate > checkIn) return false;
     if (rule.endDate && rule.endDate < checkOut) return false;
+    // Optional: add daysOfWeek check here
     return true;
   });
 
@@ -53,18 +54,50 @@ export function calculatePricing(
     multiplier = Math.max(...activeRules.map(r => r.multiplier));
   }
 
-  const subtotal = basePrice * durationInDays * multiplier;
+  const subtotalBeforeDiscount = basePrice * durationInDays * multiplier;
+
+  // 2. Apply Promotion
+  let discount = 0;
+  if (promotion) {
+    if (promotion.type === "percentage") {
+      discount = subtotalBeforeDiscount * (promotion.value / 100);
+    } else if (promotion.type === "fixed") {
+      discount = promotion.value;
+    }
+  }
+
+  const subtotal = Math.max(0, subtotalBeforeDiscount - discount);
   const taxes = subtotal * 0.12; // 12% Tax
   const fees = 5.99; // Standard Service Fee
+  const total = subtotal + taxes + fees;
+
+  // 3. Calculate Commission (based on subtotal)
+  let commission = 0;
+  if (commissionRule) {
+    if (commissionRule.type === "percentage") {
+      commission = subtotal * (commissionRule.value / 100);
+    } else if (commissionRule.type === "fixed") {
+      commission = commissionRule.value;
+    }
+  } else {
+    // Default 15% commission if no rule found
+    commission = subtotal * 0.15;
+  }
+
+  const ownerEarnings = subtotal - commission;
 
   return {
     basePrice,
     multiplier,
     durationInDays,
+    subtotalBeforeDiscount: Number(subtotalBeforeDiscount.toFixed(2)),
+    discount: Number(discount.toFixed(2)),
     subtotal: Number(subtotal.toFixed(2)),
     taxes: Number(taxes.toFixed(2)),
     fees: Number(fees.toFixed(2)),
-    total: Number((subtotal + taxes + fees).toFixed(2)),
+    total: Number(total.toFixed(2)),
+    commission: Number(commission.toFixed(2)),
+    ownerEarnings: Number(ownerEarnings.toFixed(2)),
   };
 }
 

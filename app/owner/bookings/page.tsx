@@ -74,6 +74,24 @@ export default function OwnerBookingsPage() {
   const { reservations, adminLocations, adminReviews, initializeForOwner } = useDataStore();
   const searchParams = useSearchParams(); // Use search params
 
+  // State
+  const [activeTab, setActiveTab] = useState("bookings");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date-desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState<Reservation | null>(null);
+  const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const { toast } = useToast();
+
   // Fetch booking requests
   const fetchBookingRequests = useCallback(async () => {
     setIsLoadingRequests(true);
@@ -99,37 +117,21 @@ export default function OwnerBookingsPage() {
     } finally {
       setIsLoadingRequests(false);
     }
-  }, []);
+  }, [toast]);
 
   // Initialize data
   useEffect(() => {
     if (user) {
-      if (user.role === "owner" || user.role === "OWNER" || user.role === "ADMIN") {
+      const isOwnerRole = user.role === "owner" || user.role === "OWNER" || user.role === "ADMIN";
+      if (isOwnerRole) {
         fetchBookingRequests();
-        if (user.ownerId) {
-          initializeForOwner(user.ownerId);
+        const idToUse = user.ownerId || user.id;
+        if (idToUse) {
+          initializeForOwner(idToUse);
         }
       }
     }
   }, [user, initializeForOwner, fetchBookingRequests]);
-
-  // State
-  const [activeTab, setActiveTab] = useState("bookings");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("date-desc");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBooking, setSelectedBooking] = useState<Reservation | null>(null);
-  const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [isReplying, setIsReplying] = useState(false);
-  const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
-  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const { toast } = useToast();
 
   // Safe data access
   const safeReservations = reservations || [];

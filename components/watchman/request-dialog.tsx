@@ -53,7 +53,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
     parkingId: "",
     requestType: "WALK_IN" as any,
     duration: "2",
-    priority: "normal",
+    priority: "NORMAL",
     notes: "",
   });
 
@@ -117,7 +117,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
         parkingId: "",
         requestType: "WALK_IN",
         duration: "2",
-        priority: "normal",
+        priority: "NORMAL",
         notes: "",
       });
     } catch (error) {
@@ -147,7 +147,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
 
         <div className="space-y-4 py-6">
           {/* Row 1: Name & Phone */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="customerName" className="text-sm font-semibold">
                 Customer Name <span className="text-red-500">*</span>
@@ -160,28 +160,26 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
                 className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerEmail" className="text-sm font-semibold">Email</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
-                  className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerPhone" className="text-sm font-semibold">Phone</Label>
-                <Input
-                  id="customerPhone"
-                  placeholder="+1 555-1234"
-                  value={formData.customerPhone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-                  className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerEmail" className="text-sm font-semibold">Email</Label>
+              <Input
+                id="customerEmail"
+                type="email"
+                placeholder="john@example.com"
+                value={formData.customerEmail}
+                onChange={(e) => setFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
+                className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerPhone" className="text-sm font-semibold">Phone</Label>
+              <Input
+                id="customerPhone"
+                placeholder="+1 555-1234"
+                value={formData.customerPhone}
+                onChange={(e) => setFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
+              />
             </div>
           </div>
 
@@ -248,7 +246,7 @@ export function RequestDialog({ open, onOpenChange, initialData }: RequestDialog
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="NORMAL">Normal</SelectItem>
                   <SelectItem value="URGENT">Urgent</SelectItem>
                 </SelectContent>
               </Select>

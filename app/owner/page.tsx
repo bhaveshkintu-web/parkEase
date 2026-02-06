@@ -71,12 +71,18 @@ export default function OwnerDashboard() {
         setIsLoading(true);
         const response = await fetch("/api/owner/analytics");
         if (response.ok) {
-          const data = await response.json();
-          if (data.stats) {
-            setStats(data.stats);
-          }
-          if (data.data) {
-            setDashboardData(data.data);
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            if (data.stats) {
+              setStats(data.stats);
+            }
+            if (data.data) {
+              setDashboardData(data.data);
+            }
+          } else {
+            // Handle non-JSON response (likely HTML error or redirect)
+            console.warn("Received non-JSON response from analytics API");
           }
         }
       } catch (error) {

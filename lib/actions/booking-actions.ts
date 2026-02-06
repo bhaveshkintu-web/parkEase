@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
+import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -36,7 +37,7 @@ export async function getBookingDetails(bookingId: string) {
   try {
     const userId = await getAuthUserId();
     console.log(`[getBookingDetails] Searching. ID: ${bookingId}, AuthUser: ${userId}`);
-    
+
     if (!bookingId || bookingId === 'undefined') {
       console.error("[getBookingDetails] Invalid booking ID provided");
       return { success: false, error: "Invalid reservation ID" };
@@ -123,11 +124,11 @@ export async function createBooking(data: any) {
     const userId = await getAuthUserId();
 
     // 1. Validation
-    const { 
-      locationId, checkIn, checkOut, 
+    const {
+      locationId, checkIn, checkOut,
       guestFirstName, guestLastName, guestEmail, guestPhone,
       vehicleMake, vehicleModel, vehicleColor, vehiclePlate,
-      paymentMethodId // New field
+      paymentMethodId, promoCode
     } = data;
 
     const checkInDate = new Date(checkIn);
@@ -137,37 +138,68 @@ export async function createBooking(data: any) {
       return { success: false, error: "Check-out must be after check-in" };
     }
 
-    // 2. Fetch location and validate
-    const location = await prisma.parkingLocation.findUnique({
-      where: { id: locationId },
-      include: { analytics: true }
-    });
-
-    if (!location) {
-      return { success: false, error: "Parking location not found" };
-    }
-
-    if (location.status !== "ACTIVE") {
-      return { success: false, error: "This location is currently not accepting bookings" };
-    }
-
-    if (location.availableSpots <= 0) {
-      return { success: false, error: "No spots available for the selected dates" };
-    }
-
-    // 3. Calculate Prices (Server-side source of truth)
-    const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-    const basePrice = location.pricePerDay * days;
-    const taxes = basePrice * 0.0925; // 9.25% tax
-    const fees = 2.99; // Service fee
-    const totalPrice = basePrice + taxes + fees;
-
-    const confirmationCode = `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-
-    // 4. Prisma Transaction
+    // 2. Prisma Transaction for Atomic Booking
     const result = await prisma.$transaction(async (tx) => {
-      // a. Create Booking
+      // a. Fetch location and validate
+      const location = await tx.parkingLocation.findUnique({
+        where: { id: locationId },
+        include: {
+          pricingRules: true,
+          owner: {
+            include: { wallet: true }
+          }
+        }
+      });
+
+      if (!location) throw new Error("Parking location not found");
+      if (location.status !== "ACTIVE") throw new Error("Location not active");
+
+      // b. Check for overlapping bookings
+      const overlappingCount = await tx.booking.count({
+        where: {
+          locationId,
+          status: { in: ["CONFIRMED", "PENDING"] },
+          AND: [
+            { checkIn: { lt: checkOutDate } },
+            { checkOut: { gt: checkInDate } },
+          ],
+        },
+      });
+
+      if (location.totalSpots - overlappingCount <= 0) {
+        throw new Error("No spots available for the selected dates");
+      }
+
+      // c. Handle Promotion
+      let promotion = null;
+      if (promoCode) {
+        promotion = await tx.promotion.findUnique({
+          where: { code: promoCode.toUpperCase() },
+        });
+
+        if (promotion && (!promotion.isActive || promotion.validUntil < new Date())) {
+          throw new Error("Invalid or expired promo code");
+        }
+      }
+
+      // d. Handle Commission Rule
+      const commissionRule = await tx.commissionRule.findFirst({
+        where: { isActive: true },
+      });
+
+      // e. Calculate Pricing (Server-side source of truth)
+      const pricing = calculatePricing(
+        location.pricePerDay,
+        location.pricingRules,
+        checkInDate,
+        checkOutDate,
+        promotion,
+        commissionRule
+      );
+
+      const confirmationCode = generateConfirmationCode();
+
+      // f. Create Booking
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -182,50 +214,82 @@ export async function createBooking(data: any) {
           vehicleModel,
           vehicleColor,
           vehiclePlate,
-          totalPrice,
-          taxes,
-          fees,
+          totalPrice: pricing.total,
+          taxes: pricing.taxes,
+          fees: pricing.fees,
           status: BookingStatus.CONFIRMED,
           confirmationCode,
         },
       });
 
-      // b. Decrement available spots
-      await tx.parkingLocation.update({
-        where: { id: locationId },
-        data: {
-          availableSpots: {
-            decrement: 1
-          }
-        }
-      });
+      // g. Handle Promotion Usage
+      if (promotion) {
+        await tx.promotion.update({
+          where: { id: promotion.id },
+          data: { usedCount: { increment: 1 } }
+        });
+      }
 
-      // c. Create Payment
+      // h. Update Owner Wallet and Create Transaction
+      const ownerWallet = location.owner.wallet;
+      if (ownerWallet) {
+        await tx.wallet.update({
+          where: { id: ownerWallet.id },
+          data: { balance: { increment: pricing.ownerEarnings } }
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            walletId: ownerWallet.id,
+            type: "CREDIT",
+            amount: pricing.ownerEarnings,
+            description: `Earnings for booking ${confirmationCode}`,
+            status: "SUCCESS",
+            reference: booking.id,
+          }
+        });
+      }
+
+      // i. Create Payment Record
       await tx.payment.create({
         data: {
           bookingId: booking.id,
-          amount: totalPrice,
+          amount: pricing.total,
           currency: "USD",
           provider: "STRIPE",
           transactionId: data.paymentIntentId || `txn_saved_${Math.random().toString(36).substring(2, 15)}`,
           status: "SUCCESS",
-          // @ts-ignore - Prisma client out of sync with DB schema
           paymentMethodId: paymentMethodId || null,
         }
       });
 
-      // d. Update Analytics
+      // j. Create Parking Session
+      await tx.parkingSession.create({
+        data: {
+          bookingId: booking.id,
+          locationId: locationId,
+          status: "RESERVED",
+        },
+      });
+
+      // k. Update Analytics
       await tx.locationAnalytics.upsert({
         where: { locationId },
         create: {
           locationId,
           totalBookings: 1,
-          revenue: totalPrice,
+          revenue: pricing.total,
         },
         update: {
           totalBookings: { increment: 1 },
-          revenue: { increment: totalPrice },
+          revenue: { increment: pricing.total },
         }
+      });
+
+      // l. Decrement available spots (simple field update)
+      await tx.parkingLocation.update({
+        where: { id: locationId },
+        data: { availableSpots: { decrement: 1 } }
       });
 
       return booking;
@@ -233,28 +297,35 @@ export async function createBooking(data: any) {
 
     revalidatePath("/account/reservations");
     revalidatePath(`/parking/${locationId}`);
-    
+
     return { success: true, data: result };
   } catch (error: any) {
-    console.error("Failed to create booking:", error);
-    if (error.message === "UNAUTHORIZED") {
-      return { success: false, error: "Please log in to complete your booking" };
-    }
-    return { success: false, error: "Failed to create reservation. Please try again." };
+    console.error("Failed to create booking action:", error);
+    return { success: false, error: error.message || "Failed to create reservation" };
   }
 }
 
 /**
  * Cancels a booking and initiates a refund request.
  */
+/**
+ * Cancels a booking and initiates a refund request based on policy.
+ */
 export async function cancelBooking(bookingId: string, reason: string) {
   try {
     const userId = await getAuthUserId();
 
-    // Verify ownership and get locationId
+    // Verify ownership and get locationId with policy
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { userId: true, status: true, totalPrice: true, locationId: true },
+      include: {
+        location: {
+          select: {
+            id: true,
+            cancellationPolicy: true,
+          }
+        }
+      }
     });
 
     if (!booking) {
@@ -269,6 +340,50 @@ export async function cancelBooking(bookingId: string, reason: string) {
       return { success: false, error: "Booking is already cancelled" };
     }
 
+    // --- Cancellation Policy Logic ---
+    const now = new Date();
+    const checkIn = new Date(booking.checkIn);
+    const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    let refundAmount = 0;
+    const policy = booking.location?.cancellationPolicy as any;
+    let policyType = "standard";
+
+    // Default policy if missing (fallback)
+    if (!policy) {
+      // If no policy set, assume user gets full refund if > 24h (safe fallback) or 0 (strict)
+      // Choosing to return 0 to be safe and let admin decide, but marking as 'manual review'
+      refundAmount = 0;
+    } else {
+      const deadlineHours = policy.hours || 24; // Default to 24 if parsing failed
+
+      switch (policy.type) {
+        case "free":
+          if (hoursUntilCheckIn >= deadlineHours) {
+            refundAmount = booking.totalPrice;
+          } else {
+            refundAmount = 0; // Past deadline
+          }
+          break;
+        case "moderate":
+          if (hoursUntilCheckIn >= deadlineHours) {
+            refundAmount = booking.totalPrice * 0.5;
+          } else {
+            refundAmount = 0;
+          }
+          break;
+        case "strict":
+          refundAmount = 0;
+          break;
+        default:
+          refundAmount = 0;
+      }
+      policyType = policy.type;
+    }
+
+    // Round to 2 decimals
+    refundAmount = Math.round(refundAmount * 100) / 100;
+
     // Update booking status, create refund request, and restore spot in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const updatedBooking = await tx.booking.update({
@@ -276,12 +391,19 @@ export async function cancelBooking(bookingId: string, reason: string) {
         data: { status: BookingStatus.CANCELLED },
       });
 
+      // Status logic:
+      // If it's a guaranteed free cancellation, we might want to Auto-Approve (if system allows)
+      // or set to PENDING but with approvedAmount pre-filled.
+      // For this system, we'll keep it PENDING so Admin reviews it, but we set the expected amount.
+
       await tx.refundRequest.create({
         data: {
           bookingId,
-          amount: booking.totalPrice, // Default to full refund for now
-          reason,
+          amount: refundAmount, // Calculated amount eligible for refund
+          reason: `${reason} (Policy: ${policyType}, Eligible: ${hoursUntilCheckIn.toFixed(1)}h before)`,
+          description: `Cancellation Policy: ${policyType?.toUpperCase()}. \nHours before check-in: ${hoursUntilCheckIn.toFixed(1)}. \nOriginal Price: ${booking.totalPrice}`,
           status: "PENDING",
+          approvedAmount: refundAmount, // Suggest this amount to admin
         },
       });
 

@@ -44,11 +44,16 @@ export default function OwnerProfilePage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        if (error.details) {
-          setErrors(error.details);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const error = await response.json();
+          if (error.details) {
+            setErrors(error.details);
+          }
+          throw new Error(error.error || "Failed to create profile");
+        } else {
+          throw new Error("Failed to create profile: Server returned non-JSON response");
         }
-        throw new Error(error.error || "Failed to create profile");
       }
 
       toast({

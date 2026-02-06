@@ -90,18 +90,20 @@ function CheckoutContent() {
   const { toast } = useToast();
   const { location: contextLocation, checkIn, checkOut } = useBooking();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
   const [isLoading, setIsLoading] = useState(!contextLocation);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Saved Cards
   const [savedCards, setSavedCards] = useState<any[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [useNewCard, setUseNewCard] = useState(true);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+  const [appliedPromotion, setAppliedPromotion] = useState<any>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
   // Stripe state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -187,7 +189,27 @@ function CheckoutContent() {
   }, [isAuthenticated]);
 
   const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut) : null;
-  const finalPrice = quote ? (promoApplied ? quote.totalPrice * 0.9 : quote.totalPrice) : 0;
+
+  // Calculate final price with dynamic promotion
+  const calculateFinalPrice = () => {
+    if (!quote) return 0;
+    if (!promoApplied || !appliedPromotion) return quote.totalPrice;
+
+    let discount = 0;
+    if (appliedPromotion.type === "percentage") {
+      discount = quote.totalPrice * (appliedPromotion.value / 100);
+    } else {
+      discount = appliedPromotion.value;
+    }
+
+    if (appliedPromotion.maxDiscount) {
+      discount = Math.min(discount, appliedPromotion.maxDiscount);
+    }
+
+    return Math.max(0, quote.totalPrice - discount);
+  };
+
+  const finalPrice = calculateFinalPrice();
 
   // Create PaymentIntent when user reaches payment step
   const createPaymentIntentForCheckout = async () => {
@@ -202,7 +224,7 @@ function CheckoutContent() {
         checkOut: checkOut.toISOString(),
         guestEmail: email,
       });
-      
+
       if (result.success) {
         setClientSecret(result.clientSecret ?? null);
         setPaymentIntentId(result.paymentIntentId ?? null);
@@ -230,22 +252,47 @@ function CheckoutContent() {
       createPaymentIntentForCheckout();
     }
   }, [step]);
-  
-  const handleApplyPromo = () => {
-    if (promoCode.toLowerCase() === "save10") {
-      setPromoApplied(true);
-      // Reset clientSecret to regenerate with new amount
-      setClientSecret(null);
-      toast({
-        title: "Promo Applied",
-        description: "10% discount has been applied to your total.",
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+
+    setIsValidatingPromo(true);
+    try {
+      const res = await fetch("/api/promotions/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoCode,
+          amount: quote?.totalPrice
+        }),
       });
-    } else {
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setAppliedPromotion(data.promotion);
+        setPromoApplied(true);
+        // Reset clientSecret to regenerate with new amount
+        setClientSecret(null);
+        toast({
+          title: "Promo Applied",
+          description: `Code ${data.promotion.code} has been applied!`,
+        });
+      } else {
+        toast({
+          title: "Invalid Code",
+          description: data.error || "The promo code you entered is not valid.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Invalid Code",
-        description: "The promo code you entered is not valid.",
+        title: "Error",
+        description: "Failed to validate promo code.",
         variant: "destructive",
       });
+    } finally {
+      setIsValidatingPromo(false);
     }
   };
 
@@ -267,6 +314,7 @@ function CheckoutContent() {
         taxes: quote!.taxes,
         fees: quote!.fees,
         paymentIntentId: paymentId,
+        promoCode: promoApplied ? appliedPromotion?.code : undefined,
       };
 
       const response = await createBooking(bookingData);
@@ -293,7 +341,7 @@ function CheckoutContent() {
   const handleSavedCardPayment = async () => {
     if (!selectedCardId) return;
     setIsSubmitting(true);
-    
+
     try {
       const bookingData = {
         locationId: bookingLocation.id,
@@ -311,6 +359,7 @@ function CheckoutContent() {
         taxes: quote!.taxes,
         fees: quote!.fees,
         paymentMethodId: selectedCardId,
+        promoCode: promoApplied ? appliedPromotion?.code : undefined,
       };
 
       const response = await createBooking(bookingData);
@@ -393,9 +442,8 @@ function CheckoutContent() {
                 <AccordionItem value="step-1" className="rounded-xl border border-border bg-card">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        isGuestInfoComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                      }`}>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isGuestInfoComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
                         {isGuestInfoComplete ? <CheckCircle className="h-4 w-4" /> : <UserIcon className="h-4 w-4" />}
                       </div>
                       <div className="text-left">
@@ -461,9 +509,8 @@ function CheckoutContent() {
                 <AccordionItem value="step-2" className="rounded-xl border border-border bg-card">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        isVehicleInfoComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                      }`}>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isVehicleInfoComplete ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
                         {isVehicleInfoComplete ? <CheckCircle className="h-4 w-4" /> : <CarIcon className="h-4 w-4" />}
                       </div>
                       <div className="text-left">
@@ -527,9 +574,8 @@ function CheckoutContent() {
                 <AccordionItem value="step-3" className="rounded-xl border border-border bg-card">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        selectedCardId || clientSecret ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                      }`}>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${selectedCardId || clientSecret ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
                         <CreditCard className="h-4 w-4" />
                       </div>
                       <div className="text-left">
@@ -565,7 +611,7 @@ function CheckoutContent() {
                                   <div className={cn(
                                     "w-12 h-8 rounded flex items-center justify-center text-[10px] font-black text-white uppercase",
                                     card.brand === 'visa' ? "bg-[#1A1F71]" :
-                                    card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-700"
+                                      card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-700"
                                   )}>
                                     {card.brand}
                                   </div>
@@ -690,9 +736,9 @@ function CheckoutContent() {
                               </div>
                             </div>
                           ) : clientSecret ? (
-                            <Elements 
-                              stripe={stripePromise} 
-                              options={{ 
+                            <Elements
+                              stripe={stripePromise}
+                              options={{
                                 clientSecret,
                                 appearance: {
                                   theme: 'stripe',
@@ -722,36 +768,36 @@ function CheckoutContent() {
 
                       {/* Unified Submit Button for Saved Card or Demo */}
                       {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
-                        <Button 
+                        <Button
                           className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
                           disabled={isSubmitting || !agreedToTerms}
                           onClick={() => {
                             if (selectedCardId) {
-                               handleSavedCardPayment();
+                              handleSavedCardPayment();
                             } else if (!isStripeConfigured && useNewCard) {
-                               if (!validateCardForm()) {
-                                 setCardTouched({
-                                   cardName: true,
-                                   cardNumber: true,
-                                   expiry: true,
-                                   cvv: true
-                                 });
-                                 toast({
-                                   title: "Validation Error",
-                                   description: "Please focus on correcting the card entry errors.",
-                                   variant: "destructive"
-                                 });
-                                 return;
-                               }
-                               setIsSubmitting(true);
-                               setTimeout(() => {
-                                 handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
-                               }, 1500);
+                              if (!validateCardForm()) {
+                                setCardTouched({
+                                  cardName: true,
+                                  cardNumber: true,
+                                  expiry: true,
+                                  cvv: true
+                                });
+                                toast({
+                                  title: "Validation Error",
+                                  description: "Please focus on correcting the card entry errors.",
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              setIsSubmitting(true);
+                              setTimeout(() => {
+                                handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
+                              }, 1500);
                             } else {
-                               setIsSubmitting(true);
-                               setTimeout(() => {
-                                 handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
-                               }, 1500);
+                              setIsSubmitting(true);
+                              setTimeout(() => {
+                                handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
+                              }, 1500);
                             }
                           }}
                         >
@@ -856,15 +902,21 @@ function CheckoutContent() {
                       <Button
                         variant="outline"
                         onClick={handleApplyPromo}
-                        disabled={promoApplied || !promoCode}
+                        disabled={promoApplied || !promoCode || isValidatingPromo}
                       >
-                        {promoApplied ? "Applied" : "Apply"}
+                        {isValidatingPromo ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : promoApplied ? (
+                          "Applied"
+                        ) : (
+                          "Apply"
+                        )}
                       </Button>
                     </div>
-                    {promoApplied && (
+                    {promoApplied && appliedPromotion && (
                       <p className="mt-2 flex items-center gap-1 text-sm text-primary">
                         <Tag className="h-3 w-3" />
-                        SAVE10 - 10% off applied!
+                        {appliedPromotion.code} - {appliedPromotion.type === "percentage" ? `${appliedPromotion.value}%` : formatCurrency(appliedPromotion.value)} off applied!
                       </p>
                     )}
                   </div>
@@ -891,10 +943,10 @@ function CheckoutContent() {
                         <span>-{formatCurrency(savings)}</span>
                       </div>
                     )}
-                    {promoApplied && (
+                    {promoApplied && appliedPromotion && quote && (
                       <div className="flex items-center justify-between text-sm text-primary">
-                        <span>Promo discount (10%)</span>
-                        <span>-{formatCurrency(totalPrice * 0.1)}</span>
+                        <span>Promo discount ({appliedPromotion.code})</span>
+                        <span>-{formatCurrency(quote.totalPrice - finalPrice)}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
