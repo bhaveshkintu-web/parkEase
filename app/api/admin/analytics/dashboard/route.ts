@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     let openDisputes = 0;
     let pendingRefunds = 0;
     let pendingReviews = 0;
+    let pendingWithdrawals = 0;
 
     try {
       totalUsers = await prisma.user.count();
@@ -112,6 +113,14 @@ export async function GET(req: NextRequest) {
       console.error("Error counting pending reviews:", error);
     }
 
+    try {
+      pendingWithdrawals = await prisma.withdrawalRequest.count({
+        where: { status: "PENDING" }
+      });
+    } catch (error) {
+      console.error("Error counting pending withdrawals:", error);
+    }
+
     // Get revenue safely (sum of all bookings)
     try {
       const revenueData = await prisma.booking.aggregate({
@@ -159,7 +168,8 @@ export async function GET(req: NextRequest) {
         openDisputes,
         pendingRefunds,
         pendingReviews,
-        totalPendingApprovals: pendingOwners + pendingLocations + pendingRefunds,
+        pendingWithdrawals,
+        totalPendingApprovals: pendingOwners + pendingLocations + pendingRefunds + pendingWithdrawals,
         slaAdherence,
       },
     });

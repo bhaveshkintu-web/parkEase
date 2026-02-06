@@ -1,22 +1,18 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useDataStore } from "@/lib/data-store";
-import { useAuth } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -28,615 +24,494 @@ import {
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
   Calendar,
   Download,
-  ArrowUpRight,
-  ArrowDownRight,
   Wallet,
   CreditCard,
   PiggyBank,
   MapPin,
   ChevronLeft,
+  Loader2,
+  AlertCircle,
+  Filter,
+  Search,
+  Percent,
 } from "lucide-react";
 
 export default function OwnerEarningsPage() {
-  const { user } = useAuth();
-  const { adminLocations, transactions, wallet, initializeForOwner } = useDataStore();
-  const [timeRange, setTimeRange] = useState("30d");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Data States
+  const [overviewData, setOverviewData] = useState<any>(null);
+  const [breakdownData, setBreakdownData] = useState<any[]>([]);
+  const [locationsData, setLocationsData] = useState<any[]>([]);
+
+  // Filter States
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [selectedLocation, setSelectedLocation] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Initialize owner data
-  React.useEffect(() => {
-    if (user?.ownerId) {
-      initializeForOwner(user.ownerId);
-    }
-  }, [user?.ownerId, initializeForOwner]);
-
-  // Safe transactions access
-  const safeTransactions = transactions || [];
-  const myLocations = adminLocations.filter((l) => l.createdBy === user?.id || true);
-
-  // Generate earnings data based on time range
-  const earningsData = useMemo(() => {
-    const now = new Date();
-    const data = [];
-    let days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : timeRange === "90d" ? 90 : 365;
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const dayName = timeRange === "7d" 
-        ? date.toLocaleDateString("en-US", { weekday: "short" })
-        : timeRange === "30d"
-        ? date.toLocaleDateString("en-US", { day: "numeric", month: "short" })
-        : date.toLocaleDateString("en-US", { month: "short" });
+  const fetchOverview = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append("startDate", dateRange.start);
+      if (dateRange.end) params.append("endDate", dateRange.end);
       
-      // Generate realistic earnings data
-      const baseEarnings = 150 + Math.random() * 200;
-      const commission = baseEarnings * 0.1;
-      const bookings = Math.floor(5 + Math.random() * 15);
-      
-      data.push({
-        date: dayName,
-        fullDate: date.toLocaleDateString(),
-        earnings: Math.round(baseEarnings * 100) / 100,
-        commission: Math.round(commission * 100) / 100,
-        net: Math.round((baseEarnings - commission) * 100) / 100,
-        bookings,
-      });
+      const res = await fetch(`/api/owner/earnings/overview?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch overview");
+      setOverviewData(await res.json());
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load overview data.");
     }
-    return data;
-  }, [timeRange]);
+  }, [dateRange]);
 
-  // Location-based earnings breakdown
-  const locationEarnings = useMemo(() => {
-    return myLocations.map((loc) => ({
-      id: loc.id,
-      name: loc.name,
-      earnings: loc.analytics.revenue,
-      bookings: loc.analytics.totalBookings,
-      avgPerBooking: loc.analytics.totalBookings > 0 
-        ? Math.round(loc.analytics.revenue / loc.analytics.totalBookings * 100) / 100 
-        : 0,
-      occupancy: loc.analytics.occupancyRate,
-    }));
-  }, [myLocations]);
+  const fetchBreakdown = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append("startDate", dateRange.start);
+      if (dateRange.end) params.append("endDate", dateRange.end);
+      if (selectedLocation !== "all") params.append("locationId", selectedLocation);
+      if (selectedStatus !== "all") params.append("status", selectedStatus);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    const totalEarnings = earningsData.reduce((sum, d) => sum + d.earnings, 0);
-    const totalCommission = earningsData.reduce((sum, d) => sum + d.commission, 0);
-    const totalBookings = earningsData.reduce((sum, d) => sum + d.bookings, 0);
-    const avgDaily = totalEarnings / earningsData.length;
-    
-    // Compare to previous period
-    const prevPeriodEarnings = totalEarnings * (0.85 + Math.random() * 0.3);
-    const growthRate = ((totalEarnings - prevPeriodEarnings) / prevPeriodEarnings) * 100;
+      const res = await fetch(`/api/owner/earnings/breakdown?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch breakdown");
+      setBreakdownData(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, [dateRange, selectedLocation, selectedStatus]);
 
-    return {
-      totalEarnings,
-      totalCommission,
-      netEarnings: totalEarnings - totalCommission,
-      totalBookings,
-      avgDaily,
-      growthRate: Math.round(growthRate * 10) / 10,
+  const fetchLocations = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append("startDate", dateRange.start);
+      if (dateRange.end) params.append("endDate", dateRange.end);
+      
+      const res = await fetch(`/api/owner/earnings/locations?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch locations performance");
+      setLocationsData(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, [dateRange]);
+
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true);
+      setError(null);
+      await fetchOverview();
+      if (activeTab === "breakdown") await fetchBreakdown();
+      if (activeTab === "locations") await fetchLocations();
+      setLoading(false);
     };
-  }, [earningsData]);
-
-  // Pie chart data for earnings distribution
-  const distributionData = useMemo(() => {
-    const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-    return locationEarnings.slice(0, 5).map((loc, i) => ({
-      name: loc.name.length > 15 ? loc.name.substring(0, 15) + "..." : loc.name,
-      value: loc.earnings,
-      fill: colors[i % colors.length],
-    }));
-  }, [locationEarnings]);
+    loadAll();
+  }, [activeTab, fetchOverview, fetchBreakdown, fetchLocations]);
 
   const chartConfig = {
-    earnings: { label: "Earnings", color: "hsl(142 76% 36%)" },
-    commission: { label: "Commission", color: "hsl(0 84% 60%)" },
-    net: { label: "Net", color: "hsl(221 83% 53%)" },
-    bookings: { label: "Bookings", color: "hsl(262 83% 58%)" },
-    value: { label: "Revenue", color: "hsl(221 83% 53%)" },
-    date: { label: "Date", color: "hsl(0 0% 50%)" },
+    amount: { label: "Revenue", color: "hsl(142 76% 36%)" },
   };
 
+  const filteredBreakdown = useMemo(() => {
+    if (!searchQuery) return breakdownData;
+    return breakdownData.filter(item => 
+      item.confirmationCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.location.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [breakdownData, searchQuery]);
+
+  const distributionData = useMemo(() => {
+    if (locationsData.length === 0) return [];
+    return locationsData.slice(0, 5).map((loc, i) => ({
+      name: loc.name,
+      value: loc.grossRevenue,
+      fill: `hsl(var(--chart-${(i % 5) + 1}))`
+    }));
+  }, [locationsData]);
+
+  if (loading && !overviewData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] space-y-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-muted-foreground font-medium text-lg">Loading financial records...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] text-center px-4">
+        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+        <Button size="lg" onClick={() => fetchOverview()}>Retry Loading</Button>
+      </div>
+    );
+  }
+
+  const { stats, chartData } = overviewData;
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
+      {/* Header Area */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-2 border-b">
         <div className="flex items-center gap-3">
           <Link href="/owner">
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <ChevronLeft className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8">
+              <ChevronLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Earnings</h1>
-            <p className="text-muted-foreground mt-1">
-              Track your revenue and financial performance
-            </p>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Earnings</h1>
+            <p className="text-xs text-muted-foreground">Track your revenue and financial performance</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" className="bg-transparent">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
+           <Select defaultValue="30">
+              <SelectTrigger className="w-[120px] h-9 text-xs">
+                <Calendar className="w-3.5 h-3.5 mr-2" />
+                <SelectValue placeholder="Last 30 Days" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 Days</SelectItem>
+                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="90">Last 90 Days</SelectItem>
+              </SelectContent>
+           </Select>
+           <Button variant="outline" size="sm" className="h-9 text-xs">
+              <Download className="w-3.5 h-3.5 mr-2" /> Export
+           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {formatCurrency(totals.totalEarnings)}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  {totals.growthRate >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className={totals.growthRate >= 0 ? "text-green-600 text-sm" : "text-red-600 text-sm"}>
-                    {Math.abs(totals.growthRate)}%
-                  </span>
-                  <span className="text-muted-foreground text-sm">vs prev period</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
+      {/* Summary Cards Row - Row 1 in Screenshot */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Earnings</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(stats.totalEarnings)}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-emerald-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Net Earnings</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {formatCurrency(totals.netEarnings)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">After commission</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-blue-600" />
-              </div>
+        <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Net Earnings</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(stats.netEarnings)}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Commission Paid</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {formatCurrency(totals.totalCommission)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">10% platform fee</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-red-600" />
-              </div>
+        <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-rose-500">Commission</p>
+              <p className="text-xl font-bold text-rose-600">{formatCurrency(stats.totalCommission)}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-rose-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg Daily</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {formatCurrency(totals.avgDaily)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">{totals.totalBookings} bookings</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                <PiggyBank className="w-6 h-6 text-purple-600" />
-              </div>
+        <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-all">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Available</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(stats.availableBalance)}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <PiggyBank className="w-5 h-5 text-purple-400" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Wallet Balance Card */}
-      <Card className="bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0">
-        <CardContent className="py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-green-100 font-medium">Available Balance</p>
-              <p className="text-3xl sm:text-4xl font-bold mt-1">
-                {formatCurrency(wallet?.balance || 0)}
-              </p>
-              <p className="text-green-100 text-sm mt-1">Ready for withdrawal</p>
-            </div>
-            <div className="flex gap-2">
-              <Link href="/owner/wallet">
-                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
-                  View Wallet
-                </Button>
-              </Link>
-              <Link href="/owner/wallet/withdraw">
-                <Button className="bg-white text-green-600 hover:bg-white/90">
-                  Withdraw
-                </Button>
-              </Link>
-            </div>
+      {/* Highlights Card - Teal full width */}
+      <Card className="bg-[#00a680] text-white border-0 shadow-lg p-6 sm:p-8 relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 relative z-10">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">AVAILABLE BALANCE</p>
+            <p className="text-4xl sm:text-5xl font-black mt-2">{formatCurrency(stats.availableBalance)}</p>
+            <p className="text-xs mt-3 flex items-center gap-1.5 opacity-90 font-medium">
+              <TrendingUp className="w-3.5 h-3.5" /> Ready to be withdrawn to your bank account
+            </p>
           </div>
-        </CardContent>
+          <div className="flex gap-3">
+             <Link href="/owner/wallet">
+               <Button variant="outline" className="bg-[#ffffff15] hover:bg-[#ffffff25] text-white border-0 px-6 h-11 font-bold">
+                 Manage Wallet
+               </Button>
+             </Link>
+             <Link href="/owner/wallet">
+               <Button className="bg-white text-[#00a680] hover:bg-white/90 px-8 h-11 font-black shadow-md">
+                 Withdraw
+               </Button>
+             </Link>
+          </div>
+        </div>
       </Card>
 
-      {/* Charts Section */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
-          <TabsTrigger value="locations">By Location</TabsTrigger>
-        </TabsList>
+      {/* Tabs Menu */}
+      <Tabs defaultValue="overview" className="space-y-6" onValueChange={setActiveTab}>
+        <div className="bg-muted/30 p-1 rounded-lg w-fit">
+          <TabsList className="bg-transparent h-9">
+            <TabsTrigger value="overview" className="px-6 h-7 rounded-md font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
+            <TabsTrigger value="breakdown" className="px-6 h-7 rounded-md font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Breakdown</TabsTrigger>
+            <TabsTrigger value="locations" className="px-6 h-7 rounded-md font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Locations</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-4">
-          {/* Earnings Over Time */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Earnings Over Time</CardTitle>
-              <CardDescription>Your revenue trend for the selected period</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[350px] w-full">
-                <AreaChart data={earningsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(142 76% 36%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(142 76% 36%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `$${value}`}
-                  />
-                  <ChartTooltip 
-                    content={<ChartTooltipContent />}
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, "Earnings"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="earnings"
-                    stroke="hsl(142 76% 36%)"
-                    strokeWidth={2}
-                    fill="url(#earningsGradient)"
-                  />
-                </AreaChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* Net vs Commission Comparison */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
+        {/* --- OVERVIEW TAB CONTENT (Matches Screenshot) --- */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Earnings Distribution Card */}
+            <Card className="border shadow-sm">
               <CardHeader>
-                <CardTitle>Net vs Commission</CardTitle>
-                <CardDescription>Breakdown of your earnings</CardDescription>
+                <CardTitle className="text-base font-bold">Earnings Distribution</CardTitle>
+                <CardDescription className="text-xs">Revenue share by top locations</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <BarChart data={earningsData.slice(-14)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value) => `$${value}`}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="net" fill="hsl(221 83% 53%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="commission" fill="hsl(0 84% 60%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ChartContainer>
+                <div className="h-[250px] flex items-center justify-center">
+                  {distributionData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={distributionData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={65}
+                          outerRadius={90}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {distributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
+                          ))}
+                        </Pie>
+                        <ChartTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-muted-foreground text-xs italic">No location data available</p>
+                  )}
+                </div>
+                <div className="mt-6 space-y-3">
+                  {distributionData.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px] px-2">
+                       <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
+                          <span className="font-medium text-muted-foreground">{item.name}</span>
+                       </div>
+                       <span className="font-bold">{formatCurrency(item.value)}</span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Financial Summary Card */}
+            <Card className="border shadow-sm">
               <CardHeader>
-                <CardTitle>Bookings Trend</CardTitle>
-                <CardDescription>Daily booking volume</CardDescription>
+                <CardTitle className="text-base font-bold">Financial Summary</CardTitle>
+                <CardDescription className="text-xs">Detailed deductions for the period</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <LineChart data={earningsData.slice(-14)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis 
-                      tickLine={false} 
-                      axisLine={false}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line
-                      type="monotone"
-                      dataKey="bookings"
-                      stroke="hsl(262 83% 58%)"
-                      strokeWidth={2}
-                      dot={{ fill: "hsl(262 83% 58%)", strokeWidth: 0, r: 4 }}
-                    />
-                  </LineChart>
-                </ChartContainer>
+              <CardContent className="space-y-6">
+                <div className="space-y-4 pt-2">
+                   <div className="flex justify-between items-center text-xs">
+                     <span className="font-medium text-muted-foreground">Gross Revenue</span>
+                     <span className="font-bold">{formatCurrency(stats.totalEarnings)}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs">
+                     <span className="font-medium text-muted-foreground">Commission Fee</span>
+                     <span className="font-bold text-rose-500">-{formatCurrency(stats.totalCommission)}</span>
+                   </div>
+                   <div className="pt-5 border-t flex justify-between items-end">
+                     <span className="font-black text-sm uppercase tracking-tight">Net Earnings</span>
+                     <span className="font-black text-2xl text-[#00a680]">{formatCurrency(stats.netEarnings)}</span>
+                   </div>
+                </div>
+
+                <div className="bg-muted/20 p-4 rounded-xl space-y-4">
+                   <div className="flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                         <CreditCard className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider leading-none">AVG PER BOOKING</p>
+                        <p className="text-sm font-black">{formatCurrency(stats.netEarnings / (stats.totalBookings || 1))}</p>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                         <Calendar className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider leading-none">TOTAL BOOKINGS</p>
+                        <p className="text-sm font-black">{stats.totalBookings}</p>
+                      </div>
+                   </div>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="breakdown" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Distribution Pie Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Earnings Distribution</CardTitle>
-                <CardDescription>Revenue share by location</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={distributionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {distributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-background border rounded-lg px-3 py-2 shadow-lg">
-                              <p className="text-sm font-medium">{payload[0].name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Revenue: <span className="font-medium text-foreground">{formatCurrency(Number(payload[0].value))}</span>
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
+        {/* --- BREAKDOWN TAB CONTENT (Logic for Transactions) --- */}
+        <TabsContent value="breakdown" className="space-y-6">
+           {/* <Card className="border shadow-sm">
+             <CardHeader>
+               <div className="flex items-center justify-between">
+                 <div>
+                   <CardTitle className="text-lg">Revenue Trend</CardTitle>
+                   <CardDescription className="text-xs">Daily earning fluctuations</CardDescription>
+                 </div>
+               </div>
+             </CardHeader>
+             <CardContent className="h-[300px] w-full px-2">
+               <ResponsiveContainer width="100%" height="100%">
+                 <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00a680" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#00a680" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      tickFormatter={(str) => {
+                        const d = new Date(str);
+                        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                       }}
                     />
-                  </PieChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                    <ChartTooltip />
+                    <Area type="monotone" dataKey="amount" stroke="#00a680" strokeWidth={3} fill="url(#colorAmt)" />
+                 </AreaChart>
+               </ResponsiveContainer>
+             </CardContent>
+           </Card> */}
 
-            {/* Summary Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
-                <CardDescription>Key metrics for the period</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Gross Revenue</p>
-                      <p className="text-xs text-muted-foreground">Before deductions</p>
-                    </div>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{formatCurrency(totals.totalEarnings)}</p>
+          {/* Detailed Transaction Table below the summary cards in Breakdown */}
+          <div className="space-y-4">
+             <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search ID, Location..." 
+                    className="pl-9 h-9 text-xs" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                   <SelectTrigger className="w-[140px] h-9 text-xs font-medium">
+                      <SelectValue placeholder="Status" />
+                   </SelectTrigger>
+                   <SelectContent>
+                      <SelectItem value="all">Any Status</SelectItem>
+                      <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                   </SelectContent>
+                </Select>
+             </div>
 
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Platform Commission</p>
-                      <p className="text-xs text-muted-foreground">10% of gross</p>
-                    </div>
-                  </div>
-                  <p className="text-lg font-bold text-red-600">-{formatCurrency(totals.totalCommission)}</p>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Net Earnings</p>
-                      <p className="text-xs text-muted-foreground">Your take-home</p>
-                    </div>
-                  </div>
-                  <p className="text-lg font-bold text-green-600">{formatCurrency(totals.netEarnings)}</p>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Bookings</span>
-                    <span className="font-medium text-foreground">{totals.totalBookings}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-2">
-                    <span className="text-muted-foreground">Avg. per Booking</span>
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(totals.totalBookings > 0 ? totals.totalEarnings / totals.totalBookings : 0)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+             <Card className="border-0 shadow-sm overflow-hidden rounded-xl border-t">
+               <div className="overflow-x-auto">
+                 <table className="w-full text-[11px]">
+                   <thead className="bg-muted/30 text-muted-foreground border-b italic">
+                     <tr>
+                       <th className="px-6 py-4 text-left font-bold uppercase tracking-widest">ID / Date</th>
+                       <th className="px-6 py-4 text-left font-bold uppercase tracking-widest">Location</th>
+                       <th className="px-6 py-4 text-right font-bold uppercase tracking-widest">Gross</th>
+                       <th className="px-6 py-4 text-right font-bold uppercase tracking-widest">Commission</th>
+                       <th className="px-6 py-4 text-right font-bold uppercase tracking-widest">Net</th>
+                       <th className="px-6 py-4 text-center font-bold uppercase tracking-widest">Status</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {filteredBreakdown.length > 0 ? filteredBreakdown.map((row) => (
+                       <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                         <td className="px-6 py-4 font-bold">
+                           <div className="flex flex-col">
+                             <span className="text-muted-foreground mb-0.5 font-mono">#{row.confirmationCode}</span>
+                             <span className="text-foreground">{new Date(row.date).toLocaleDateString()}</span>
+                           </div>
+                         </td>
+                         <td className="px-6 py-4 font-bold text-foreground">{row.location}</td>
+                         <td className="px-6 py-4 text-right font-medium">{formatCurrency(row.gross)}</td>
+                         <td className="px-6 py-4 text-right font-medium text-rose-500">-{formatCurrency(row.commission)}</td>
+                         <td className="px-6 py-4 text-right font-black text-emerald-600">{formatCurrency(row.net)}</td>
+                         <td className="px-6 py-4 text-center">
+                            <Badge variant={row.status === "COMPLETED" ? "default" : "secondary"} className="text-[9px] font-black uppercase rounded-full px-2 py-0">
+                               {row.status}
+                            </Badge>
+                         </td>
+                       </tr>
+                     )) : (
+                       <tr>
+                         <td colSpan={6} className="py-12 text-center text-muted-foreground italic">No records found matching your filters.</td>
+                       </tr>
+                     )}
+                   </tbody>
+                 </table>
+               </div>
+             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="locations" className="space-y-4">
-          {/* Location Filter */}
-          <div className="flex items-center gap-2">
-            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-              <SelectTrigger className="w-[200px]">
-                <MapPin className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {myLocations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Location Earnings Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Earnings by Location</CardTitle>
-              <CardDescription>Performance breakdown for each parking location</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Location</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Revenue</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Bookings</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Avg/Booking</th>
-                      <th className="text-right py-3 px-4 font-medium text-muted-foreground">Occupancy</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {locationEarnings
-                      .filter((loc) => selectedLocation === "all" || loc.id === selectedLocation)
-                      .map((loc) => (
-                        <tr key={loc.id} className="border-b last:border-0 hover:bg-muted/50">
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <MapPin className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <span className="font-medium text-foreground">{loc.name}</span>
-                            </div>
-                          </td>
-                          <td className="text-right py-4 px-4 font-medium text-foreground">
-                            {formatCurrency(loc.earnings)}
-                          </td>
-                          <td className="text-right py-4 px-4 text-foreground">{loc.bookings}</td>
-                          <td className="text-right py-4 px-4 text-foreground">
-                            {formatCurrency(loc.avgPerBooking)}
-                          </td>
-                          <td className="text-right py-4 px-4">
-                            <span className={`font-medium ${loc.occupancy >= 70 ? "text-green-600" : loc.occupancy >= 40 ? "text-amber-600" : "text-red-600"}`}>
-                              {loc.occupancy}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        {/* --- LOCATIONS TAB CONTENT --- */}
+        <TabsContent value="locations" className="space-y-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {locationsData.map(loc => (
+                <Card key={loc.id} className="border shadow-sm hover:border-[#00a680] transition-colors overflow-hidden flex flex-col">
+                  <div className="p-4 bg-muted/20 border-b flex items-center justify-between font-bold">
+                     <span className="text-sm truncate pr-4">{loc.name}</span>
+                     <Badge className="bg-[#00a680] shrink-0 text-[10px] font-black">{loc.occupancyRate}% Occ.</Badge>
+                  </div>
+                  <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-0.5">
+                           <p className="text-[9px] font-black text-muted-foreground uppercase">Net Earnings</p>
+                           <p className="text-lg font-black text-[#00a680]">{formatCurrency(loc.netEarnings)}</p>
+                        </div>
+                        <div className="space-y-0.5 text-right">
+                           <p className="text-[9px] font-black text-muted-foreground uppercase">Gross Rev</p>
+                           <p className="text-lg font-black text-foreground">{formatCurrency(loc.grossRevenue)}</p>
+                        </div>
+                     </div>
+                     <div className="pt-3 border-t flex items-center justify-between text-xs pt-4">
+                        <div className="flex flex-col">
+                           <span className="text-muted-foreground font-medium uppercase text-[9px] tracking-wider mb-0.5">AVG Value</span>
+                           <span className="font-bold">{formatCurrency(loc.avgBookingValue)}</span>
+                        </div>
+                        <div className="flex flex-col text-right">
+                           <span className="text-muted-foreground font-medium uppercase text-[9px] tracking-wider mb-0.5">Bookings</span>
+                           <span className="font-bold">{loc.bookingsCount}</span>
+                        </div>
+                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+           </div>
         </TabsContent>
       </Tabs>
-
-      {/* Recent Transactions */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>Your latest earnings and deductions</CardDescription>
-          </div>
-          <Link href="/owner/wallet">
-            <Button variant="ghost" size="sm">
-              View All
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {safeTransactions.slice(0, 5).map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    tx.type === "credit" ? "bg-green-100" : tx.type === "withdrawal" ? "bg-blue-100" : "bg-red-100"
-                  }`}>
-                    {tx.type === "credit" ? (
-                      <TrendingUp className={`w-5 h-5 text-green-600`} />
-                    ) : tx.type === "withdrawal" ? (
-                      <Wallet className="w-5 h-5 text-blue-600" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{tx.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(tx.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <span className={`font-medium ${
-                  tx.type === "credit" ? "text-green-600" : "text-foreground"
-                }`}>
-                  {tx.type === "credit" ? "+" : "-"}{formatCurrency(Math.abs(tx.amount))}
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
+
