@@ -204,7 +204,7 @@ export default function OwnerBookingsPage() {
       revenue: safeReservations
         .filter((b) => b.status === "confirmed")
         .reduce((sum, b) => sum + b.totalPrice, 0),
-      pendingRequests: bookingRequests.filter(r => r.status === "pending").length,
+      pendingRequests: bookingRequests.filter(r => r.status === "PENDING").length,
     };
   }, [safeReservations, bookingRequests]);
 
@@ -719,12 +719,12 @@ export default function OwnerBookingsPage() {
                               <span className="font-medium">{formatCurrency(request.estimatedAmount)}</span>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={request.status === "pending" ? "outline" : "secondary"}>
+                              <Badge variant={request.status === "PENDING" ? "outline" : "secondary"}>
                                 {request.status}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              {request.status === "pending" ? (
+                              {request.status === "PENDING" ? (
                                 <div className="flex items-center justify-end gap-2">
                                   <Button
                                     size="sm"

@@ -39,6 +39,7 @@ export default function ProfilePage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +82,9 @@ export default function ProfilePage() {
     }
   };
 
-  const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : "U";
+  const initials = user
+    ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || "U"
+    : "U";
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -113,6 +116,9 @@ export default function ProfilePage() {
                 type="button"
                 className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
                 aria-label="Change photo"
+                onClick={() =>
+                  document.getElementById("avatar-upload")?.click()
+                }
               >
                 <Camera className="w-4 h-4" />
               </button>
@@ -122,19 +128,54 @@ export default function ProfilePage() {
                 Upload a photo of yourself. Max file size: 5MB.
               </p>
               <div className="flex gap-2 mt-2">
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setIsUploading(true);
+                      const res = await uploadAvatar(file);
+                      setIsUploading(false);
+                      if (res.success) {
+                        toast({
+                          title: "Photo updated",
+                          description: "Your profile photo has been updated.",
+                        });
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: res.error || "Failed to upload photo",
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  }}
+                />
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={isUploading}
                   onClick={() =>
                     document.getElementById("avatar-upload")?.click()
                   }
                 >
-                  Upload
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    "Upload"
+                  )}
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={isUploading}
                   onClick={async () => {
                     const res = await removeAvatar();
                     if (!res.success) {
