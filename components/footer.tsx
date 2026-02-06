@@ -10,22 +10,22 @@ const footerLinks = {
     { label: "Auto Insurance", href: "#" },
   ],
   Company: [
-    { label: "About Us", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Press", href: "#" },
-    { label: "Blog", href: "#" },
+    { label: "About Us", href: "/about-us" },
+    { label: "Careers", href: "/careers" },
+    { label: "Press", href: "/press" },
+    { label: "Blog", href: "/blog" },
     { label: "Contact", href: "/support" },
   ],
   Support: [
     { label: "Help Center", href: "/support" },
     { label: "FAQs", href: "/support#faqs" },
     { label: "Cancellation Policy", href: "/cancellation-policy" },
-    { label: "Report an Issue", href: "#" },
+    { label: "Report an Issue", href: "/report-issue" },
   ],
   Legal: [
-    { label: "Terms of Service", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-    { label: "Cookie Policy", href: "#" },
+    { label: "Terms of Service", href: "/terms-of-service" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Cookie Policy", href: "/cookie-policy" },
   ],
 };
 
@@ -49,7 +49,7 @@ export function Footer() {
               <span className="text-xl font-bold text-foreground">ParkEase</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              Find and reserve parking spots near airports, events, and city centers. 
+              Find and reserve parking spots near airports, events, and city centers.
               Save money and time with guaranteed reservations.
             </p>
             <div className="mt-6 flex gap-4">

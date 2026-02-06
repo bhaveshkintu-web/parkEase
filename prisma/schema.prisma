@@ -431,15 +431,28 @@ model Promotion {
   updatedAt       DateTime @updatedAt
 }
 
+enum CMSPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model CMSPage {
-  id          String    @id @default(cuid())
-  slug        String    @unique
-  title       String
-  content     String
-  status      String
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String        @id @default(cuid())
+  slug              String        @unique
+  title             String
+  content           String        @db.Text
+  metaTitle         String?
+  metaDescription   String?
+  status            CMSPageStatus @default(DRAFT)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  publishedAt       DateTime?
+  createdBy         String
+  updatedBy         String?
+
+  @@index([slug])
+  @@index([status])
 }
 
 model CommissionRule {
