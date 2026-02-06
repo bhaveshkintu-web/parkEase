@@ -123,6 +123,8 @@ export const ownerLocationSchema = z.object({
   selfPark: z.boolean().default(true),
   valet: z.boolean().default(false),
   open24Hours: z.boolean().default(false),
+  cancellationPolicy: z.enum(["free", "moderate", "strict"]).default("free"),
+  cancellationDeadline: z.string().default("24"),
 });
 
 // Admin review moderation validations

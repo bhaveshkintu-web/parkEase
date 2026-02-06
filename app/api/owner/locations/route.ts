@@ -108,6 +108,16 @@ export async function POST(req: NextRequest) {
           totalSpots: data.totalSpots,
           availableSpots: data.totalSpots, // Initial state
           status: "PENDING", // Requires admin approval
+          cancellationPolicy: {
+            type: data.cancellationPolicy,
+            hours: parseInt(data.cancellationDeadline) || 0,
+            deadline: data.cancellationPolicy === "strict" ? "No refunds" : `${data.cancellationDeadline} hours before check-in`,
+            description: data.cancellationPolicy === "free"
+              ? `Free cancellation up to ${data.cancellationDeadline} hours before check-in`
+              : data.cancellationPolicy === "moderate"
+                ? `50% refund up to ${data.cancellationDeadline} hours before check-in`
+                : "Non-refundable"
+          },
         },
       });
 
@@ -140,5 +150,55 @@ export async function POST(req: NextRequest) {
       { error: "An internal server error occurred." },
       { status: 500 }
     );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || (session.user.role?.toUpperCase() !== "OWNER" && session.user.role?.toUpperCase() !== "ADMIN")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    const ownerProfile = await prisma.ownerProfile.findUnique({
+      where: { userId },
+      include: {
+        locations: {
+          include: {
+            analytics: true
+          }
+        },
+      }
+    });
+
+    if (!ownerProfile) {
+      return NextResponse.json([]);
+    }
+
+    // Map to AdminParkingLocation format expected by frontend
+    const locations = ownerProfile.locations.map(l => ({
+      ...l,
+      airport: l.airportCode || "Unknown",
+      coordinates: { lat: l.latitude || 0, lng: l.longitude || 0 },
+      distance: "N/A",
+      analytics: l.analytics ? {
+        totalBookings: l.analytics.totalBookings,
+        revenue: l.analytics.revenue,
+        averageRating: l.analytics.averageRating,
+        occupancyRate: l.analytics.occupancyRate
+      } : {
+        totalBookings: 0,
+        revenue: 0,
+        averageRating: 0,
+        occupancyRate: 0
+      }
+    }));
+
+    return NextResponse.json(locations);
+  } catch (error) {
+    console.error("[OWNER_LOCATIONS_GET]", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

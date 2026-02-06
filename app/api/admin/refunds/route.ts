@@ -33,66 +33,72 @@ export async function GET(request: Request) {
     ];
   }
 
-    try {
-      const [refunds, total, statusCounts, pendingSum, pendingOwners, pendingLocations] = await Promise.all([
-        prisma.refundRequest.findMany({
-          where,
-          include: {
-            booking: {
-              include: {
-                user: {
-                  select: {
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                  }
+  try {
+    const [refunds, total, statusCounts, pendingSum, pendingOwners, pendingLocations] = await Promise.all([
+      prisma.refundRequest.findMany({
+        where,
+        include: {
+          booking: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
                 }
-              }
-            },
-            dispute: {
-              select: {
-                id: true,
-                subject: true,
+              },
+              location: {
+                select: {
+                  name: true,
+                  cancellationPolicy: true
+                }
               }
             }
           },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.refundRequest.count({ where }),
-        prisma.refundRequest.groupBy({
-          by: ['status'],
-          _count: {
-            id: true
+          dispute: {
+            select: {
+              id: true,
+              subject: true,
+            }
           }
-        }),
-        prisma.refundRequest.aggregate({
-          where: { status: 'PENDING' },
-          _sum: {
-            amount: true
-          }
-        }),
-        prisma.ownerProfile.count({ where: { status: 'pending' } }),
-        prisma.parkingLocation.count({ where: { status: 'PENDING' } })
-      ]);
-
-      const counts = statusCounts.reduce((acc: any, curr: any) => {
-        acc[curr.status] = curr._count.id;
-        return acc;
-      }, { PENDING: 0, APPROVED: 0, PROCESSED: 0, REJECTED: 0 });
-
-      return NextResponse.json({
-        refunds,
-        stats: {
-          total,
-          pending: counts.PENDING,
-          approved: counts.APPROVED,
-          processed: counts.PROCESSED,
-          rejected: counts.REJECTED,
-          totalPendingAmount: pendingSum._sum.amount || 0,
-          totalPendingApprovals: counts.PENDING + pendingOwners + pendingLocations
         },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.refundRequest.count({ where }),
+      prisma.refundRequest.groupBy({
+        by: ['status'],
+        _count: {
+          id: true
+        }
+      }),
+      prisma.refundRequest.aggregate({
+        where: { status: 'PENDING' },
+        _sum: {
+          amount: true
+        }
+      }),
+      prisma.ownerProfile.count({ where: { status: 'pending' } }),
+      prisma.parkingLocation.count({ where: { status: 'PENDING' } })
+    ]);
+
+    const counts = statusCounts.reduce((acc: any, curr: any) => {
+      acc[curr.status] = curr._count.id;
+      return acc;
+    }, { PENDING: 0, APPROVED: 0, PROCESSED: 0, REJECTED: 0 });
+
+    return NextResponse.json({
+      refunds,
+      stats: {
+        total,
+        pending: counts.PENDING,
+        approved: counts.APPROVED,
+        processed: counts.PROCESSED,
+        rejected: counts.REJECTED,
+        totalPendingAmount: pendingSum._sum.amount || 0,
+        totalPendingApprovals: counts.PENDING + pendingOwners + pendingLocations
+      },
       pagination: {
         total,
         pages: Math.ceil(total / limit),

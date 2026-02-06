@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useBooking } from "@/lib/booking-context";
 import { destinations, formatDate, formatTime } from "@/lib/data";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -308,6 +308,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
               type="button"
               onClick={handleUseLocation}
               disabled={isLocating}
+              suppressHydrationWarning
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
               title="Use my location"
             >

@@ -375,18 +375,23 @@ export default function OwnerNewLocationPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Location creation failed:", error);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const error = await response.json();
+          console.error("Location creation failed:", error);
 
-        // Show validation details if available
-        if (error.details) {
-          const fieldErrors = Object.entries(error.details)
-            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join('\n');
-          throw new Error(`Validation failed:\n${fieldErrors}`);
+          // Show validation details if available
+          if (error.details) {
+            const fieldErrors = Object.entries(error.details)
+              .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+              .join('\n');
+            throw new Error(`Validation failed:\n${fieldErrors}`);
+          }
+
+          throw new Error(error.error || "Failed to create location");
+        } else {
+          throw new Error("Failed to create location: Server returned non-JSON error");
         }
-
-        throw new Error(error.error || "Failed to create location");
       }
 
       const result = await response.json();
