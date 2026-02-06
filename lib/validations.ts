@@ -88,15 +88,19 @@ export const reservationModifySchema = z.object({
 
 // Owner profile validations
 export const ownerProfileSchema = z.object({
-  businessName: z.string().min(2, "Business name must be at least 2 characters"),
-  businessType: z.enum(["individual", "company"]),
-  taxId: z.string().optional(),
-  registrationNumber: z.string().optional(),
-  street: z.string().min(5, "Street address must be at least 5 characters"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  zipCode: z.string().min(5, "Valid zip code is required"),
-  country: z.string().min(2, "Country is required"),
+  businessName: z.string().min(2, "Business name must be at least 2 characters").optional().nullable(),
+  businessType: z.enum(["individual", "company"]).optional().nullable(),
+  taxId: z.string().nullable().optional(),
+  registrationNumber: z.string().nullable().optional(),
+  street: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  zipCode: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
+  bankName: z.string().nullable().optional(),
+  bankAccountName: z.string().nullable().optional(),
+  accountNumber: z.string().nullable().optional(),
+  routingNumber: z.string().nullable().optional(),
 });
 
 // Owner location creation validations

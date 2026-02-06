@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     const result = ownerProfileSchema.safeParse(body);
 
     if (!result.success) {
+      console.error("[OWNER_PROFILE_VALIDATION_ERROR]", result.error.flatten().fieldErrors);
       return NextResponse.json(
         { error: "Validation failed", details: result.error.flatten().fieldErrors },
         { status: 400 }
@@ -51,30 +52,43 @@ export async function POST(req: NextRequest) {
 
     const data = result.data;
 
+    // Get existing profile to preserve data
+    const existingProfile = await prisma.ownerProfile.findUnique({
+      where: { userId: session.user.id }
+    });
+
     const profile = await prisma.ownerProfile.upsert({
       where: { userId: session.user.id },
       update: {
-        businessName: data.businessName,
-        businessType: data.businessType,
-        taxId: data.taxId,
-        registrationNumber: data.registrationNumber,
-        street: data.street,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
+        businessName: data.businessName || existingProfile?.businessName || "New Owner",
+        businessType: data.businessType || existingProfile?.businessType || "individual",
+        taxId: data.taxId !== undefined ? data.taxId : existingProfile?.taxId,
+        registrationNumber: data.registrationNumber !== undefined ? data.registrationNumber : existingProfile?.registrationNumber,
+        street: data.street || existingProfile?.street || "Pending Address",
+        city: data.city || existingProfile?.city || "Pending City",
+        state: data.state || existingProfile?.state || "Pending State",
+        zipCode: data.zipCode || existingProfile?.zipCode || "00000",
+        country: data.country || existingProfile?.country || "USA",
+        bankName: data.bankName !== undefined ? data.bankName : existingProfile?.bankName,
+        bankAccountName: data.bankAccountName !== undefined ? data.bankAccountName : existingProfile?.bankAccountName,
+        accountNumber: data.accountNumber !== undefined ? data.accountNumber : existingProfile?.accountNumber,
+        routingNumber: data.routingNumber !== undefined ? data.routingNumber : existingProfile?.routingNumber,
       },
       create: {
         userId: session.user.id,
-        businessName: data.businessName,
-        businessType: data.businessType,
+        businessName: data.businessName || "New Owner",
+        businessType: data.businessType || "individual",
         taxId: data.taxId,
         registrationNumber: data.registrationNumber,
-        street: data.street,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
+        street: data.street || "Pending Address",
+        city: data.city || "Pending City",
+        state: data.state || "Pending State",
+        zipCode: data.zipCode || "00000",
+        country: data.country || "USA",
+        bankName: data.bankName,
+        bankAccountName: data.bankAccountName,
+        accountNumber: data.accountNumber,
+        routingNumber: data.routingNumber,
         status: "pending",
         verificationStatus: "unverified",
       },

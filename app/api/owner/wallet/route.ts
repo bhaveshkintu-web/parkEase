@@ -12,22 +12,23 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
-    const ownerProfile = await prisma.ownerProfile.findUnique({
-      where: { userId },
+    const wallet = await prisma.wallet.findFirst({
+      where: { owner: { userId } },
       include: {
-        wallet: {
-          include: {
-            transactions: {
-              orderBy: { createdAt: "desc" },
-              take: 20,
-            },
-          },
+        owner: true,
+        transactions: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
         },
       },
     });
 
-    if (!ownerProfile || !ownerProfile.wallet) {
-      // Create wallet if it doesn't exist (defensive)
+    if (!wallet) {
+      // Check if owner exists but no wallet
+      const ownerProfile = await prisma.ownerProfile.findUnique({
+        where: { userId }
+      });
+
       if (ownerProfile) {
         const newWallet = await prisma.wallet.create({
           data: {
@@ -35,14 +36,17 @@ export async function GET(req: NextRequest) {
             balance: 0,
             currency: "USD",
           },
-          include: { transactions: true }
+          include: { 
+            owner: true,
+            transactions: true 
+          }
         });
         return NextResponse.json(newWallet);
       }
       return NextResponse.json({ error: "Owner profile not found" }, { status: 404 });
     }
 
-    return NextResponse.json(ownerProfile.wallet);
+    return NextResponse.json(wallet);
   } catch (error) {
     console.error("[OWNER_WALLET_GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

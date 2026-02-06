@@ -183,17 +183,26 @@ model WalletTransaction {
 }
 
 model WithdrawalRequest {
-  id            String    @id @default(cuid())
+  id            String           @id @default(cuid())
   walletId      String
   amount        Float
   accountName   String
   accountNumber String
   bankName      String
   routingNumber String?
-  status        String
-  requestedAt   DateTime  @default(now())
+  status        WithdrawalStatus @default(PENDING)
+  requestedAt   DateTime         @default(now())
   processedAt   DateTime?
-  wallet        Wallet    @relation(fields: [walletId], references: [id])
+  adminNotes    String?
+  wallet        Wallet           @relation(fields: [walletId], references: [id])
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSED
+  FAILED
 }
 
 model Watchman {
@@ -582,6 +591,7 @@ enum WalletTransactionType {
   WITHDRAWAL
   REFUND
   COMMISSION
+  MANUAL_ADJUSTMENT
 }
 
 enum WatchmanShiftStatus {
@@ -697,4 +707,9 @@ enum NotificationType {
   SUPPORT_TICKET_CREATED
   SUPPORT_TICKET_UPDATED
   SYSTEM_ALERT
+  EARNINGS_CREDITED
+  WITHDRAWAL_REQUESTED
+  WITHDRAWAL_PROCESSED
+  WITHDRAWAL_REJECTED
+  REFUND_DEDUCTION
 }

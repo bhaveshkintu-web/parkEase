@@ -66,6 +66,21 @@ export async function PATCH(
         include: { booking: true }
       });
 
+      if (updatedSession.bookingId) {
+        // Import dynamically to avoid circular dependencies if any, 
+        // though here it should be fine.
+        const { FinanceService } = await import("@/lib/finance-service");
+        
+        // 1. Mark booking as COMPLETED
+        await prisma.booking.update({
+          where: { id: updatedSession.bookingId },
+          data: { status: "COMPLETED" }
+        });
+
+        // 2. Credit earnings to owner
+        await FinanceService.creditEarnings(updatedSession.bookingId);
+      }
+
       // Bonus: Increment available spots back
       await prisma.parkingLocation.update({
         where: { id: updatedSession.locationId },

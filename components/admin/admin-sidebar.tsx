@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LayoutDashboard, MapPin, MessageSquare, Users, Wallet, Settings, BarChart3, Tag, Percent, FileText, AlertTriangle, QrCode, Car, Clock, Shield, Menu, ChevronRight, LogOut, Type as type, LucideIcon, Building2 } from "lucide-react";
+import { LayoutDashboard, MapPin, MessageSquare, Users, Wallet, Settings, BarChart3, Tag, Percent, FileText, AlertTriangle, QrCode, Car, Clock, Shield, Menu, ChevronRight, LogOut, Type as type, LucideIcon, Building2, Banknote } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
@@ -47,6 +47,7 @@ const systemAdminNav: NavSection[] = [
     items: [
       { label: "Disputes", href: "/admin/disputes", icon: AlertTriangle },
       { label: "Refunds", href: "/admin/refunds", icon: Wallet },
+      { label: "Withdrawals", href: "/admin/withdrawals", icon: Banknote },
       { label: "Support Tickets", href: "/admin/support", icon: MessageSquare },
     ],
   },
@@ -174,6 +175,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
       case "Location Approvals": return counts.pendingLocations;
       case "Disputes": return counts.openDisputes;
       case "Refunds": return counts.pendingRefunds;
+      case "Withdrawals": return counts.pendingWithdrawals;
       case "Support Tickets": return counts.openTickets;
       case "Reviews": return counts.pendingReviews;
       default: return undefined;
