@@ -210,6 +210,63 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
   }
 }
 
+export async function notifyAdminsOfPartnerInquiry(lead: any) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { email: true, firstName: true },
+    });
+
+    if (admins.length === 0) return;
+
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    for (const admin of admins) {
+      await transporter.sendMail({
+        from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+        to: admin.email,
+        subject: `New Partner Inquiry: ${lead.businessName}`,
+        html: `
+          <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #0d9488;">New Partner Inquiry</h2>
+            <p>A new partner inquiry has been submitted.</p>
+            
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Name:</strong> ${lead.fullName}</p>
+              <p style="margin: 0;"><strong>Email:</strong> ${lead.email}</p>
+              <p style="margin: 0;"><strong>Phone:</strong> ${lead.phone}</p>
+              <p style="margin: 0;"><strong>Business:</strong> ${lead.businessName}</p>
+              <p style="margin: 0;"><strong>Type:</strong> ${lead.businessType}</p>
+              <p style="margin: 0;"><strong>Location:</strong> ${lead.city}, ${lead.state}, ${lead.country}</p>
+            </div>
+
+            <p>Please log in to the admin dashboard to review this inquiry.</p>
+            <a href="${process.env.APP_URL}/admin" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+          </div>
+        `,
+      });
+    }
+
+    console.log(`✅ Admin notifications sent for lead ${lead.id}`);
+  } catch (error) {
+    console.error("❌ Failed to notify admins:", error);
+  }
+}
+
 export async function sendSupportEmail(data: {
   name: string;
   email: string;
