@@ -50,6 +50,7 @@ interface Filters {
 function ParkingResultsContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
+  const locationId = searchParams.get("locationId");
   const { checkIn, checkOut } = useBooking();
 
   const [locations, setLocations] = useState<any[]>([]);
@@ -117,6 +118,11 @@ function ParkingResultsContent() {
   // Filter locations
   const filteredLocations = useMemo(() => {
     return enrichedLocations.filter((location) => {
+      // Location ID filter (Exact match)
+      if (locationId && location.id !== locationId) {
+        return false;
+      }
+
       // Search query filter
       if (query) {
         const searchLower = query.toLowerCase();
