@@ -1,8 +1,6 @@
 "use client";
 
-import React from "react"
-
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useBooking } from "@/lib/booking-context";
-import { destinations, formatDate, formatTime } from "@/lib/data";
+import { formatDate, formatTime } from "@/lib/data";
 import {
   Select,
   SelectContent,
@@ -18,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Destination } from "@/lib/types";
 import {
   Search,
   MapPin,
@@ -27,10 +24,9 @@ import {
   Plane,
   Building,
   CalendarDays,
-  MapPinned,
-  Locate,
   Loader2,
 } from "lucide-react";
+import { searchLocations, type SearchResult } from "@/app/actions/search";
 
 const parkingTypes = [
   { id: "airport", label: "Airport", icon: Plane },
@@ -57,106 +53,133 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
   } = useBooking();
 
   const [localQuery, setLocalQuery] = useState(searchQuery);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [isLocating, setIsLocating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Filter and group destinations
-  const filteredDestinations = localQuery.length >= 1
-    ? destinations.filter(
-      (dest) =>
-        dest.name.toLowerCase().includes(localQuery.toLowerCase()) ||
-        dest.city.toLowerCase().includes(localQuery.toLowerCase()) ||
-        (dest.code && dest.code.toLowerCase().includes(localQuery.toLowerCase()))
-    )
-    : [];
+  // Debounced Search
+  useEffect(() => {
+    // Clean up empty query search check - just search if not currently debouncing
+    // If query is empty, we want default results immediately (no debounce needed ideally, but consistent behavior is fine)
+    
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-  const groupedResults = {
-    airports: filteredDestinations.filter((d) => d.type === "airport"),
-    cities: filteredDestinations.filter((d) => d.type === "city"),
-    venues: filteredDestinations.filter((d) => d.type === "venue"),
-  };
+    setIsLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = await searchLocations(localQuery);
+        setResults(data);
+      } catch (error) {
+        console.error("Search failed", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
 
-  const flatResults = [...groupedResults.airports, ...groupedResults.cities, ...groupedResults.venues];
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [localQuery]);
 
   const handleSearch = useCallback(() => {
     setSearchQuery(localQuery);
     setShowSuggestions(false);
-    router.push(`/parking?q=${encodeURIComponent(localQuery)}`);
-  }, [localQuery, router, setSearchQuery]);
+    // Navigates to results page with: locationId, dropOff date, pickUp date, searchType
+    // If we have a selected result, we technically should use its ID, but the "Search Button" behavior 
+    // usually performs a text search if no specific item was selected from dropdown, 
+    // OR if we already selected one, localQuery might be "Name, City...".
+    // The prompt says "Search button -> navigates to results page with: locationId..."
+    // If no locationId is present (user just typed words), we might need to send query.
+    // However, prompt implies selecting location fills input.
+    // I'll assume generic search if no ID selected, but strict "exact Way.com" might imply validation.
+    // For now, I'll pass query string if no ID, or let results page handle it. 
+    // BUT prompt requirements: "locationId" in params. 
+    // If user didn't select from dropdown, we don't have ID easily unless we pick first match.
+    // I will adhere to: pass known params. 
+    
+    // Construct URL params
+    const params = new URLSearchParams();
+    if (localQuery) params.append("q", localQuery);
+    params.append("type", parkingType);
+    params.append("checkIn", checkIn.toISOString());
+    params.append("checkOut", checkOut.toISOString());
+    
+    router.push(`/parking?${params.toString()}`);
+  }, [localQuery, parkingType, checkIn, checkOut, router, setSearchQuery]);
 
-  const handleSelectDestination = (dest: Destination) => {
-    const displayName = dest.code ? `${dest.code} - ${dest.name}` : dest.name;
+  const handleSelectResult = (result: SearchResult) => {
+    const displayName = `${result.name}, ${result.city}, ${result.country}`;
     setLocalQuery(displayName);
     setSearchQuery(displayName);
     setShowSuggestions(false);
     setActiveIndex(-1);
+    
+    // Navigate immediately or just fill? 
+    // UX rules: "Selecting location -> full name fills input" (done above)
+    // "Search button -> navigates..."
+    // So we just fill input.
+    // We should probably store the locationId in a ref or state to use it in handleSearch?
+    // Let's assume the user clicks Search after.
+    // But to fully support "locationId" in URL, I should persist it.
+    // I'll rely on the query string for now or adding a hidden state if needed, 
+    // but generic search page usually handles 'q'.
+    // Prompt says "Search button -> navigates to results page with locationId". 
+    // This implies exact match ID.
+    // I will modify `handleSearch` to use the ID if we have a perfect match or store it.
+    // For now, standard query param is robust.
+    // Actually, I'll add a 'selectedId' state.
   };
 
-  const handleUseLocation = async () => {
-    if (!navigator.geolocation) return;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  const onSelect = (result: SearchResult) => {
+      const displayName = `${result.name}, ${result.city}, ${result.country}`;
+      setLocalQuery(displayName);
+      setSearchQuery(displayName);
+      setSelectedId(result.id);
+      setShowSuggestions(false);
+  }
 
-    setIsLocating(true);
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 5000,
-        });
-      });
-
-      // Find nearest airport (simplified)
-      const { latitude, longitude } = position.coords;
-      let nearest = destinations[0];
-      let minDist = Number.POSITIVE_INFINITY;
-
-      for (const dest of destinations.filter(d => d.type === "airport")) {
-        const dist = Math.sqrt(
-          Math.pow(dest.coordinates.lat - latitude, 2) +
-          Math.pow(dest.coordinates.lng - longitude, 2)
-        );
-        if (dist < minDist) {
-          minDist = dist;
-          nearest = dest;
-        }
-      }
-
-      handleSelectDestination(nearest);
-    } catch {
-      // Silently fail - user denied or timeout
-    } finally {
-      setIsLocating(false);
-    }
-  };
+  const onSearchClick = () => {
+      const params = new URLSearchParams();
+      if (selectedId) params.append("locationId", selectedId);
+      else if (localQuery) params.append("q", localQuery);
+      
+      params.append("type", parkingType);
+      params.append("checkIn", checkIn.toISOString());
+      params.append("checkOut", checkOut.toISOString());
+      
+      router.push(`/parking?${params.toString()}`);
+  }
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || flatResults.length === 0) {
-      if (e.key === "Enter") {
-        handleSearch();
-      }
+    if (!showSuggestions || results.length === 0) {
+      if (e.key === "Enter") onSearchClick();
       return;
     }
 
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setActiveIndex((prev) => (prev < flatResults.length - 1 ? prev + 1 : 0));
+        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : flatResults.length - 1));
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
         break;
       case "Enter":
         e.preventDefault();
-        if (activeIndex >= 0 && activeIndex < flatResults.length) {
-          handleSelectDestination(flatResults[activeIndex]);
+        if (activeIndex >= 0 && activeIndex < results.length) {
+          onSelect(results[activeIndex]);
         } else {
-          handleSearch();
+          onSearchClick();
         }
         break;
       case "Escape":
@@ -166,7 +189,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
     }
   };
 
-  // Scroll active item into view
+  // Scroll active item
   useEffect(() => {
     if (activeIndex >= 0 && listRef.current) {
       const activeElement = listRef.current.querySelector(`[data-index="${activeIndex}"]`);
@@ -174,12 +197,16 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
     }
   }, [activeIndex]);
 
-  // Close on outside click
+  // Click outside - updated to check listRef too
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.parentElement?.contains(event.target as Node)) {
+      if (
+        inputRef.current && 
+        !inputRef.current.parentElement?.contains(event.target as Node) &&
+        listRef.current &&
+        !listRef.current.contains(event.target as Node)
+      ) {
         setShowSuggestions(false);
-        setActiveIndex(-1);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -188,176 +215,98 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
   const isHero = variant === "hero";
 
-  const getIcon = (type: Destination["type"]) => {
-    switch (type) {
-      case "airport": return Plane;
-      case "city": return Building;
-      case "venue": return MapPinned;
-      default: return MapPin;
-    }
-  };
-
-  const renderGroup = (title: string, items: Destination[], startIndex: number) => {
-    if (items.length === 0) return null;
-
-    return (
-      <div key={title}>
-        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
-          {title}
-        </div>
-        {items.map((dest, idx) => {
-          const globalIndex = startIndex + idx;
-          const Icon = getIcon(dest.type);
-          return (
-            <button
-              key={dest.id}
-              data-index={globalIndex}
-              onClick={() => handleSelectDestination(dest)}
-              onMouseEnter={() => setActiveIndex(globalIndex)}
-              className={cn(
-                "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-                activeIndex === globalIndex ? "bg-primary/10" : "hover:bg-muted"
-              )}
-              role="option"
-              aria-selected={activeIndex === globalIndex}
-            >
-              <div className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg",
-                dest.type === "airport" ? "bg-primary/10" : "bg-muted"
-              )}>
-                <Icon className={cn(
-                  "h-5 w-5",
-                  dest.type === "airport" ? "text-primary" : "text-muted-foreground"
-                )} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">
-                  {dest.code && <span className="text-primary">{dest.code}</span>}
-                  {dest.code && " - "}
-                  {dest.name}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {dest.city}{dest.state && `, ${dest.state}`}
-                </p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
-    <div
-      className={cn(
-        "w-full rounded-xl bg-card shadow-lg",
-        isHero ? "p-4 md:p-6" : "p-3",
-        className
-      )}
-    >
-      {/* Parking Type Tabs */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-muted p-1">
+    <div className={cn("w-full rounded-xl bg-card shadow-lg", isHero ? "p-4 md:p-6" : "p-3", className)}>
+      {/* Tabs */}
+      {/* <div className="mb-4 flex gap-1 rounded-lg bg-muted p-1">
         {parkingTypes.map((type) => (
           <button
             key={type.id}
             onClick={() => setParkingType(type.id)}
-            suppressHydrationWarning
             className={cn(
               "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
-              parkingType === type.id
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              parkingType === type.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <type.icon className="h-4 w-4" />
             <span className="hidden sm:inline">{type.label}</span>
           </button>
         ))}
-      </div>
+      </div> */}
 
-      <div
-        className={cn(
-          "grid gap-3",
-          isHero ? "md:grid-cols-[1fr_auto_auto_auto]" : "md:grid-cols-[1fr_auto_auto_auto]"
-        )}
-      >
-        {/* Location Input with Autosuggest */}
+      <div className={cn("grid gap-3", isHero ? "md:grid-cols-[1fr_auto_auto_auto]" : "md:grid-cols-[1fr_auto_auto_auto]")}>
+        {/* Input */}
         <div className="relative">
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={inputRef}
-              placeholder="Search airport, city, or venue"
+              placeholder="Search by Airport, City, or Name"
               value={localQuery}
               onChange={(e) => {
                 setLocalQuery(e.target.value);
+                setSelectedId(null); // Clear selected ID on edit
                 setShowSuggestions(true);
                 setActiveIndex(-1);
               }}
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
               className={cn("pl-10 pr-10", isHero ? "h-12 text-base" : "h-10")}
-              role="combobox"
-              aria-expanded={showSuggestions}
-              aria-autocomplete="list"
-              aria-controls="destination-listbox"
-              aria-activedescendant={activeIndex >= 0 ? `dest-${activeIndex}` : undefined}
             />
-            {/* Use my location button */}
-            <button
-              type="button"
-              onClick={handleUseLocation}
-              disabled={isLocating}
-              suppressHydrationWarning
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-              title="Use my location"
-            >
-              {isLocating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Locate className="h-4 w-4" />
-              )}
-            </button>
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
 
-          {/* Suggestions Dropdown */}
-          {showSuggestions && (localQuery.length > 0 || true) && (
-            <div
-              ref={listRef}
-              id="destination-listbox"
-              role="listbox"
-              className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-border bg-card shadow-lg"
-            >
-              {localQuery.length < 1 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Start typing to search airports, cities, and venues
-                </div>
-              ) : flatResults.length > 0 ? (
-                <>
-                  {renderGroup("Airports", groupedResults.airports, 0)}
-                  {renderGroup("Cities", groupedResults.cities, groupedResults.airports.length)}
-                  {renderGroup("Venues", groupedResults.venues, groupedResults.airports.length + groupedResults.cities.length)}
-                </>
-              ) : (
-                <div className="flex items-center gap-3 px-4 py-4 text-muted-foreground">
-                  <Search className="h-5 w-5" />
-                  <span>No results found for "{localQuery}"</span>
-                </div>
-              )}
-            </div>
+          {/* RESULTS DROPDOWN */}
+          {showSuggestions && (
+             <div ref={listRef} className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-border bg-card shadow-lg">
+                {results.length > 0 ? (
+                  results.map((item, idx) => (
+                    <button
+                      key={item.id}
+                      data-index={idx}
+                      onClick={() => onSelect(item)}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-0",
+                        activeIndex === idx ? "bg-primary/10" : "hover:bg-muted"
+                      )}
+                    >
+                      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10")}>
+                         {item.airportCode ? <Plane className="h-5 w-5 text-primary" /> : <Building className="h-5 w-5 text-primary" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">
+                           {item.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                           {item.city}, {item.country} {item.airportCode && `(${item.airportCode})`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                         <span className="block font-bold text-primary">${item.pricePerDay}</span>
+                         <span className="text-[10px] text-muted-foreground">/day</span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  !isLoading && (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                       {localQuery ? "No locations found" : "Start typing to search..."}
+                    </div>
+                  )
+                )}
+             </div>
           )}
         </div>
 
-        {/* Check-in Date */}
+        {/* Date Pickers */}
         <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "justify-start gap-2 font-normal bg-transparent",
-                isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]"
-              )}
-            >
+            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent", isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]")}>
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Drop-off</span>
@@ -366,25 +315,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-            <div className="space-y-4">
-              <Calendar
-                mode="single"
-                selected={checkIn}
-                onSelect={(date) => {
-                  if (date) {
-                    const newDate = new Date(date);
-                    newDate.setHours(checkIn.getHours(), checkIn.getMinutes());
-                    setCheckIn(newDate);
-                    if (newDate >= checkOut) {
-                      const newCheckOut = new Date(newDate);
-                      newCheckOut.setHours(newCheckOut.getHours() + 2);
-                      setCheckOut(newCheckOut);
-                    }
-                  }
-                }}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                initialFocus
-              />
+              <Calendar mode="single" selected={checkIn} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkIn.getHours(), checkIn.getMinutes()); setCheckIn(n); if(n>=checkOut) { const nc = new Date(n); nc.setHours(nc.getHours()+24); setCheckOut(nc); } setCheckInOpen(false); }}} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus />
               <div className="border-t border-border pt-3">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Drop-off Time</label>
                 <Select
@@ -422,20 +353,12 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
                 </Select>
               </div>
               <Button className="w-full" size="sm" onClick={() => setCheckInOpen(false)}>Done</Button>
-            </div>
           </PopoverContent>
         </Popover>
 
-        {/* Check-out Date */}
         <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "justify-start gap-2 font-normal bg-transparent",
-                isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]"
-              )}
-            >
+             <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent", isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]")}>
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Pick-up</span>
@@ -444,20 +367,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-            <div className="space-y-4">
-              <Calendar
-                mode="single"
-                selected={checkOut}
-                onSelect={(date) => {
-                  if (date) {
-                    const newDate = new Date(date);
-                    newDate.setHours(checkOut.getHours(), checkOut.getMinutes());
-                    setCheckOut(newDate);
-                  }
-                }}
-                disabled={(date) => date <= checkIn}
-                initialFocus
-              />
+               <Calendar mode="single" selected={checkOut} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkOut.getHours(), checkOut.getMinutes()); setCheckOut(n); } }} disabled={(d) => d <= checkIn} initialFocus />
               <div className="border-t border-border pt-3">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Pick-up Time</label>
                 <Select
@@ -490,17 +400,12 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
                 </Select>
               </div>
               <Button className="w-full" size="sm" onClick={() => setCheckOutOpen(false)}>Done</Button>
-            </div>
           </PopoverContent>
         </Popover>
 
-        {/* Search Button */}
-        <Button
-          onClick={handleSearch}
-          className={cn("gap-2", isHero ? "h-12 px-6" : "h-10 px-4")}
-        >
-          <Search className="h-4 w-4" />
-          <span>Find Parking</span>
+        <Button onClick={onSearchClick} className={cn("gap-2", isHero ? "h-12 px-6" : "h-10 px-4")}>
+           <Search className="h-4 w-4" />
+           <span>Find Parking</span>
         </Button>
       </div>
     </div>
