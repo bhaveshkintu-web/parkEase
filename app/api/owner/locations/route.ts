@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { ownerLocationSchema } from "@/lib/validations";
+import { notifyAdminsOfLocationSubmission } from "@/lib/notifications";
 
 /**
  * @api {post} /api/owner/locations Create a new parking location
@@ -136,6 +137,11 @@ export async function POST(req: NextRequest) {
     });
 
     // 6. Response
+    // Send notifications asynchronously (don't block response)
+    notifyAdminsOfLocationSubmission(newLocation).catch(err => 
+      console.error("Failed to send location submission notifications:", err)
+    );
+
     return NextResponse.json(
       {
         message: "Parking location created successfully.",

@@ -20,6 +20,8 @@ interface StripePaymentFormProps {
   amount: number;
   isSubmitting: boolean;
   setIsSubmitting: (value: boolean) => void;
+  agreedToTerms: boolean;
+  setAgreedToTerms: (value: boolean) => void;
 }
 
 export function StripePaymentForm({
@@ -29,6 +31,8 @@ export function StripePaymentForm({
   amount,
   isSubmitting,
   setIsSubmitting,
+  agreedToTerms,
+  setAgreedToTerms,
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -46,7 +50,7 @@ export function StripePaymentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || !isFormComplete) return;
+    if (!stripe || !elements || !isFormComplete || !agreedToTerms) return;
 
     const cardNumberElement = elements.getElement(CardNumberElement);
     if (!cardNumberElement) return;
@@ -214,15 +218,31 @@ export function StripePaymentForm({
 
       {/* Security & Button Section */}
       <div className="space-y-4 pt-2">
+        {/* Terms Checkbox - Shared placement */}
+        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
+          <div className="mt-0.5">
+            <input
+              type="checkbox"
+              id="stripe-terms"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+          </div>
+          <Label htmlFor="stripe-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer font-medium italic">
+            I agree to the Terms of Service & Cancellation Policy. I understand that my reservation is subject to availability.
+          </Label>
+        </div>
+
         <Button
           type="submit"
           className={cn(
             "w-full h-14 font-black text-lg shadow-xl shadow-primary/20 transition-all duration-300",
             "hover:scale-[1.01] active:scale-[0.98] rounded-xl group",
-            !isFormComplete && "opacity-60 grayscale-[0.5]"
+            (!isFormComplete || !agreedToTerms) && "opacity-60 grayscale-[0.5]"
           )}
-          variant={!isFormComplete ? "secondary" : "default"}
-          disabled={!stripe || !isFormComplete || isSubmitting}
+          variant={(!isFormComplete || !agreedToTerms) ? "secondary" : "default"}
+          disabled={!stripe || !isFormComplete || isSubmitting || !agreedToTerms}
         >
           {isSubmitting ? (
             <div className="flex items-center gap-3">
@@ -231,8 +251,8 @@ export function StripePaymentForm({
             </div>
           ) : (
             <div className="flex items-center justify-center w-full relative">
-              <span className="uppercase tracking-widest">
-                Confirm & Pay {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)}
+              <span className="uppercase tracking-widest font-black">
+                Pay {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)} & Book Now
               </span>
               <Lock className="absolute right-0 h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
             </div>

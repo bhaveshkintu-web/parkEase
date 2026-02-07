@@ -57,6 +57,7 @@ export default function OwnerApprovalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedLead, setSelectedLead] = useState<OwnerLead | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
   const [adminNotes, setAdminNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -183,122 +184,123 @@ export default function OwnerApprovalsPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, business or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Filters & Search - Styled like Refund Processing */}
+      <Card className="border-none shadow-sm bg-white">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, business or email..."
+                className="pl-10 h-10 border-slate-200"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+              <TabsList className="bg-slate-100 h-10 w-full md:w-auto">
+                <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
+                <TabsTrigger value="approved">Approved ({approvedCount})</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
+                <TabsTrigger value="all">All ({leads.length})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Leads List */}
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({approvedCount})</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
-          <TabsTrigger value="all">All ({leads.length})</TabsTrigger>
-        </TabsList>
-
-        {["pending", "approved", "rejected", "all"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
-            <div className="grid gap-4">
-              {filteredLeads
-                .filter((lead) => tab === "all" || lead.status === tab)
-                .map((lead) => (
-                  <Card key={lead.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-lg text-foreground">
-                                {lead.fullName}
-                              </h3>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                <Building2 className="w-4 h-4" />
-                                {lead.businessName} ({lead.businessType})
-                                {lead.isProfile && (
-                                  <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                    Registered Profile
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <Badge variant={lead.status === "approved" ? "default" : lead.status === "rejected" ? "destructive" : "secondary"}>
-                              {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+      <div className="space-y-4">
+        {filteredLeads
+          .filter((lead) => activeTab === "all" || lead.status === activeTab)
+          .map((lead) => (
+            <Card key={lead.id} className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg text-foreground">
+                          {lead.fullName}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <Building2 className="w-4 h-4" />
+                          {lead.businessName} ({lead.businessType})
+                          {lead.isProfile && (
+                            <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              Registered Profile
                             </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium">{lead.email}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium">{lead.phone}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium">{lead.city}, {lead.state}, {lead.country}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Submitted:</span>
-                              <span className="font-medium">
-                                {new Date(lead.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-row lg:flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 lg:flex-none bg-transparent"
-                            onClick={() => setSelectedLead(lead)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Review
-                          </Button>
-                          {lead.status === "pending" && (
-                            <Button
-                              size="sm"
-                              className="flex-1 lg:flex-none"
-                              onClick={() => {
-                                setSelectedLead(lead);
-                              }}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
-                            </Button>
                           )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <Badge variant={lead.status === "approved" ? "default" : lead.status === "rejected" ? "destructive" : "secondary"}>
+                        {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                      </Badge>
+                    </div>
 
-              {filteredLeads.filter((lead) => tab === "all" || lead.status === tab).length === 0 && (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium text-foreground">No leads found</h3>
-                    <p className="text-muted-foreground mt-1">
-                      {tab === "pending" ? "No pending leads at this time" : "No leads match your search"}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{lead.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{lead.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{lead.city}, {lead.state}, {lead.country}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Submitted:</span>
+                        <span className="font-medium">
+                          {new Date(lead.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row lg:flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 lg:flex-none bg-transparent"
+                      onClick={() => setSelectedLead(lead)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Review
+                    </Button>
+                    {lead.status === "pending" && (
+                      <Button
+                        size="sm"
+                        className="flex-1 lg:flex-none"
+                        onClick={() => {
+                          setSelectedLead(lead);
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+        {filteredLeads.filter((lead) => activeTab === "all" || lead.status === activeTab).length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground">No leads found</h3>
+              <p className="text-muted-foreground mt-1">
+                {activeTab === "pending" ? "No pending leads at this time" : "No leads match your search"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Review Dialog */}
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>

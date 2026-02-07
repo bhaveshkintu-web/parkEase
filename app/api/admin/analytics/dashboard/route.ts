@@ -66,11 +66,11 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      pendingOwners = await prisma.ownerProfile.count({
+      pendingOwners = await prisma.ownerLead.count({
         where: { status: "pending" }
       });
     } catch (error) {
-      console.error("Error counting pending owners:", error);
+      console.error("Error counting pending owner leads:", error);
     }
 
     try {

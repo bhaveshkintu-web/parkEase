@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Check, Info, AlertTriangle, MessageSquare } from "lucide-react";
+import { Bell, Check, Info, AlertTriangle, MessageSquare, MapPin } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -104,7 +104,8 @@ export function NotificationCenter() {
     }
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (notification: Notification) => {
+    const { type, metadata } = notification;
     switch (type) {
       case "DISPUTE_CREATED":
       case "DISPUTE_UPDATED":
@@ -115,6 +116,11 @@ export function NotificationCenter() {
       case "SUPPORT_TICKET_CREATED":
       case "SUPPORT_TICKET_UPDATED":
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case "SYSTEM_ALERT":
+        if (metadata?.subtype === "LOCATION_SUBMITTED") {
+          return <MapPin className="h-4 w-4 text-purple-500" />;
+        }
+        return <Info className="h-4 w-4 text-blue-500" />;
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
     }
@@ -130,6 +136,9 @@ export function NotificationCenter() {
     }
     if (type.startsWith("SUPPORT_TICKET")) {
       return `/admin/support?id=${metadata.ticketId}`;
+    }
+    if (type === "LOCATION_SUBMITTED" || (type === "SYSTEM_ALERT" && metadata?.subtype === "LOCATION_SUBMITTED")) {
+      return `/admin/approvals`;
     }
     return "#";
   };
@@ -187,7 +196,7 @@ export function NotificationCenter() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border">
-                        {getIcon(n.type)}
+                        {getIcon(n)}
                       </div>
                       <span className="text-sm font-semibold leading-none">
                         {n.title}

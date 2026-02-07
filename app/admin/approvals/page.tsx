@@ -57,6 +57,7 @@ export default function ParkingApprovalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<ParkingLocation | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
   const [reviewNotes, setReviewNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -198,118 +199,119 @@ export default function ParkingApprovalsPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by location or owner..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Filters & Search - Styled like Refund Processing */}
+      <Card className="border-none shadow-sm bg-white">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by location or owner..."
+                className="pl-10 h-10 border-slate-200"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+              <TabsList className="bg-slate-100 h-10 w-full md:w-auto">
+                <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
+                <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
+                <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Locations List */}
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-          <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
-          <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
-        </TabsList>
-
-        {["all", "pending", "active", "rejected"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
-            <div className="grid gap-4">
-              {filteredLocations
-                .filter((loc) => {
-                  if (tab === "all") return true;
-                  if (tab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
-                  return loc.status?.toUpperCase() === tab.toUpperCase();
-                })
-                .map((location) => (
-                  <Card key={location.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-lg text-foreground">
-                                {location.name}
-                              </h3>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                <MapPin className="w-4 h-4" />
-                                {location.address}, {location.city}
-                              </div>
-                            </div>
-                            <Badge variant={location.status?.toUpperCase() === "ACTIVE" ? "default" : location.status?.toUpperCase() === "INACTIVE" ? "destructive" : "secondary"}>
-                              {location.status === "INACTIVE" ? "REJECTED" : location.status}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Owner:</span>
-                              <span className="font-medium">{location.owner?.businessName}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-muted-foreground">Created:</span>
-                              <span className="font-medium">
-                                {new Date(location.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-row lg:flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 lg:flex-none bg-transparent"
-                            onClick={() => setSelectedLocation(location)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Review
-                          </Button>
-                          {location.status?.toUpperCase() === "PENDING" && (
-                            <Button
-                              size="sm"
-                              className="flex-1 lg:flex-none"
-                              onClick={() => {
-                                setSelectedLocation(location);
-                              }}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
-                            </Button>
-                          )}
+      <div className="space-y-4">
+        {filteredLocations
+          .filter((loc) => {
+            if (activeTab === "all") return true;
+            if (activeTab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
+            return loc.status?.toUpperCase() === activeTab.toUpperCase();
+          })
+          .map((location) => (
+            <Card key={location.id} className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg text-foreground">
+                          {location.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <MapPin className="w-4 h-4" />
+                          {location.address}, {location.city}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <Badge variant={location.status?.toUpperCase() === "ACTIVE" ? "default" : location.status?.toUpperCase() === "INACTIVE" ? "destructive" : "secondary"}>
+                        {location.status === "INACTIVE" ? "REJECTED" : location.status}
+                      </Badge>
+                    </div>
 
-              {filteredLocations.filter((loc) => {
-                  if (tab === "all") return true;
-                  if (tab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
-                  return loc.status?.toUpperCase() === tab.toUpperCase();
-                }).length === 0 && (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium text-foreground">No locations found</h3>
-                    <p className="text-muted-foreground mt-1">
-                      {tab === "pending" ? "No pending locations at this time" : "No locations match your search"}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Owner:</span>
+                        <span className="font-medium">{location.owner?.businessName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Created:</span>
+                        <span className="font-medium">
+                          {new Date(location.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row lg:flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 lg:flex-none bg-transparent"
+                      onClick={() => setSelectedLocation(location)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Review
+                    </Button>
+                    {location.status?.toUpperCase() === "PENDING" && (
+                      <Button
+                        size="sm"
+                        className="flex-1 lg:flex-none"
+                        onClick={() => {
+                          setSelectedLocation(location);
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+        {filteredLocations.filter((loc) => {
+          if (activeTab === "all") return true;
+          if (activeTab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
+          return loc.status?.toUpperCase() === activeTab.toUpperCase();
+        }).length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground">No locations found</h3>
+              <p className="text-muted-foreground mt-1">
+                {activeTab === "pending" ? "No pending locations at this time" : "No locations match your search"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Review Dialog */}
       <Dialog open={!!selectedLocation} onOpenChange={() => setSelectedLocation(null)}>

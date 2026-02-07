@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { NotificationService, NotificationType, notifyAdminsOfPartnerInquiry } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   try {
@@ -55,6 +56,17 @@ export async function POST(req: Request) {
         status: "pending",
       },
     });
+
+
+    // Send notifications
+    await NotificationService.notifyAdmins({
+      title: "New Partner Inquiry",
+      message: `New inquiry from ${fullName} for ${businessName}`,
+      type: NotificationType.SYSTEM_ALERT,
+      metadata: { leadId: lead.id, type: "partner_lead" }
+    });
+
+    await notifyAdminsOfPartnerInquiry(lead);
 
     return NextResponse.json(
       { message: "Lead submitted successfully", leadId: lead.id },

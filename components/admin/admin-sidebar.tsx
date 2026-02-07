@@ -171,13 +171,13 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
 
   const getNavBadge = (label: string) => {
     switch (label) {
-      case "Owner Lead Approvals": return counts.pendingOwners;
-      case "Location Approvals": return counts.pendingLocations;
-      case "Disputes": return counts.openDisputes;
-      case "Refunds": return counts.pendingRefunds;
-      case "Withdrawals": return counts.pendingWithdrawals;
-      case "Support Tickets": return counts.openTickets;
-      case "Reviews": return counts.pendingReviews;
+      case "Owner Lead Approvals": return counts.pendingOwners > 0 ? counts.pendingOwners : undefined;
+      case "Location Approvals": return counts.pendingLocations > 0 ? counts.pendingLocations : undefined;
+      case "Disputes": return counts.openDisputes > 0 ? counts.openDisputes : undefined;
+      case "Refunds": return counts.pendingRefunds > 0 ? counts.pendingRefunds : undefined;
+      case "Withdrawals": return counts.pendingWithdrawals > 0 ? counts.pendingWithdrawals : undefined;
+      case "Support Tickets": return counts.openTickets > 0 ? counts.openTickets : undefined;
+      case "Reviews": return counts.pendingReviews > 0 ? counts.pendingReviews : undefined;
       default: return undefined;
     }
   };

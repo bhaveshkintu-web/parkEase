@@ -6,7 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { generateToken } from "@/lib/token";
-import { sendVerificationEmail } from "@/lib/mailer";
+import { sendVerificationEmail, sendWelcomeEmail } from "@/lib/mailer";
 
 // Schema for user creation
 const createUserSchema = z.object({
@@ -208,8 +208,19 @@ export async function POST(req: NextRequest) {
         await sendVerificationEmail(email, rawVerifyToken);
       } catch (emailError) {
         console.error("Failed to send invite email:", emailError);
-        // We generally don't want to fail the request if email fails, 
-        // but client might want to know. For now log it.
+      }
+    } else {
+      // If NOT sending invite, we assume manual creation + auto-verify
+      // Send welcome email with credentials
+      try {
+        await sendWelcomeEmail(
+          email,
+          `${firstName} ${lastName}`,
+          effectivePassword,
+          role
+        );
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
       }
     }
 

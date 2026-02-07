@@ -12,8 +12,15 @@ import {
 import { formatCurrency } from "@/lib/data";
 import { DataTable, StatusBadge, type Column, type Action } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { AdminParkingLocation } from "@/lib/types";
 import {
@@ -27,6 +34,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Wrench,
+  Search,
+  Filter,
 } from "lucide-react";
 
 export default function OwnerLocationsPage() {
@@ -35,14 +44,33 @@ export default function OwnerLocationsPage() {
   const { toast } = useToast();
   const [locations, setLocations] = useState<AdminParkingLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const [counts, setCounts] = useState({
+    total: 0,
+    active: 0,
+    maintenance: 0,
+    revenue: 0
+  });
 
   const fetchLocations = async () => {
     if (!user) return;
     setIsLoading(true);
     const result = await getOwnerLocations(user.id);
     if (result.success) {
-      setLocations(result.data as unknown as AdminParkingLocation[]);
+      const data = result.data as unknown as AdminParkingLocation[];
+      setLocations(data);
+      
+      // Calculate stats
+      setCounts({
+        total: data.length,
+        active: data.filter(l => l.status === "ACTIVE").length,
+        maintenance: data.filter(l => l.status === "MAINTENANCE").length,
+        revenue: data.reduce((sum, l) => sum + (l.analytics?.revenue || 0), 0)
+      });
     } else {
       toast({
         title: "Error",
@@ -57,10 +85,19 @@ export default function OwnerLocationsPage() {
     fetchLocations();
   }, [user]);
 
-  const filteredLocations =
-    activeTab === "all"
-      ? locations
-      : locations.filter((l) => l.status === activeTab.toUpperCase());
+  // Filter logic
+  const filteredLocations = locations.filter((location) => {
+    // 1. Search Filter
+    const matchesSearch = searchQuery === "" || 
+      location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      location.address?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // 2. Status Filter
+    const matchesStatus = statusFilter === "all" || 
+      location.status === statusFilter.toUpperCase();
+
+    return matchesSearch && matchesStatus;
+  });
 
   const columns: Column<AdminParkingLocation>[] = [
     {
@@ -135,7 +172,9 @@ export default function OwnerLocationsPage() {
               ? "success"
               : item.status === "MAINTENANCE"
                 ? "warning"
-                : "default"
+                : item.status === "PENDING"
+                  ? "info"
+                  : "default"
           }
         />
       ),
@@ -208,81 +247,89 @@ export default function OwnerLocationsPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Locations</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">My Locations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your parking locations and pricing
           </p>
         </div>
         <Link href="/owner/locations/new">
           <Button>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Add Location
           </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total Locations</p>
-            <p className="text-2xl font-bold text-foreground">{locations.length}</p>
-          </CardContent>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Locations</CardDescription>
+            <CardTitle className="text-3xl">{counts.total}</CardTitle>
+          </CardHeader>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Active</p>
-            <p className="text-2xl font-bold text-green-600">
-              {locations.filter((l) => l.status === "ACTIVE").length}
-            </p>
-          </CardContent>
+          <CardHeader className="pb-2">
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-3xl text-primary">{counts.active}</CardTitle>
+          </CardHeader>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">In Maintenance</p>
-            <p className="text-2xl font-bold text-amber-600">
-              {locations.filter((l) => l.status === "MAINTENANCE").length}
-            </p>
-          </CardContent>
+          <CardHeader className="pb-2">
+            <CardDescription>In Maintenance</CardDescription>
+            <CardTitle className="text-3xl text-amber-600">{counts.maintenance}</CardTitle>
+          </CardHeader>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
-            <p className="text-2xl font-bold text-foreground">
-              {formatCurrency(locations.reduce((sum, l) => sum + (l.analytics?.revenue || 0), 0))}
-            </p>
-          </CardContent>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Revenue</CardDescription>
+            <CardTitle className="text-3xl">{formatCurrency(counts.revenue)}</CardTitle>
+          </CardHeader>
         </Card>
       </div>
 
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="w-full sm:w-[200px]">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Locations Table */}
       <Card>
-        <CardHeader>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="all">All ({locations.length})</TabsTrigger>
-              <TabsTrigger value="active">
-                Active ({locations.filter((l) => l.status === "ACTIVE").length})
-              </TabsTrigger>
-              <TabsTrigger value="inactive">
-                Inactive ({locations.filter((l) => l.status === "INACTIVE").length})
-              </TabsTrigger>
-              <TabsTrigger value="maintenance">
-                Maintenance ({locations.filter((l) => l.status === "MAINTENANCE").length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <DataTable
             data={filteredLocations}
             columns={columns}
             actions={getActions}
-            searchKey="name"
-            searchPlaceholder="Search locations..."
             emptyMessage="No locations found"
             onRowClick={(item) => router.push(`/owner/locations/${item.id}`)}
           />

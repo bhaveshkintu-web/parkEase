@@ -168,14 +168,14 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
   // Let's use Raw for best performance as requested "optimized Prisma queries".
   
   const monthlyEarningsRaw = await prisma.$queryRaw`
-    SELECT TO_CHAR("createdAt", 'Mon YYYY') as month, SUM(amount) as amount
+    SELECT TO_CHAR(p."createdAt", 'Mon YYYY') as month, SUM(p.amount) as amount
     FROM "Payment" p
     JOIN "Booking" b ON p."bookingId" = b.id
     JOIN "ParkingLocation" pl ON b."locationId" = pl.id
     WHERE pl."ownerId" = ${ownerId}
     AND p.status = 'COMPLETED'
-    GROUP BY TO_CHAR("createdAt", 'Mon YYYY'), DATE_TRUNC('month', "createdAt")
-    ORDER BY DATE_TRUNC('month', "createdAt") DESC
+    GROUP BY TO_CHAR(p."createdAt", 'Mon YYYY'), DATE_TRUNC('month', p."createdAt")
+    ORDER BY DATE_TRUNC('month', p."createdAt") DESC
     LIMIT 12
   ` as { month: string, amount: number }[];
 

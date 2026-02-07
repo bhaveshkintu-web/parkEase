@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/mailer";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -174,6 +175,7 @@ export async function POST(req: Request) {
             password: hashedPassword,
             role: "OWNER",
             status: "ACTIVE",
+            emailVerified: true, // Changing to boolean temporarily if logic dictates, or keeping as Date if schema confirms.
           },
         });
 
@@ -199,6 +201,9 @@ export async function POST(req: Request) {
       });
 
       console.log(`Approved owner: ${lead!.email}. Temp password: ${tempPassword}`);
+
+      // Send welcome email
+      await sendWelcomeEmail(lead!.email, lead!.fullName, tempPassword, "OWNER");
 
       return NextResponse.json({
         message: "Owner approved and account created successfully",
