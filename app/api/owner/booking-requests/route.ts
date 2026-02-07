@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
                 customerId: req.customerId || null,
                 customerName: req.customerName || "Unknown",
                 vehiclePlate: req.vehiclePlate || "N/A",
-                status: (req.status || 'pending').toLowerCase(),
+                status: (req.status || 'pending').toUpperCase(),
                 requestedAt: req.requestedAt || new Date().toISOString(),
                 requestedStart: req.requestedStart || req.requestedAt || new Date().toISOString(),
                 requestedEnd: req.requestedEnd || new Date().toISOString()

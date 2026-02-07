@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { notifyOwnerOfBookingRequest, notifyAdminsOfBookingRequest } from "@/lib/notifications";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -77,6 +78,14 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // Trigger notifications asynchronously
+    notifyOwnerOfBookingRequest(newRequest.id).catch(err => 
+      console.error("Failed to notify owner after request creation:", err)
+    );
+    notifyAdminsOfBookingRequest(newRequest.id).catch(err => 
+      console.error("Failed to notify admins after request creation:", err)
+    );
 
     return NextResponse.json(newRequest);
   } catch (error: any) {

@@ -18,7 +18,6 @@ export enum NotificationType {
 }
 
 export async function notifyAdminsOfBookingRequest(requestId: string) {
-// ... existing code ...
   try {
     const request = await prisma.bookingRequest.findUnique({
       where: { id: requestId },
@@ -81,6 +80,91 @@ export async function notifyAdminsOfBookingRequest(requestId: string) {
     console.log(`✅ Admin notifications sent for request ${requestId}`);
   } catch (error) {
     console.error("❌ Failed to notify admins:", error);
+  }
+}
+
+/**
+ * Notifies the owner of a new booking request at their location.
+ */
+export async function notifyOwnerOfBookingRequest(requestId: string) {
+  try {
+    const request = await prisma.bookingRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        location: {
+          include: {
+            owner: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+        requestedBy: true,
+      },
+    });
+
+    if (!request || !request.location?.owner?.user) {
+      console.log(`⚠️ Could not find owner for request ${requestId}`);
+      return;
+    }
+
+    const owner = request.location.owner.user;
+
+    // 1. Send Email
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+      to: owner.email,
+      subject: `New Booking Request for ${request.location.name}`,
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0d9488;">New Booking Request</h2>
+          <p>Hello ${owner.firstName},</p>
+          <p>A new ${request.requestType.toLowerCase()} request has been submitted at your location <strong>${request.location.name}</strong> by watchman <strong>${request.requestedBy.firstName} ${request.requestedBy.lastName}</strong>.</p>
+          
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Customer:</strong> ${request.customerName}</p>
+            <p style="margin: 0;"><strong>Vehicle:</strong> ${request.vehiclePlate}</p>
+            <p style="margin: 0;"><strong>Requested Time:</strong> ${new Date(request.requestedStart).toLocaleString()} - ${new Date(request.requestedEnd).toLocaleString()}</p>
+            <p style="margin: 0;"><strong>Estimated Amount:</strong> $${request.estimatedAmount}</p>
+          </div>
+
+          <p>Please log in to your owner dashboard to approve or reject this request.</p>
+          <a href="${process.env.APP_URL}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+          
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+        </div>
+      `,
+    });
+
+    // 2. Create In-App Notification
+    await prisma.notification.create({
+      data: {
+        userId: owner.id,
+        title: "New Booking Request",
+        message: `New request at "${request.location.name}" for ${request.customerName}.`,
+        type: NotificationType.SYSTEM_ALERT as any,
+        metadata: { requestId: request.id, type: "BOOKING_REQUEST" },
+      },
+    });
+
+    console.log(`✅ Owner notification sent for request ${requestId} to ${owner.email}`);
+  } catch (error) {
+    console.error("❌ Failed to notify owner:", error);
   }
 }
 
@@ -264,6 +348,73 @@ export async function notifyAdminsOfPartnerInquiry(lead: any) {
     console.log(`✅ Admin notifications sent for lead ${lead.id}`);
   } catch (error) {
     console.error("❌ Failed to notify admins:", error);
+  }
+}
+
+export async function notifyAdminsOfLocationSubmission(location: any) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (admins.length === 0) return;
+
+    // 1. Send Emails
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    for (const admin of admins) {
+      await transporter.sendMail({
+        from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+        to: admin.email,
+        subject: `Location Approval Request Received: ${location.name}`,
+        html: `
+          <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #0d9488;">Location Approval Request Received</h2>
+            <p>A new parking location has been submitted for approval.</p>
+            
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Location Name:</strong> ${location.name}</p>
+              <p style="margin: 0;"><strong>Address:</strong> ${location.address}, ${location.city}, ${location.state}</p>
+              <p style="margin: 0;"><strong>Spots:</strong> ${location.totalSpots}</p>
+              <p style="margin: 0;"><strong>Price/Day:</strong> $${location.pricePerDay}</p>
+            </div>
+
+            <p>Please log in to the admin dashboard to review and approve this location.</p>
+            <a href="${process.env.APP_URL}/admin/approvals" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+          </div>
+        `,
+      });
+    }
+
+    // 2. Create In-App Notifications
+    await prisma.notification.createMany({
+      data: admins.map((admin) => ({
+        userId: admin.id,
+        title: "Location Approval Request Received",
+        message: `New location "${location.name}" requires approval.`,
+        type: NotificationType.SYSTEM_ALERT,
+        metadata: { locationId: location.id, subtype: "LOCATION_SUBMITTED" },
+      })),
+    });
+
+    console.log(`✅ Admin notifications sent for location ${location.id}`);
+  } catch (error) {
+    console.error("❌ Failed to notify admins of location submission:", error);
   }
 }
 

@@ -6,7 +6,6 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { generateToken } from "@/lib/token";
-import { generateToken } from "@/lib/token";
 import { sendVerificationEmail, sendWelcomeEmail } from "@/lib/mailer";
 
 // Schema for user creation

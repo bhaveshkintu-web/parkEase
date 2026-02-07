@@ -15,6 +15,7 @@ import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { validateLuhn, formatCardNumber, detectCardBrand, validateExpiry } from "@/lib/card-utils";
+import { getVehicles } from "@/lib/actions/vehicle-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -167,7 +168,13 @@ function CheckoutContent() {
   }, [contextLocation, router, toast]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      // Auto-fill Guest Info if empty
+      if (!firstName && user.firstName) setFirstName(user.firstName);
+      if (!lastName && user.lastName) setLastName(user.lastName);
+      if (!email && user.email) setEmail(user.email);
+      if (!phone && user.phone) setPhone(user.phone);
+
       const fetchSavedCards = async () => {
         try {
           const res = await fetch("/api/payment-methods");
@@ -184,9 +191,30 @@ function CheckoutContent() {
           console.error("Failed to fetch saved cards", error);
         }
       };
+      
+      const fetchVehicles = async () => {
+         try {
+             const vehicles = await getVehicles();
+             
+             if (vehicles && vehicles.length > 0) {
+                 // getVehicles sorts by default first, then newest.
+                 const topVehicle = vehicles[0];
+                 
+                 // Only auto-fill if fields are empty to respect manual edits
+                 if (!make) setMake(topVehicle.make);
+                 if (!model) setModel(topVehicle.model);
+                 if (!color) setColor(topVehicle.color);
+                 if (!licensePlate) setLicensePlate(topVehicle.licensePlate);
+             }
+         } catch (error) {
+             console.error("Failed to fetch vehicles", error);
+         }
+      };
+
       fetchSavedCards();
+      fetchVehicles();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut) : null;
 
@@ -755,6 +783,8 @@ function CheckoutContent() {
                                 onPaymentError={handlePaymentError}
                                 isSubmitting={isSubmitting}
                                 setIsSubmitting={setIsSubmitting}
+                                agreedToTerms={agreedToTerms}
+                                setAgreedToTerms={setAgreedToTerms}
                               />
                             </Elements>
                           ) : (
@@ -765,6 +795,26 @@ function CheckoutContent() {
                           )}
                         </div>
                       )}
+
+                      {/* Terms Checkbox Moved Here */}
+                      <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
+                        <Checkbox
+                          id="terms"
+                          checked={agreedToTerms}
+                          onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                        />
+                        <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                          I agree to the{" "}
+                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                            Terms of Service
+                          </Link>{" "}
+                          and{" "}
+                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                            Cancellation Policy
+                          </Link>
+                          . I understand that my reservation is subject to availability.
+                        </Label>
+                      </div>
 
                       {/* Unified Submit Button for Saved Card or Demo */}
                       {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
@@ -816,29 +866,7 @@ function CheckoutContent() {
                 </AccordionItem>
               </Accordion>
 
-              {/* Terms Checkbox */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="terms"
-                      checked={agreedToTerms}
-                      onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                    />
-                    <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                      I agree to the{" "}
-                      <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                        Terms of Service
-                      </Link>{" "}
-                      and{" "}
-                      <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                        Cancellation Policy
-                      </Link>
-                      . I understand that my reservation is subject to availability.
-                    </Label>
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
 
             {/* Order Summary Sidebar */}
