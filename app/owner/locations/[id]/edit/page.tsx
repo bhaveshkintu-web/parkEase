@@ -42,6 +42,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { MediaManagementCard } from "@/components/owner/media-management-card";
 import {
   Popover,
   PopoverContent,
@@ -215,51 +216,6 @@ export default function OwnerEditLocationPage() {
     }
   }, [errors]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsSubmitting(true);
-    const uploadedUrls: string[] = [...formData.images];
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formDataUpload = new FormData();
-        formDataUpload.append("file", file);
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formDataUpload,
-        });
-
-        if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
-
-        const data = await response.json();
-        uploadedUrls.push(data.url);
-      }
-      handleInputChange("images", uploadedUrls);
-      toast({
-        title: "Images uploaded",
-        description: `Successfully uploaded ${files.length} image(s).`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload images. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const removeImage = useCallback((index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-  }, []);
 
   // Fetch address suggestions from LocationIQ API
   const fetchSuggestions = async (query: string) => {
@@ -670,72 +626,12 @@ export default function OwnerEditLocationPage() {
           </CardContent>
         </Card>
 
-        {/* Media Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" />
-              Location Media
-            </CardTitle>
-            <CardDescription>
-              Manage photos of your parking location
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {formData.images.map((url, index) => (
-                <div key={index} className="group relative aspect-video rounded-lg border overflow-hidden bg-muted">
-                  <img src={url} alt={`Location ${index + 1}`} className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                  {index === 0 && (
-                    <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-[10px] text-white py-1 text-center font-bold">
-                      MAIN COVER
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              <label
-                className={cn(
-                  "flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/[0.02] cursor-pointer transition-all gap-2",
-                  isSubmitting && "opacity-50 pointer-events-none"
-                )}
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-foreground">Upload Photos</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP up to 5MB</p>
-                </div>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  disabled={isSubmitting}
-                />
-              </label>
-            </div>
-
-            {formData.images.length === 0 && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>No photos yet</AlertTitle>
-                <AlertDescription>
-                  Adding at least 3 high-quality photos helps build trust with customers.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+        <MediaManagementCard
+          locationId={locationId}
+          images={formData.images}
+          onImagesChange={(newImages) => handleInputChange("images", newImages)}
+          autoSave={false}
+        />
       </div>
     </div>
   );

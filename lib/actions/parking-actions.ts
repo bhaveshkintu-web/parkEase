@@ -378,3 +378,30 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
   }
 }
 
+/**
+ * Updates only the images of a parking location.
+ */
+export async function updateLocationImages(id: string, images: string[]) {
+  try {
+    const updatedLocation = await prisma.parkingLocation.update({
+      where: { id },
+      data: {
+        images,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/owner/locations");
+    revalidatePath(`/owner/locations/${id}`);
+    revalidatePath("/parking");
+
+    return { success: true, data: updatedLocation };
+  } catch (error) {
+    console.error("Failed to update location images:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update location images"
+    };
+  }
+}
+

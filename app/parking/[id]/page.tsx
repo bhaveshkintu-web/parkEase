@@ -40,7 +40,17 @@ import {
   ParkingCircle,
   AlertTriangle,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  X as CloseIcon,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { use } from "react";
 
@@ -49,6 +59,8 @@ function LocationDetailsContent({ id }: { id: string }) {
   const [location, setLocationData] = React.useState<any>(null);
   const [nearbyLocations, setNearbyLocations] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isGalleryOpen, setIsGalleryOpen] = React.useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
 
   const { checkIn, checkOut, setLocation } = useBooking();
 
@@ -113,6 +125,21 @@ function LocationDetailsContent({ id }: { id: string }) {
       title: "Saved",
       description: "Location added to your favorites.",
     });
+  };
+
+  const openGallery = (index: number = 0) => {
+    setCurrentPhotoIndex(index);
+    setIsGalleryOpen(true);
+  };
+
+  const nextPhoto = () => {
+    if (!location?.images) return;
+    setCurrentPhotoIndex((prev) => (prev + 1) % location.images.length);
+  };
+
+  const prevPhoto = () => {
+    if (!location?.images) return;
+    setCurrentPhotoIndex((prev) => (prev - 1 + location.images.length) % location.images.length);
   };
 
   if (isLoading) {
@@ -216,58 +243,71 @@ function LocationDetailsContent({ id }: { id: string }) {
           </div>
 
           {/* Image Gallery */}
-          <div className="relative mb-8 grid gap-2 overflow-hidden rounded-xl md:grid-cols-4 md:grid-rows-2">
-            <div className="relative col-span-2 row-span-2 aspect-[4/3] bg-gradient-to-br from-primary/20 to-primary/5 md:aspect-auto">
+          <div className="relative mb-8 grid gap-2 overflow-hidden rounded-xl h-[300px] md:h-[500px] md:grid-cols-4 md:grid-rows-2">
+            {/* Main Large Image */}
+            <div
+              className="relative col-span-2 row-span-2 aspect-auto bg-muted cursor-pointer overflow-hidden group border-r border-background/10 md:border-r-0"
+              onClick={() => openGallery(0)}
+            >
               {location.images && location.images[0] ? (
                 <img
                   src={location.images[0]}
                   alt={location.name}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                   <Car className="h-24 w-24 text-primary/30" />
                 </div>
               )}
-              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+              {/* Overlay labels moved to top badges section for cleaner look or kept here with reduced visibility */}
+              <div className="absolute left-4 top-4 flex flex-wrap gap-2 pointer-events-none">
                 {location.shuttle && (
-                  <Badge className="gap-1 bg-primary">
+                  <Badge className="gap-1 bg-primary/90 backdrop-blur-md border-none shadow-sm">
                     <Bus className="h-3 w-3" />
                     Free Shuttle
                   </Badge>
                 )}
-                {location.cancellationPolicy?.type === "free" && (
-                  <Badge variant="secondary" className="gap-1 bg-card/90 text-foreground">
-                    <CheckCircle className="h-3 w-3 text-primary" />
-                    Free Cancellation
-                  </Badge>
-                )}
               </div>
             </div>
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="hidden aspect-video bg-gradient-to-br from-muted to-muted/50 md:block relative overflow-hidden"
-              >
-                {location.images && location.images[i] ? (
-                  <img
-                    src={location.images[i]}
-                    alt={`${location.name} ${i}`}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <Car className="h-12 w-12 text-muted-foreground/30" />
-                  </div>
-                )}
-              </div>
-            ))}
+
+            {/* Thumbnails - Grid approach to look more "equal" */}
+            <div className="hidden md:grid col-span-2 row-span-2 grid-cols-2 grid-rows-2 gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="relative overflow-hidden bg-muted cursor-pointer group"
+                  onClick={() => i < (location.images?.length || 0) ? openGallery(i) : openGallery(0)}
+                >
+                  {location.images && location.images[i] ? (
+                    <img
+                      src={location.images[i]}
+                      alt={`${location.name} ${i}`}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-muted/50">
+                      <Car className="h-10 w-10 text-muted-foreground/20" />
+                    </div>
+                  )}
+                  {/* Overlay for more photos tag on the last slot */}
+                  {i === 4 && location.images && location.images.length > 5 && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center text-white font-bold group-hover:bg-black/60 transition-colors">
+                      <span className="text-2xl">+{location.images.length - 4}</span>
+                      <span className="text-[10px] uppercase tracking-wider">Photos</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <Button
               variant="secondary"
               size="sm"
-              className="absolute bottom-4 right-4 gap-2"
+              className="absolute bottom-4 right-4 gap-2 shadow-lg bg-white/80 backdrop-blur-md hover:bg-white text-foreground border-white/20 transition-all active:scale-95"
+              onClick={() => openGallery(0)}
             >
-              Show all photos
+              <span className="font-semibold px-1">Show all photos</span>
             </Button>
           </div>
 
@@ -587,6 +627,84 @@ function LocationDetailsContent({ id }: { id: string }) {
       </div>
 
       <Footer />
+
+      {/* Photo Gallery Lightbox - Compact Glassmorphism */}
+      <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[85vh] p-0 overflow-hidden bg-black/40 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-3xl flex flex-col sm:rounded-3xl sm:-translate-y-[54%]">
+          <div className="relative flex flex-col h-full w-full">
+            {/* Header / Top Bar - Integrated */}
+            <div className="absolute top-0 inset-x-0 z-50 p-4 pb-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+              <div className="text-white text-sm font-semibold pointer-events-auto flex items-center gap-2 pl-2">
+                <span className="bg-primary/30 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] tracking-widest uppercase border border-white/10">
+                  {currentPhotoIndex + 1} / {location.images?.length || 0}
+                </span>
+                <span className="opacity-80 text-xs hidden sm:inline">{location.name}</span>
+              </div>
+              <DialogClose className="p-2 mr-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all pointer-events-auto active:scale-90 border border-white/10 backdrop-blur-md">
+                <CloseIcon className="h-4 w-4" />
+              </DialogClose>
+            </div>
+
+            {/* Main Image Area - Constrained */}
+            <div className="flex-1 flex items-center justify-center relative p-2 md:p-6 bg-black/10 overflow-hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 z-50 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white border border-white/10 backdrop-blur-md transition-all active:scale-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevPhoto();
+                }}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+
+              <div className="relative w-full h-full flex items-center justify-center p-4">
+                {location.images && location.images[currentPhotoIndex] && (
+                  <img
+                    src={location.images[currentPhotoIndex]}
+                    alt={`${location.name} - Full view`}
+                    className="max-h-full max-w-full object-contain rounded-lg shadow-2xl select-none"
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                )}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 z-50 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white border border-white/10 backdrop-blur-md transition-all active:scale-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextPhoto();
+                }}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Thumbnail Reel - Minimal Glassy */}
+            <div className="h-24 bg-black/20 backdrop-blur-md p-4 border-t border-white/10 flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2 overflow-x-auto h-full max-w-full px-2 [ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {location.images?.map((img: string, i: number) => (
+                  <button
+                    key={i}
+                    className={cn(
+                      "relative h-full aspect-square rounded-md overflow-hidden border-2 transition-all flex-shrink-0 active:scale-95",
+                      currentPhotoIndex === i
+                        ? "border-primary scale-105 shadow-lg z-10"
+                        : "border-white/5 opacity-50 hover:opacity-100"
+                    )}
+                    onClick={() => setCurrentPhotoIndex(i)}
+                  >
+                    <img src={img} alt={`Thumbnail ${i}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
