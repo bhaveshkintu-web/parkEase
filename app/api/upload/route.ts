@@ -13,7 +13,8 @@ cloudinary.config({
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
+  const role = session?.user?.role?.toUpperCase();
+  if (!session || (role !== "ADMIN" && role !== "OWNER")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

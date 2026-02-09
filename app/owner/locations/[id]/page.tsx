@@ -385,11 +385,17 @@ export default function OwnerLocationDetailsPage() {
               <div className="grid grid-cols-2 gap-2">
                 {location.images && location.images.length > 0 ? (
                   location.images.map((img: string, i: number) => (
-                    <div key={i} className="aspect-square bg-muted rounded-md overflow-hidden relative">
-                      {/* Placeholder for actual image component */}
-                      <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-                        Image {i + 1}
-                      </div>
+                    <div key={i} className="group relative aspect-square bg-muted rounded-md overflow-hidden border">
+                      <img
+                        src={img}
+                        alt={`Location ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      {i === 0 && (
+                        <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-[10px] text-white py-0.5 text-center font-bold text-shadow-sm">
+                          COVER
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (

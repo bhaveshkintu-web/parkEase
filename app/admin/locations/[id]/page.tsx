@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Trash2, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Loader2, ToggleLeft, ToggleRight, Upload, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,8 @@ import {
 import { useDataStore } from "@/lib/data-store";
 import { useToast } from "@/hooks/use-toast";
 import { airports } from "@/lib/data";
+import type { AdminParkingLocation } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const amenityOptions = [
   "Covered Parking",
@@ -43,12 +45,12 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
-  const { locations, updateLocation, deleteLocation } = useDataStore();
+  const { adminLocations, updateLocation, deleteLocation } = useDataStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Find location from store
-  const existingLocation = locations.find((l) => l.id === id);
+  const existingLocation = adminLocations.find((l: AdminParkingLocation) => l.id === id);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -66,6 +68,7 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
     totalSpots: "100",
     availableSpots: "100",
     status: "active" as "active" | "inactive" | "maintenance",
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -86,6 +89,7 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
         totalSpots: existingLocation.totalSpots?.toString() || "100",
         availableSpots: existingLocation.availableSpots?.toString() || "100",
         status: "active",
+        images: existingLocation.images || [],
       });
     }
   }, [existingLocation]);
@@ -101,6 +105,51 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
         ? prev.amenities.filter((a) => a !== amenity)
         : [...prev.amenities, amenity],
     }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsSubmitting(true);
+    const uploadedUrls: string[] = [...formData.images];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formDataUpload = new FormData();
+        formDataUpload.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formDataUpload,
+        });
+
+        if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+      handleInputChange("images", uploadedUrls);
+      toast({
+        title: "Images uploaded",
+        description: `Successfully uploaded ${files.length} image(s).`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...formData.images];
+    newImages.splice(index, 1);
+    handleInputChange("images", newImages);
   };
 
   const handleSave = async () => {
@@ -125,6 +174,7 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
         totalSpots: parseInt(formData.totalSpots),
         availableSpots: parseInt(formData.availableSpots),
         description: formData.description,
+        images: formData.images,
       });
 
       toast({
@@ -247,6 +297,7 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="amenities">Amenities</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -477,6 +528,65 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
           </Card>
         </TabsContent>
 
+        <TabsContent value="media" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Location Media</CardTitle>
+              <CardDescription>Manage photos of the parking location</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {formData.images.map((url, index) => (
+                  <div key={index} className="group relative aspect-video rounded-lg border overflow-hidden bg-muted">
+                    <img src={url} alt={`Location ${index + 1}`} className="h-full w-full object-cover" />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    {index === 0 && (
+                      <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-[10px] text-white py-1 text-center font-bold">
+                        MAIN COVER
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <label
+                  className={cn(
+                    "flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/[0.02] cursor-pointer transition-all gap-2",
+                    isSubmitting && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Upload className="h-5 w-5 text-primary" />}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-bold uppercase tracking-widest text-foreground">Upload Photos</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP up to 5MB</p>
+                  </div>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={isSubmitting}
+                  />
+                </label>
+              </div>
+
+              {formData.images.length === 0 && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <p className="text-sm">We recommend uploading at least 1 image to help your location stand out.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="analytics" className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -511,9 +621,8 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
                   <div key={i} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`h-2 w-2 rounded-full ${
-                          activity.type === "review" ? "bg-accent" : "bg-primary"
-                        }`}
+                        className={`h-2 w-2 rounded-full ${activity.type === "review" ? "bg-accent" : "bg-primary"
+                          }`}
                       />
                       <span className="text-sm text-foreground">{activity.message}</span>
                     </div>

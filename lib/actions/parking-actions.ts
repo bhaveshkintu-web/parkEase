@@ -345,10 +345,22 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
       };
     }
 
+    const { cancellationPolicy, cancellationDeadline, ...rest } = result.data;
+
     const updatedLocation = await prisma.parkingLocation.update({
       where: { id },
       data: {
-        ...result.data,
+        ...rest,
+        cancellationPolicy: {
+          type: cancellationPolicy,
+          hours: parseInt(cancellationDeadline) || 0,
+          deadline: cancellationPolicy === "strict" ? "No refunds" : `${cancellationDeadline} hours before check-in`,
+          description: cancellationPolicy === "free"
+            ? `Free cancellation up to ${cancellationDeadline} hours before check-in`
+            : cancellationPolicy === "moderate"
+              ? `50% refund up to ${cancellationDeadline} hours before check-in`
+              : "Non-refundable"
+        },
         updatedAt: new Date(),
       },
     });
