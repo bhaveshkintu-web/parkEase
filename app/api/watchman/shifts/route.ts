@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || !session.user || session.user.role !== "WATCHMAN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
+            return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || !session.user || session.user.role !== "WATCHMAN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
+            return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
         }
 
         const body = await request.json();
@@ -108,7 +108,12 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        return NextResponse.json({ shift: newShift });
+        const createdWithLocation = await prisma.watchmanShift.findUnique({
+            where: { id: newShift.id },
+            include: { location: { select: { name: true } } }
+        });
+
+        return NextResponse.json({ shift: createdWithLocation });
 
     } catch (error: any) {
         console.error("Error creating shift:", error);
