@@ -635,6 +635,7 @@ function LocationDetailsContent({ id }: { id: string }) {
             {/* Header / Top Bar - Integrated */}
             <div className="absolute top-0 inset-x-0 z-50 p-4 pb-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
               <div className="text-white text-sm font-semibold pointer-events-auto flex items-center gap-2 pl-2">
+                <DialogTitle className="sr-only">Photo Gallery: {location.name}</DialogTitle>
                 <span className="bg-primary/30 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] tracking-widest uppercase border border-white/10">
                   {currentPhotoIndex + 1} / {location.images?.length || 0}
                 </span>
