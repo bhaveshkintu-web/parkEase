@@ -42,140 +42,7 @@ import type { WatchmanActivityLog, WatchmanShift, ShiftBreak } from "@/lib/types
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "react-toastify";
 
-// Mock activity data
-const mockActivityLogs: WatchmanActivityLog[] = [
-  {
-    id: "act_1",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "shift_start",
-    timestamp: new Date(new Date().setHours(8, 0, 0, 0)),
-    details: { parkingId: "park_1", location: "Downtown Parking" },
-  },
-  {
-    id: "act_2",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "check_in",
-    timestamp: new Date(new Date().setHours(8, 15, 0, 0)),
-    details: { vehiclePlate: "ABC-1234", bookingId: "book_1", parkingId: "park_1", spotNumber: "A-15" },
-  },
-  {
-    id: "act_3",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "check_in",
-    timestamp: new Date(new Date().setHours(8, 45, 0, 0)),
-    details: { vehiclePlate: "XYZ-5678", bookingId: "book_2", parkingId: "park_1", spotNumber: "B-03" },
-  },
-  {
-    id: "act_4",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "check_out",
-    timestamp: new Date(new Date().setHours(9, 30, 0, 0)),
-    details: { vehiclePlate: "DEF-9012", bookingId: "book_3", parkingId: "park_1", spotNumber: "A-08" },
-  },
-  {
-    id: "act_5",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "break_start",
-    timestamp: new Date(new Date().setHours(10, 0, 0, 0)),
-    details: { notes: "Lunch break" },
-  },
-  {
-    id: "act_6",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "break_end",
-    timestamp: new Date(new Date().setHours(10, 30, 0, 0)),
-    details: {},
-  },
-  {
-    id: "act_7",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "incident",
-    timestamp: new Date(new Date().setHours(11, 15, 0, 0)),
-    details: { vehiclePlate: "GHI-3456", notes: "Vehicle parked in wrong spot, redirected to correct location", parkingId: "park_1" },
-  },
-  {
-    id: "act_8",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "check_in",
-    timestamp: new Date(new Date().setHours(11, 45, 0, 0)),
-    details: { vehiclePlate: "JKL-7890", bookingId: "book_4", parkingId: "park_1", spotNumber: "C-12" },
-  },
-  {
-    id: "act_9",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "patrol",
-    timestamp: new Date(new Date().setHours(12, 0, 0, 0)),
-    details: { location: "Levels A-C", notes: "Routine patrol completed, no issues" },
-  },
-  {
-    id: "act_10",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    type: "check_out",
-    timestamp: new Date(new Date().setHours(13, 30, 0, 0)),
-    details: { vehiclePlate: "ABC-1234", bookingId: "book_1", parkingId: "park_1", spotNumber: "A-15" },
-  },
-];
-
-const mockShifts: WatchmanShift[] = [
-  {
-    id: "shift_1",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    parkingId: "park_1",
-    parkingName: "Downtown Parking",
-    shiftDate: new Date(),
-    scheduledStart: new Date(new Date().setHours(8, 0, 0, 0)),
-    scheduledEnd: new Date(new Date().setHours(16, 0, 0, 0)),
-    actualStart: new Date(new Date().setHours(7, 55, 0, 0)),
-    status: "active",
-    breaks: [
-      { id: "break_1", startTime: new Date(new Date().setHours(10, 0, 0, 0)), endTime: new Date(new Date().setHours(10, 30, 0, 0)), type: "lunch" },
-    ],
-    activities: mockActivityLogs.filter((a) => a.watchmanId === "watch_1"),
-    totalCheckIns: 4,
-    totalCheckOuts: 2,
-    incidentsReported: 1,
-  },
-  {
-    id: "shift_2",
-    watchmanId: "watch_1",
-    watchmanName: "John Doe",
-    parkingId: "park_1",
-    parkingName: "Downtown Parking",
-    shiftDate: new Date(Date.now() - 86400000),
-    scheduledStart: new Date(new Date(Date.now() - 86400000).setHours(8, 0, 0, 0)),
-    scheduledEnd: new Date(new Date(Date.now() - 86400000).setHours(16, 0, 0, 0)),
-    actualStart: new Date(new Date(Date.now() - 86400000).setHours(8, 5, 0, 0)),
-    actualEnd: new Date(new Date(Date.now() - 86400000).setHours(16, 10, 0, 0)),
-    status: "completed",
-    breaks: [
-      { id: "break_2", startTime: new Date(new Date(Date.now() - 86400000).setHours(12, 0, 0, 0)), endTime: new Date(new Date(Date.now() - 86400000).setHours(12, 45, 0, 0)), type: "lunch" },
-    ],
-    activities: [],
-    totalCheckIns: 12,
-    totalCheckOuts: 10,
-    incidentsReported: 0,
-  },
-];
-
-// Mock car time tracking data
-const mockCarTimeTracking = [
-  { id: "car_1", vehiclePlate: "ABC-1234", vehicleType: "sedan", timeIn: new Date(new Date().setHours(8, 15, 0, 0)), timeOut: new Date(new Date().setHours(13, 30, 0, 0)), duration: "5h 15m", spotNumber: "A-15", status: "completed" },
-  { id: "car_2", vehiclePlate: "XYZ-5678", vehicleType: "suv", timeIn: new Date(new Date().setHours(8, 45, 0, 0)), timeOut: null, duration: "4h 30m+", spotNumber: "B-03", status: "active" },
-  { id: "car_3", vehiclePlate: "DEF-9012", vehicleType: "compact", timeIn: new Date(new Date().setHours(7, 30, 0, 0)), timeOut: new Date(new Date().setHours(9, 30, 0, 0)), duration: "2h 0m", spotNumber: "A-08", status: "completed" },
-  { id: "car_4", vehiclePlate: "JKL-7890", vehicleType: "truck", timeIn: new Date(new Date().setHours(11, 45, 0, 0)), timeOut: null, duration: "1h 30m+", spotNumber: "C-12", status: "active" },
-  { id: "car_5", vehiclePlate: "MNO-2345", vehicleType: "sedan", timeIn: new Date(new Date().setHours(9, 0, 0, 0)), timeOut: new Date(new Date().setHours(11, 0, 0, 0)), duration: "2h 0m", spotNumber: "A-22", status: "completed" },
-];
+// No mock data needed anymore
 
 export default function WatchmanActivityPage() {
   const { user } = useAuth();
@@ -191,117 +58,146 @@ export default function WatchmanActivityPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Shift management states
-  const [currentShift, setCurrentShift] = useState<WatchmanShift | null>(
-    mockShifts.find((s) => s.status === "active") || null
-  );
+  const [currentShift, setCurrentShift] = useState<WatchmanShift | null>(null);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize with empty or mock if loading
+  // Initialize with empty
   const [activityLogs, setActivityLogs] = useState<WatchmanActivityLog[]>([]);
-  const [shifts, setShifts] = useState(mockShifts);
-  const [carTracking, setCarTracking] = useState(mockCarTimeTracking);
+  const [shifts, setShifts] = useState<WatchmanShift[]>([]);
+  const [carTracking, setCarTracking] = useState<any[]>([]);
+
+  const fetchActivities = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/activity?limit=100");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) {
+          setActivityLogs(data.logs);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch activities:", error);
+    }
+  }, []);
+
+  const fetchActiveShift = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/shifts?activeOnly=true");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.shifts && data.shifts.length > 0) {
+          const active = data.shifts[0];
+          setCurrentShift({
+            id: active.id,
+            watchmanId: active.watchmanId,
+            watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
+            parkingId: active.locationId,
+            parkingName: active.location?.name || "Unknown Location",
+            shiftDate: new Date(active.scheduledStart),
+            scheduledStart: new Date(active.scheduledStart),
+            scheduledEnd: new Date(active.scheduledEnd),
+            actualStart: active.actualStart ? new Date(active.actualStart) : undefined,
+            actualEnd: active.actualEnd ? new Date(active.actualEnd) : undefined,
+            status: active.status.toLowerCase() as any,
+            breaks: [],
+            activities: [],
+            totalCheckIns: 0,
+            totalCheckOuts: 0,
+            incidentsReported: 0
+          });
+        } else {
+          setCurrentShift(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch active shift:", error);
+    }
+  }, [user]);
+
+  const fetchHistory = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/shifts");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.shifts) {
+          const mappedShifts: WatchmanShift[] = data.shifts.map((s: any) => ({
+            id: s.id,
+            watchmanId: s.watchmanId,
+            watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
+            parkingId: s.locationId,
+            parkingName: s.location?.name || "Unknown Location",
+            shiftDate: new Date(s.scheduledStart),
+            scheduledStart: new Date(s.scheduledStart),
+            scheduledEnd: new Date(s.scheduledEnd),
+            actualStart: s.actualStart ? new Date(s.actualStart) : undefined,
+            actualEnd: s.actualEnd ? new Date(s.actualEnd) : undefined,
+            status: s.status.toLowerCase() as any,
+            breaks: [],
+            activities: [],
+            totalCheckIns: 0,
+            totalCheckOuts: 0,
+            incidentsReported: 0
+          }));
+          setShifts(mappedShifts);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch shift history:", error);
+    }
+  }, [user]);
+
+  const fetchCarTracking = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/sessions");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessions) {
+          const tracking = data.sessions
+            .filter((s: any) => s.checkInTime)
+            .map((s: any) => {
+              const start = new Date(s.checkInTime);
+              const end = s.checkOutTime ? new Date(s.checkOutTime) : (s.status === "active" || s.status === "checked_in" ? null : new Date());
+
+              let duration = "-";
+              if (start) {
+                const e = end || new Date();
+                const diff = Math.max(0, e.getTime() - start.getTime());
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                duration = `${hours}h ${minutes}m`;
+              }
+
+              return {
+                id: s.id,
+                vehiclePlate: s.vehiclePlate,
+                vehicleType: s.vehicleType,
+                timeIn: start,
+                timeOut: end,
+                duration: duration,
+                spotNumber: s.spotNumber || "General",
+                status: (s.status === "active" || s.status === "checked_in" || s.status === "overstay") ? "active" : "completed"
+              };
+            });
+          setCarTracking(tracking);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch car tracking", e);
+    }
+  }, []);
 
   // Fetch activities and active shift on mount
   React.useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch("/api/watchman/activity?limit=100");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.logs) {
-            setActivityLogs(data.logs);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch activities:", error);
-      }
-    };
-
-    const fetchActiveShift = async () => {
-      try {
-        const res = await fetch("/api/watchman/shifts?activeOnly=true");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.shifts && data.shifts.length > 0) {
-            const active = data.shifts[0];
-            // Adapt to frontend model
-            setCurrentShift({
-              id: active.id,
-              watchmanId: active.watchmanId,
-              watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
-              parkingId: active.locationId,
-              parkingName: active.location?.name || "Unknown Location",
-              shiftDate: new Date(active.scheduledStart),
-              scheduledStart: new Date(active.scheduledStart),
-              scheduledEnd: new Date(active.scheduledEnd),
-              actualStart: active.actualStart ? new Date(active.actualStart) : undefined,
-              actualEnd: active.actualEnd ? new Date(active.actualEnd) : undefined,
-              status: active.status.toLowerCase(),
-              breaks: [], // TODO: fetch breaks
-              activities: [],
-              totalCheckIns: 0,
-              totalCheckOuts: 0,
-              incidentsReported: 0
-            });
-          } else {
-            setCurrentShift(null);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch active shift:", error);
-      }
-    };
-
-    const fetchCarTracking = async () => {
-      try {
-        const res = await fetch("/api/watchman/sessions");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.sessions) {
-            const tracking = data.sessions
-              .filter((s: any) => s.checkInTime)
-              .map((s: any) => {
-                const start = new Date(s.checkInTime);
-                const end = s.checkOutTime ? new Date(s.checkOutTime) : (s.status === "active" || s.status === "checked_in" ? null : new Date());
-
-                // Duration calc
-                let duration = "-";
-                if (start) {
-                  const e = end || new Date();
-                  const diff = Math.max(0, e.getTime() - start.getTime());
-                  const hours = Math.floor(diff / (1000 * 60 * 60));
-                  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                  duration = `${hours}h ${minutes}m`;
-                }
-
-                return {
-                  id: s.id,
-                  vehiclePlate: s.vehiclePlate,
-                  vehicleType: s.vehicleType,
-                  timeIn: start,
-                  timeOut: end,
-                  duration: duration,
-                  spotNumber: s.spotNumber || "General",
-                  status: (s.status === "active" || s.status === "checked_in" || s.status === "overstay") ? "active" : "completed"
-                };
-              });
-            setCarTracking(tracking);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch car tracking", e);
-      }
-    };
-
-    if (user?.role === "WATCHMAN") {
+    if (user?.role?.toUpperCase() === "WATCHMAN") {
       fetchActivities();
       fetchActiveShift();
+      fetchHistory();
       fetchCarTracking();
     }
-  }, [user]);
+  }, [user, fetchActivities, fetchActiveShift, fetchHistory, fetchCarTracking]);
 
   // Helper to post new activity
   const logActivity = async (type: string, details: any = {}) => {
@@ -329,6 +225,9 @@ export default function WatchmanActivityPage() {
         const data = await res.json();
         setActivityLogs(data.logs);
       }
+
+      // Also potentially update shift counts
+      fetchHistory();
     } catch (e) {
       console.error("Failed to log activity", e);
     }
@@ -437,16 +336,17 @@ export default function WatchmanActivityPage() {
         const data = await res.json();
         const active = data.shift;
         if (active) {
+          console.log("Shift started successfully:", active.id);
           const newShift: WatchmanShift = {
             id: active.id,
-            watchmanId: user?.id || "watch_1",
+            watchmanId: active.watchmanId,
             watchmanName: `${user?.firstName || ""} ${user?.lastName || ""}`,
-            parkingId: active.locationId || "park_1",
-            parkingName: "Downtown Parking",
+            parkingId: active.locationId,
+            parkingName: active.location?.name || "Assigned Location",
             shiftDate: new Date(),
-            scheduledStart: new Date(),
-            scheduledEnd: new Date(Date.now() + 8 * 3600000),
-            actualStart: new Date(),
+            scheduledStart: new Date(active.scheduledStart),
+            scheduledEnd: new Date(active.scheduledEnd),
+            actualStart: new Date(active.actualStart || Date.now()),
             status: "active",
             breaks: [],
             activities: [],
@@ -457,9 +357,13 @@ export default function WatchmanActivityPage() {
           setCurrentShift(newShift);
           setShifts((prev) => [newShift, ...prev]);
 
-          await logActivity("shift_start", { parkingId: newShift.parkingId });
+          await logActivity("shift_start", { parkingId: newShift.parkingId, location: newShift.parkingName });
 
-          toast.success("Shift Started: Your shift has been started successfully");
+          toast.success("Shift Started successfullly");
+
+          // Refetch everything to sync completely with server state
+          await fetchHistory();
+          await fetchActiveShift();
         }
       } else {
         const err = await res.json();
@@ -475,36 +379,67 @@ export default function WatchmanActivityPage() {
   };
 
   const handleEndShift = async () => {
-    if (!currentShift) return;
+    if (!currentShift) {
+      console.warn("Attempted to end shift but currentShift is null");
+      toast.error("No active shift found");
+      return;
+    }
+
+    console.log("=== FRONTEND: Ending shift ===");
+    console.log("Shift ID:", currentShift.id);
+    console.log("Current user:", user?.email, "Role:", user?.role);
 
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
     try {
+      console.log("Sending PATCH request to:", `/api/watchman/shifts/${currentShift.id}`);
       const res = await fetch(`/api/watchman/shifts/${currentShift.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "COMPLETED" })
       });
 
-      if (res.ok) {
-        setShifts((prev) =>
-          prev.map((s) =>
-            s.id === currentShift.id
-              ? { ...s, status: "completed", actualEnd: new Date() }
-              : s
-          )
-        );
+      console.log("Response status:", res.status, res.statusText);
 
-        await logActivity("shift_end", { parkingId: currentShift.parkingId, location: currentShift.parkingName });
+      // Try to parse response as JSON
+      let responseData;
+      const responseText = await res.text();
+      console.log("Raw response:", responseText);
+
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse response as JSON:", parseError);
+        toast.error("Server returned invalid response");
+        setIsEndShiftOpen(false);
+        setIsLoading(false);
+        return;
+      }
+
+      if (res.ok) {
+        console.log("Shift ended successfully on server");
+        await logActivity("shift_end", {
+          parkingId: currentShift.parkingId,
+          location: currentShift.parkingName,
+          duration: `${shiftHours}h ${shiftMinutes}m`
+        });
 
         setCurrentShift(null);
-        toast.success("Shift Ended: Your shift has been completed");
+        toast.success("Shift ended successfully!");
+
+        // Refetch everything to sync completely
+        await fetchHistory();
+        await fetchActiveShift();
       } else {
-        toast.error("Failed to end shift");
+        console.error("Failed to end shift. Status:", res.status);
+        console.error("Error data:", responseData);
+        const errorMsg = responseData.error || responseData.details || "Unknown error";
+        toast.error(`Failed to end shift: ${errorMsg}`);
       }
     } catch (e) {
-      toast.error("Error ending shift");
+      console.error("Exception in handleEndShift:", e);
+      toast.error("Network error - please check your connection");
     }
 
     setIsEndShiftOpen(false);
@@ -544,6 +479,26 @@ export default function WatchmanActivityPage() {
       patrols: todayActivities.filter((a) => a.type === "patrol").length,
     };
   }, [activityLogs]);
+
+  // Enhanced shift with dynamic stats
+  const shiftsWithStats = useMemo(() => {
+    return shifts.map(shift => {
+      const start = new Date(shift.actualStart || shift.scheduledStart);
+      const end = shift.actualEnd ? new Date(shift.actualEnd) : new Date();
+
+      const shiftLogs = activityLogs.filter(log => {
+        const logTime = new Date(log.timestamp);
+        return logTime >= start && logTime <= end;
+      });
+
+      return {
+        ...shift,
+        totalCheckIns: shiftLogs.filter(l => l.type === "check_in").length,
+        totalCheckOuts: shiftLogs.filter(l => l.type === "check_out").length,
+        incidentsReported: shiftLogs.filter(l => l.type === "incident").length,
+      };
+    });
+  }, [shifts, activityLogs]);
 
   return (
     <Suspense fallback={null}>
@@ -992,7 +947,7 @@ export default function WatchmanActivityPage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  ${shifts.map(s => `
+                                  ${shiftsWithStats.map(s => `
                                     <tr>
                                       <td>${new Date(s.shiftDate).toLocaleDateString()}</td>
                                       <td><strong>${s.status.toUpperCase()}</strong></td>
@@ -1029,7 +984,7 @@ export default function WatchmanActivityPage() {
                     </Button>
                     <Button variant="outline" onClick={() => {
                       const headers = ["Date", "Status", "Location", "Scheduled Start", "Scheduled End", "Actual Start", "Actual End", "Check-ins", "Check-outs", "Incidents"];
-                      const rows = shifts.map(s => [
+                      const rows = shiftsWithStats.map(s => [
                         new Date(s.shiftDate).toLocaleDateString(),
                         s.status,
                         s.parkingName,
@@ -1061,7 +1016,12 @@ export default function WatchmanActivityPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {shifts.map((shift) => (
+                  {shiftsWithStats.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground border rounded-lg">
+                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No shift history found</p>
+                    </div>
+                  ) : shiftsWithStats.map((shift) => (
                     <div
                       key={shift.id}
                       className={`p-4 border rounded-lg ${shift.status === "active"
@@ -1167,16 +1127,16 @@ export default function WatchmanActivityPage() {
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Downtown Parking</p>
-                    <p className="text-sm text-muted-foreground">123 Main Street</p>
+                    <p className="font-medium">Assigned Location</p>
+                    <p className="text-sm text-muted-foreground">Please proceed to your post</p>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">Scheduled: 8:00 AM - 4:00 PM</p>
-                  <p className="text-sm text-muted-foreground">8 hour shift</p>
+                  <p className="font-medium">Standard Shift Hours</p>
+                  <p className="text-sm text-muted-foreground">8 hours typically</p>
                 </div>
               </div>
             </div>

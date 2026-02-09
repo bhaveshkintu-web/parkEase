@@ -17,9 +17,26 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        token: { label: "Token", type: "hidden" },
       },
 
       async authorize(credentials) {
+        if (credentials?.token) {
+          const { consumeMagicToken } = await import("@/lib/token-utils");
+          const user = await consumeMagicToken(credentials.token);
+          if (!user) throw new Error("Invalid or expired token");
+          
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            avatar: user.avatar,
+          };
+        }
+
         if (!credentials?.email || !credentials.password) {
           throw new Error("Missing credentials");
         }
@@ -40,6 +57,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error(`Account is ${user.status.toLowerCase()}. Please contact support.`);
         }
 
+        if (!user.password) {
+          throw new Error("This account does not have a password set. Please use the method you originally signed up with (e.g., Guest Checkout).");
+        }
+
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password,
@@ -57,6 +78,7 @@ export const authOptions: NextAuthOptions = {
           lastName: user.lastName,
           phone: user.phone,
           avatar: user.avatar,
+          isGuest: (user as any).isGuest,
         };
       },
     }),
@@ -71,6 +93,7 @@ export const authOptions: NextAuthOptions = {
         token.lastName = (user as any).lastName;
         token.phone = (user as any).phone;
         token.avatar = (user as any).avatar;
+        token.isGuest = (user as any).isGuest;
 
         // Fetch ownerId if role is OWNER
         if ((user as any).role === "OWNER") {
@@ -144,6 +167,7 @@ export const authOptions: NextAuthOptions = {
         session.user.lastName = token.lastName as string;
         session.user.phone = token.phone as string | null;
         session.user.avatar = token.avatar as string | null;
+        (session.user as any).isGuest = token.isGuest as boolean;
         (session.user as any).ownerId = token.ownerId as string | undefined;
         (session.user as any).preferences = token.preferences;
       }

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { registerSchema, type RegisterInput } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Car, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register, isLoading: authLoading } = useAuth();
+  const returnUrl = searchParams.get("returnUrl");
 
   const [formData, setFormData] = useState<RegisterInput>({
     firstName: "",
@@ -306,10 +308,29 @@ export default function RegisterPage() {
                 )}
               </Button>
 
+              <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                asChild
+              >
+                <Link href={`/auth/guest-login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}>
+                  Continue as Guest
+                </Link>
+              </Button>
+
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{" "}
                 <Link
-                  href="/auth/login"
+                  href={`/auth/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
                   className="text-primary hover:underline font-medium"
                 >
                   Sign in
@@ -320,5 +341,13 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background px-4 py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

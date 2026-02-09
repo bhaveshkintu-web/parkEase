@@ -265,3 +265,47 @@ export async function sendWelcomeEmail(email: string, name: string, password: st
     return { success: false, error: error.message };
   }
 }
+
+export async function sendMagicLink(email: string, magicLink: string) {
+  try {
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Sign in to ParkEase",
+      html: `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #0d9488;">Sign in to ParkEase</h2>
+        <p>Click the link below to sign in to your account. This link will expire in 15 minutes.</p>
+        
+        <div style="margin: 30px 0;">
+          <a href="${magicLink}" style="display: inline-block; background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Sign In</a>
+        </div>
+
+        <p>If you did not request this link, you can safely ignore this email.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+      </div>
+    `,
+    });
+
+    console.log("✅ Magic link email sent to:", email);
+    return { success: true };
+  } catch (error: any) {
+    console.error("❌ Failed to send magic link email:", error);
+    return { success: false, error: error.message };
+  }
+}
