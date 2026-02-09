@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import type { ParkingLocation, GuestInfo, VehicleInfo } from "./types";
 
 interface BookingState {
@@ -26,6 +26,8 @@ interface BookingContextType extends BookingState {
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
+const STORAGE_KEY = "parkease_booking_context";
+
 const getDefaultCheckIn = () => {
   const date = new Date();
   date.setHours(date.getHours() + 1, 0, 0, 0);
@@ -39,47 +41,10 @@ const getDefaultCheckOut = () => {
   return date;
 };
 
-export function BookingProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<BookingState>({
-    location: null,
-    checkIn: getDefaultCheckIn(),
-    checkOut: getDefaultCheckOut(),
-    guestInfo: null,
-    vehicleInfo: null,
-    searchQuery: "",
-    parkingType: "airport",
-  });
-
-  const setLocation = (location: ParkingLocation | null) => {
-    setState((prev) => ({ ...prev, location }));
-  };
-
-  const setCheckIn = (checkIn: Date) => {
-    setState((prev) => ({ ...prev, checkIn }));
-  };
-
-  const setCheckOut = (checkOut: Date) => {
-    setState((prev) => ({ ...prev, checkOut }));
-  };
-
-  const setGuestInfo = (guestInfo: GuestInfo) => {
-    setState((prev) => ({ ...prev, guestInfo }));
-  };
-
-  const setVehicleInfo = (vehicleInfo: VehicleInfo) => {
-    setState((prev) => ({ ...prev, vehicleInfo }));
-  };
-
-  const setSearchQuery = (searchQuery: string) => {
-    setState((prev) => ({ ...prev, searchQuery }));
-  };
-
-  const setParkingType = (parkingType: "airport" | "hourly" | "monthly") => {
-    setState((prev) => ({ ...prev, parkingType }));
-  };
-
-  const clearBooking = () => {
-    setState({
+// Load booking state from session storage
+const loadBookingState = (): BookingState => {
+  if (typeof window === "undefined") {
+    return {
       location: null,
       checkIn: getDefaultCheckIn(),
       checkOut: getDefaultCheckOut(),
@@ -87,23 +52,154 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       vehicleInfo: null,
       searchQuery: "",
       parkingType: "airport",
-    });
+    };
+  }
+
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...parsed,
+        checkIn: new Date(parsed.checkIn),
+        checkOut: new Date(parsed.checkOut),
+      };
+    }
+  } catch (error) {
+    console.error("Failed to load booking state from session storage:", error);
+  }
+
+  return {
+    location: null,
+    checkIn: getDefaultCheckIn(),
+    checkOut: getDefaultCheckOut(),
+    guestInfo: null,
+    vehicleInfo: null,
+    searchQuery: "",
+    parkingType: "airport",
   };
+};
+
+// Save booking state to session storage
+const saveBookingState = (state: BookingState) => {
+  if (typeof window === "undefined") return;
+  
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error("Failed to save booking state to session storage:", error);
+  }
+};
+
+// Helper to get default state
+const getInitialState = (): BookingState => ({
+  location: null,
+  checkIn: getDefaultCheckIn(),
+  checkOut: getDefaultCheckOut(),
+  guestInfo: null,
+  vehicleInfo: null,
+  searchQuery: "",
+  parkingType: "airport",
+});
+
+export function BookingProvider({ children }: { children: ReactNode }) {
+  // Always initialize with defaults to match server SSR
+  const [state, setState] = useState<BookingState>(getInitialState);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load from session storage only on client mount
+  useEffect(() => {
+    const loadFromStorage = () => {
+      try {
+        const stored = sessionStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setState({
+            ...parsed,
+            checkIn: new Date(parsed.checkIn),
+            checkOut: new Date(parsed.checkOut),
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load booking state from session storage:", error);
+      }
+      setIsInitialized(true);
+    };
+
+    loadFromStorage();
+  }, []);
+
+  // Persist state to session storage whenever it changes, but only after initialization
+  useEffect(() => {
+    if (isInitialized) {
+      saveBookingState(state);
+    }
+  }, [state, isInitialized]);
+
+  const setLocation = useCallback((location: ParkingLocation | null) => {
+    setState((prev) => ({ ...prev, location }));
+  }, []);
+
+  const setCheckIn = useCallback((checkIn: Date) => {
+    setState((prev) => ({ ...prev, checkIn }));
+  }, []);
+
+  const setCheckOut = useCallback((checkOut: Date) => {
+    setState((prev) => ({ ...prev, checkOut }));
+  }, []);
+
+  const setGuestInfo = useCallback((guestInfo: GuestInfo) => {
+    setState((prev) => ({ ...prev, guestInfo }));
+  }, []);
+
+  const setVehicleInfo = useCallback((vehicleInfo: VehicleInfo) => {
+    setState((prev) => ({ ...prev, vehicleInfo }));
+  }, []);
+
+  const setSearchQuery = useCallback((searchQuery: string) => {
+    setState((prev) => ({ ...prev, searchQuery }));
+  }, []);
+
+  const setParkingType = useCallback((parkingType: "airport" | "hourly" | "monthly") => {
+    setState((prev) => ({ ...prev, parkingType }));
+  }, []);
+
+  const clearBooking = useCallback(() => {
+    const newState = {
+      location: null,
+      checkIn: getDefaultCheckIn(),
+      checkOut: getDefaultCheckOut(),
+      guestInfo: null,
+      vehicleInfo: null,
+      searchQuery: "",
+      parkingType: "airport" as const,
+    };
+    setState(newState);
+    
+    // Also clear from session storage
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error("Failed to clear booking state from session storage:", error);
+      }
+    }
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    ...state,
+    setLocation,
+    setCheckIn,
+    setCheckOut,
+    setGuestInfo,
+    setVehicleInfo,
+    setSearchQuery,
+    setParkingType,
+    clearBooking,
+  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking]);
 
   return (
-    <BookingContext.Provider
-      value={{
-        ...state,
-        setLocation,
-        setCheckIn,
-        setCheckOut,
-        setGuestInfo,
-        setVehicleInfo,
-        setSearchQuery,
-        setParkingType,
-        clearBooking,
-      }}
-    >
+    <BookingContext.Provider value={contextValue}>
       {children}
     </BookingContext.Provider>
   );

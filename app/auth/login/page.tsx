@@ -4,7 +4,7 @@ import React from "react";
 import { Suspense } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useAuth,
   // DEMO_ACCOUNTS,
@@ -28,6 +28,7 @@ import Loading from "./loading";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isLoading: authLoading } = useAuth();
 
   const [formData, setFormData] = useState<LoginInput>({
@@ -97,10 +98,12 @@ export default function LoginPage() {
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
-                {serverError && (
+                {(serverError || searchParams.get("error")) && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{serverError}</AlertDescription>
+                    <AlertDescription>
+                      {serverError || (searchParams.get("error") === "TokenExpired" ? "Magic link expired. Please request a new one." : "Invalid or expired session.")}
+                    </AlertDescription>
                   </Alert>
                 )}
 
@@ -222,6 +225,27 @@ export default function LoginPage() {
                     Create account
                   </Link>
                 </p>
+
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      OR
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  asChild
+                >
+                  <Link href={`/auth/guest-login${searchParams.get("returnUrl") ? `?returnUrl=${encodeURIComponent(searchParams.get("returnUrl")!)}` : ""}`}>
+                    Continue as Guest
+                  </Link>
+                </Button>
               </CardFooter>
             </form>
           </Card>
