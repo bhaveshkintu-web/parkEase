@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Plus, X, Upload, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Upload, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,7 +92,7 @@ export default function NewLocationPage() {
 
   const handleSelectSuggestion = (suggestion: any) => {
     const props = suggestion.properties;
-    
+
     // Construct address
     let streetAddress = props.name || "";
     if (props.housenumber && props.street) {
@@ -108,7 +108,7 @@ export default function NewLocationPage() {
       state: props.state || props.county || "",
       zipCode: props.postcode || "",
     }));
-    
+
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -178,12 +178,57 @@ export default function NewLocationPage() {
 
   const handleNext = () => {
     if (validateStep(step)) {
-      setStep((prev) => Math.min(prev + 1, 4));
+      setStep((prev) => Math.min(prev + 1, 5));
     }
   };
 
   const handleBack = () => {
     setStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsSubmitting(true);
+    const uploadedUrls: string[] = [...formData.images];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formDataUpload = new FormData();
+        formDataUpload.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formDataUpload,
+        });
+
+        if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+      handleInputChange("images", uploadedUrls);
+      toast({
+        title: "Images uploaded",
+        description: `Successfully uploaded ${files.length} image(s).`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...formData.images];
+    newImages.splice(index, 1);
+    handleInputChange("images", newImages);
   };
 
   const handleSubmit = async () => {
@@ -193,8 +238,8 @@ export default function NewLocationPage() {
 
     try {
       const airport = airports.find((a) => a.code === formData.airportCode);
-      
-      const newLocation: Omit<ParkingLocation, "id"> = {
+
+      const newLocation = {
         name: formData.name,
         address: formData.address,
         city: formData.city,
@@ -220,11 +265,12 @@ export default function NewLocationPage() {
         description: formData.description,
         shuttleInfo: formData.shuttle
           ? {
-              hours: formData.shuttleHours,
-              frequency: formData.shuttleFrequency,
-              pickupInstructions: "Follow signs to shuttle pickup area",
-              phone: formData.shuttlePhone,
-            }
+            enabled: true,
+            hours: formData.shuttleHours,
+            frequency: formData.shuttleFrequency,
+            pickupInstructions: "Follow signs to shuttle pickup area",
+            phone: formData.shuttlePhone,
+          }
           : undefined,
         redeemSteps: redeemSteps.filter((s) => s.title.trim()),
         specialInstructions: [],
@@ -234,9 +280,11 @@ export default function NewLocationPage() {
           deadline: "24 hours before check-in",
           description: "Free cancellation up to 24 hours before your reservation",
         },
+        status: "PENDING",
+        createdBy: "ADMIN",
       };
 
-      await addLocation(newLocation as ParkingLocation);
+      await addLocation(newLocation as any);
 
       toast({
         title: "Location created",
@@ -271,32 +319,32 @@ export default function NewLocationPage() {
 
       {/* Progress Steps */}
       <div className="flex items-center justify-center gap-2">
-        {[1, 2, 3, 4].map((s) => (
+        {[1, 2, 3, 4, 5].map((s) => (
           <div key={s} className="flex items-center">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                s === step
-                  ? "bg-primary text-primary-foreground"
-                  : s < step
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-              }`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${s === step
+                ? "bg-primary text-primary-foreground"
+                : s < step
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+                }`}
             >
               {s}
             </div>
-            {s < 4 && (
+            {s < 5 && (
               <div
-                className={`h-1 w-12 ${s < step ? "bg-primary/20" : "bg-muted"}`}
+                className={`h-1 w-10 sm:w-12 ${s < step ? "bg-primary/20" : "bg-muted"}`}
               />
             )}
           </div>
         ))}
       </div>
-      <div className="flex justify-center gap-8 text-sm text-muted-foreground">
+      <div className="flex justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-muted-foreground px-4 text-center">
         <span className={step === 1 ? "text-primary font-medium" : ""}>Basic Info</span>
-        <span className={step === 2 ? "text-primary font-medium" : ""}>Pricing & Amenities</span>
-        <span className={step === 3 ? "text-primary font-medium" : ""}>Operations</span>
-        <span className={step === 4 ? "text-primary font-medium" : ""}>Review</span>
+        <span className={step === 2 ? "text-primary font-medium" : ""}>Pricing</span>
+        <span className={step === 3 ? "text-primary font-medium" : ""}>Media</span>
+        <span className={step === 4 ? "text-primary font-medium" : ""}>Operations</span>
+        <span className={step === 5 ? "text-primary font-medium" : ""}>Review</span>
       </div>
 
       {/* Step 1: Basic Info */}
@@ -344,7 +392,7 @@ export default function NewLocationPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Suggestions list */}
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md max-h-60 overflow-auto">
@@ -358,8 +406,8 @@ export default function NewLocationPage() {
                       <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
                       <div>
                         <p className="font-medium">
-                          {suggestion.properties.name || 
-                           (suggestion.properties.housenumber ? `${suggestion.properties.housenumber} ${suggestion.properties.street}` : suggestion.properties.street)}
+                          {suggestion.properties.name ||
+                            (suggestion.properties.housenumber ? `${suggestion.properties.housenumber} ${suggestion.properties.street}` : suggestion.properties.street)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {[
@@ -567,8 +615,68 @@ export default function NewLocationPage() {
         </div>
       )}
 
-      {/* Step 3: Operations */}
+      {/* Step 3: Media */}
       {step === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Location Media</CardTitle>
+            <CardDescription>Upload high-quality photos of the parking location</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {formData.images.map((url, index) => (
+                <div key={index} className="group relative aspect-video rounded-lg border overflow-hidden bg-muted">
+                  <img src={url} alt={`Location ${index + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  {index === 0 && (
+                    <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-[10px] text-white py-1 text-center font-bold">
+                      MAIN COVER
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <label
+                className={cn(
+                  "flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/[0.02] cursor-pointer transition-all gap-2",
+                  isSubmitting && "opacity-50 pointer-events-none"
+                )}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Upload className="h-5 w-5 text-primary" />}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold uppercase tracking-widest text-foreground">Upload Photos</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP up to 5MB</p>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isSubmitting}
+                />
+              </label>
+            </div>
+
+            {formData.images.length === 0 && (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <p className="text-sm">We recommend uploading at least 1 image to help your location stand out.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Operations */}
+      {step === 4 && (
         <div className="space-y-6">
           {formData.shuttle && (
             <Card>
@@ -609,7 +717,6 @@ export default function NewLocationPage() {
               </CardContent>
             </Card>
           )}
-
           <Card>
             <CardHeader>
               <CardTitle>How to Redeem</CardTitle>
@@ -654,8 +761,8 @@ export default function NewLocationPage() {
         </div>
       )}
 
-      {/* Step 4: Review */}
-      {step === 4 && (
+      {/* Step 5: Review */}
+      {step === 5 && (
         <Card>
           <CardHeader>
             <CardTitle>Review & Create</CardTitle>
@@ -706,6 +813,20 @@ export default function NewLocationPage() {
                 </dl>
               </div>
             </div>
+
+            {formData.images.length > 0 && (
+              <div>
+                <h4 className="font-medium text-foreground mb-4">Photos ({formData.images.length})</h4>
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {formData.images.map((url, idx) => (
+                    <div key={idx} className="h-24 aspect-video rounded-md border overflow-hidden shrink-0">
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <h4 className="font-medium text-foreground mb-2">Features</h4>
               <div className="flex flex-wrap gap-2">
@@ -737,7 +858,7 @@ export default function NewLocationPage() {
         <Button variant="outline" onClick={handleBack} disabled={step === 1}>
           Back
         </Button>
-        {step < 4 ? (
+        {step < 5 ? (
           <Button onClick={handleNext}>Continue</Button>
         ) : (
           <Button onClick={handleSubmit} disabled={isSubmitting}>

@@ -133,6 +133,9 @@ function CheckoutContent() {
   const [phone, setPhone] = useState(contextGuestInfo?.phone || "");
 
   // Vehicle Info initialized from context
+  const [savedVehicles, setSavedVehicles] = useState<any[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [useNewVehicle, setUseNewVehicle] = useState(true);
   const [make, setMake] = useState(contextVehicleInfo?.make || "");
   const [model, setModel] = useState(contextVehicleInfo?.model || "");
   const [color, setColor] = useState(contextVehicleInfo?.color || "");
@@ -221,24 +224,29 @@ function CheckoutContent() {
           console.error("Failed to fetch saved cards", error);
         }
       };
-      
+
       const fetchVehicles = async () => {
-         try {
-             const vehicles = await getVehicles();
-             
-             if (vehicles && vehicles.length > 0) {
-                 // getVehicles sorts by default first, then newest.
-                 const topVehicle = vehicles[0];
-                 
-                 // Only auto-fill if fields are empty to respect manual edits
-                 if (!make) setMake(topVehicle.make);
-                 if (!model) setModel(topVehicle.model);
-                 if (!color) setColor(topVehicle.color);
-                 if (!licensePlate) setLicensePlate(topVehicle.licensePlate);
-             }
-         } catch (error) {
-             console.error("Failed to fetch vehicles", error);
-         }
+        try {
+          const vehicles = await getVehicles();
+          setSavedVehicles(vehicles || []);
+
+          if (vehicles && vehicles.length > 0) {
+            setUseNewVehicle(false);
+            // getVehicles sorts by default first, then newest.
+            const defaultVehicle = vehicles.find((v: any) => v.isDefault) || vehicles[0];
+            setSelectedVehicleId(defaultVehicle.id);
+
+            // Auto-fill fields for consistency
+            setMake(defaultVehicle.make);
+            setModel(defaultVehicle.model);
+            setColor(defaultVehicle.color || "");
+            setLicensePlate(defaultVehicle.licensePlate);
+          } else {
+            setUseNewVehicle(true);
+          }
+        } catch (error) {
+          console.error("Failed to fetch vehicles", error);
+        }
       };
 
       fetchSavedCards();
@@ -602,51 +610,115 @@ function CheckoutContent() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pb-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="make">Vehicle Make</Label>
-                        <Input
-                          id="make"
-                          placeholder="Toyota"
-                          value={make}
-                          onChange={(e) => setMake(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="model">Vehicle Model</Label>
-                        <Input
-                          id="model"
-                          placeholder="Camry"
-                          value={model}
-                          onChange={(e) => setModel(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="color">Color (Optional)</Label>
-                        <Input
-                          id="color"
-                          placeholder="Silver"
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="licensePlate">License Plate</Label>
-                        <Input
-                          id="licensePlate"
-                          placeholder="ABC 1234"
-                          value={licensePlate}
-                          onChange={(e) => setLicensePlate(e.target.value)}
-                        />
-                      </div>
+                    <div className="space-y-6">
+                      {/* Saved Vehicles Selection */}
+                      {isAuthenticated && savedVehicles.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Your Saved Vehicles</Label>
+                          <div className="grid gap-3">
+                            {savedVehicles.map((vehicle) => (
+                              <div
+                                key={vehicle.id}
+                                onClick={() => {
+                                  setSelectedVehicleId(vehicle.id);
+                                  setUseNewVehicle(false);
+                                  setMake(vehicle.make);
+                                  setModel(vehicle.model);
+                                  setColor(vehicle.color || "");
+                                  setLicensePlate(vehicle.licensePlate);
+                                }}
+                                className={cn(
+                                  "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                  selectedVehicleId === vehicle.id && !useNewVehicle ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                )}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <CarIcon className="w-6 h-6 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-sm">{vehicle.nickname || `${vehicle.make} ${vehicle.model}`}</p>
+                                    <p className="text-[10px] text-muted-foreground font-medium uppercase">{vehicle.color} • {vehicle.licensePlate}</p>
+                                  </div>
+                                </div>
+                                {selectedVehicleId === vehicle.id && !useNewVehicle && <CheckCircle className="w-5 h-5 text-primary" />}
+                              </div>
+                            ))}
+                            <div
+                              onClick={() => {
+                                setUseNewVehicle(true);
+                                setSelectedVehicleId(null);
+                                // Clear fields if they were filled by a saved vehicle selection
+                                setMake("");
+                                setModel("");
+                                setColor("");
+                                setLicensePlate("");
+                              }}
+                              className={cn(
+                                "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                useNewVehicle ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                              )}
+                            >
+                              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                                <Plus className="w-5 h-5 text-muted-foreground" />
+                              </div>
+                              <p className="font-bold text-sm">Use a new vehicle</p>
+                              {useNewVehicle && <CheckCircle className="ml-auto w-5 h-5 text-primary" />}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Manual Entry Fields */}
+                      {(useNewVehicle || !isAuthenticated || savedVehicles.length === 0) && (
+                        <div className="grid gap-4 sm:grid-cols-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="make">Vehicle Make</Label>
+                            <Input
+                              id="make"
+                              placeholder="Toyota"
+                              value={make}
+                              onChange={(e) => setMake(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="model">Vehicle Model</Label>
+                            <Input
+                              id="model"
+                              placeholder="Camry"
+                              value={model}
+                              onChange={(e) => setModel(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="color">Color (Optional)</Label>
+                            <Input
+                              id="color"
+                              placeholder="Silver"
+                              value={color}
+                              onChange={(e) => setColor(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licensePlate">License Plate</Label>
+                            <Input
+                              id="licensePlate"
+                              placeholder="ABC 1234"
+                              value={licensePlate}
+                              onChange={(e) => setLicensePlate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <Button
+                        className="w-full h-12 rounded-xl"
+                        onClick={() => setStep(3)}
+                        disabled={!isVehicleInfoComplete}
+                      >
+                        Continue to Payment
+                      </Button>
                     </div>
-                    <Button
-                      className="mt-4"
-                      onClick={() => setStep(3)}
-                      disabled={!isVehicleInfoComplete}
-                    >
-                      Continue to Payment
-                    </Button>
                   </AccordionContent>
                 </AccordionItem>
 
