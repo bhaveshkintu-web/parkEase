@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   Building2,
   Users2,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getUserInitials } from "@/lib/user-utils";
@@ -34,6 +35,7 @@ import { NotificationCenter } from "@/components/notification-center";
 
 const navLinks = [
   { href: "/parking", label: "Parking", icon: Car },
+  { href: "/find-booking", label: "Find My Booking", icon: Search },
   { href: "#", label: "Insurance", icon: Shield },
   { href: "#", label: "Car Wash", icon: Droplets },
   { href: "#", label: "Gas", icon: Fuel },

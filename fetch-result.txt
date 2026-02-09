@@ -1,0 +1,20 @@
+Trying port 3000...
+Port 3000 STATUS 200: {
+  "success": true,
+  "message": "Notification test triggered. Check server logs.",
+  "bookingId": "cmlf9gp02000elk00yurfrh5m",
+  "notification": {
+    "id": "cmlfa84p70003lkb8r358hkb8",
+    "userId": "cmlc77s540001lku4jngl79wc",
+    "title": "New Booking Received",
+    "message": "New pending booking at \"ATL Park-Ride Lot C\" for Guest User.",
+    "type": "NEW_BOOKING",
+    "status": "UNREAD",
+    "metadata": {
+      "bookingId": "cmlf9gp02000elk00yurfrh5m",
+      "confirmationCode": "PK-84IV2K-7233"
+    },
+    "createdAt": "2026-02-09T14:43:27.271Z",
+    "updatedAt": "2026-02-09T14:43:27.271Z"
+  }
+}

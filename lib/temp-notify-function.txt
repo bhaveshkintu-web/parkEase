@@ -1,0 +1,99 @@
+/**
+ * Notifies the owner of a new booking at their location.
+ */
+export async function notifyOwnerOfNewBooking(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        location: {
+          include: {
+            owner: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!booking || !booking.location?.owner?.user) {
+      console.log(`⚠️ Could not find owner for booking ${bookingId}`);
+      return;
+    }
+
+    const owner = booking.location.owner.user;
+
+    // 1. Send Email
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const formatDateStr = (date: Date) => {
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    };
+
+    await transporter.sendMail({
+      from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+      to: owner.email,
+      subject: `New Booking at ${booking.location.name}`,
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0d9488;">New Booking Received</h2>
+          <p>Hello ${owner.firstName},</p>
+          <p>You have received a new booking at your location <strong>${booking.location.name}</strong>.</p>
+          
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Guest:</strong> ${booking.guestFirstName} ${booking.guestLastName}</p>
+            <p style="margin: 0;"><strong>Email:</strong> ${booking.guestEmail}</p>
+            <p style="margin: 0;"><strong>Phone:</strong> ${booking.guestPhone}</p>
+            <p style="margin: 0;"><strong>Vehicle:</strong> ${booking.vehicleColor} ${booking.vehicleMake} ${booking.vehicleModel} (${booking.vehiclePlate})</p>
+            <p style="margin: 0;"><strong>Check-in:</strong> ${formatDateStr(new Date(booking.checkIn))}</p>
+            <p style="margin: 0;"><strong>Check-out:</strong> ${formatDateStr(new Date(booking.checkOut))}</p>
+            <p style="margin: 0;"><strong>Total Amount:</strong> $${booking.totalPrice.toFixed(2)}</p>
+            <p style="margin: 0;"><strong>Confirmation Code:</strong> ${booking.confirmationCode}</p>
+            <p style="margin: 0;"><strong>Status:</strong> ${booking.status}</p>
+          </div>
+
+          <p>Please log in to your owner dashboard to ${booking.status === "PENDING" ? "approve or reject" : "view"} this booking.</p>
+          <a href="${process.env.APP_URL}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+          
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+        </div>
+      `,
+    });
+
+    // 2. Create In-App Notification
+    await prisma.notification.create({
+      data: {
+        userId: owner.id,
+        title: "New Booking Received",
+        message: `New ${booking.status.toLowerCase()} booking at "${booking.location.name}" for ${booking.guestFirstName} ${booking.guestLastName}.`,
+        type: NotificationType.NEW_BOOKING as any,
+        metadata: { bookingId: booking.id, confirmationCode: booking.confirmationCode },
+      },
+    });
+
+    console.log(`✅ Owner notification sent for booking ${bookingId} to ${owner.email}`);
+  } catch (error) {
+    console.error("❌ Failed to notify owner of new booking:", error);
+  }
+}

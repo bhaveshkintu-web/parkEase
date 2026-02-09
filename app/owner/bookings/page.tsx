@@ -26,6 +26,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -68,6 +69,7 @@ import { Suspense, useEffect, useCallback } from "react";
 import Loading from "./loading";
 import { useToast } from "@/hooks/use-toast";
 import type { WatchmanBookingRequest } from "@/lib/types";
+import { approveBooking, rejectBooking } from "@/lib/actions/booking-actions";
 
 export default function OwnerBookingsPage() {
   const { user } = useAuth();
@@ -89,6 +91,9 @@ export default function OwnerBookingsPage() {
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isBookingApproveOpen, setIsBookingApproveOpen] = useState(false);
+  const [isBookingRejectOpen, setIsBookingRejectOpen] = useState(false);
+  const [selectedBookingForAction, setSelectedBookingForAction] = useState<Reservation | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast } = useToast();
 
@@ -229,6 +234,12 @@ export default function OwnerBookingsPage() {
         label: "Cancelled",
         className: "bg-red-100 text-red-700 border-red-200",
       },
+      rejected: {
+        variant: "destructive" as const,
+        icon: XCircle,
+        label: "Rejected",
+        className: "bg-rose-100 text-rose-700 border-rose-200",
+      },
     };
     const item = config[status] || config.pending;
     const Icon = item.icon;
@@ -317,6 +328,71 @@ export default function OwnerBookingsPage() {
       toast({
         title: "Error",
         description: "An error occurred during rejection",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  const handleBookingApprove = async () => {
+    if (!selectedBookingForAction) return;
+    setIsLoadingRequests(true);
+    try {
+      const result = await approveBooking(selectedBookingForAction.id);
+      if (result.success) {
+        toast({
+          title: "Booking Approved",
+          description: "The reservation has been confirmed and the owner wallet updated.",
+        });
+        setIsBookingApproveOpen(false);
+        setSelectedBookingForAction(null);
+        const idToUse = user?.ownerId || user?.id;
+        if (idToUse) await initializeForOwner(idToUse);
+      } else {
+        toast({
+          title: "Approval Failed",
+          description: result.error || "Failed to approve booking",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  const handleBookingReject = async () => {
+    if (!selectedBookingForAction || !rejectionReason.trim()) return;
+    setIsLoadingRequests(true);
+    try {
+      const result = await rejectBooking(selectedBookingForAction.id, rejectionReason);
+      if (result.success) {
+        toast({
+          title: "Booking Rejected",
+          description: "The reservation has been rejected and the spot restored.",
+        });
+        setIsBookingRejectOpen(false);
+        setSelectedBookingForAction(null);
+        setRejectionReason("");
+        const idToUse = user?.ownerId || user?.id;
+        if (idToUse) await initializeForOwner(idToUse);
+      } else {
+        toast({
+          title: "Rejection Failed",
+          description: result.error || "Failed to reject booking",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -610,23 +686,50 @@ export default function OwnerBookingsPage() {
                             </TableCell>
                             <TableCell>{getStatusBadge(booking.status)}</TableCell>
                             <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => setSelectedBooking(booking)}>
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    View Details
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <div className="flex items-center justify-end gap-2">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {booking.status === "pending" && (
+                                      <>
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedBookingForAction(booking);
+                                            setIsBookingApproveOpen(true);
+                                          }}
+                                          className="text-emerald-600"
+                                        >
+                                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                                          Approve
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedBookingForAction(booking);
+                                            setIsBookingRejectOpen(true);
+                                          }}
+                                          className="text-red-600"
+                                        >
+                                          <XCircle className="w-4 h-4 mr-2" />
+                                          Reject
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                      </>
+                                    )}
+                                    <DropdownMenuItem onClick={() => setSelectedBooking(booking)}>
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      View Details
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -1107,6 +1210,76 @@ export default function OwnerBookingsPage() {
               >
                 {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Reject Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Booking Approval Dialog */}
+        <Dialog open={isBookingApproveOpen} onOpenChange={setIsBookingApproveOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Reservation</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this reservation for {selectedBookingForAction?.guestInfo.firstName} {selectedBookingForAction?.guestInfo.lastName}?
+                This will confirm the booking and credit the earnings to your wallet.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Confirmation Code:</span>
+                <span className="font-medium">#{selectedBookingForAction?.confirmationCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount:</span>
+                <span className="font-medium text-emerald-600 font-bold">{formatCurrency(selectedBookingForAction?.totalPrice || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Dates:</span>
+                <span className="font-medium">
+                  {selectedBookingForAction && formatDate(new Date(selectedBookingForAction.checkIn))} to {selectedBookingForAction && formatDate(new Date(selectedBookingForAction.checkOut))}
+                </span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBookingApproveOpen(false)}>Cancel</Button>
+              <Button onClick={handleBookingApprove} disabled={isLoadingRequests} className="bg-emerald-600 hover:bg-emerald-700">
+                {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                Confirm & Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Booking Rejection Dialog */}
+        <Dialog open={isBookingRejectOpen} onOpenChange={setIsBookingRejectOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Reservation</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this reservation. This action will cancel the booking and release the parking spot.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reject-reason">Rejection Reason</Label>
+                <Textarea
+                  id="reject-reason"
+                  placeholder="e.g., Maintenance issue, location full, etc."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBookingRejectOpen(false)}>Cancel</Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleBookingReject} 
+                disabled={isLoadingRequests || !rejectionReason.trim()}
+              >
+                {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                Reject Reservation
               </Button>
             </DialogFooter>
           </DialogContent>

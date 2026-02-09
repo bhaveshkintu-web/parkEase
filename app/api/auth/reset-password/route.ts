@@ -47,6 +47,8 @@ export async function POST(req: Request) {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpiry: null,
+        isGuest: false,
+        guestConvertedAt: new Date(),
       },
     });
 
