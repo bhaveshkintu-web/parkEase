@@ -139,15 +139,15 @@ export default function AdminReviewsPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Stats
+  // Stats based on filtered reviews
   const stats = useMemo(() => {
-    if (reviews.length === 0) return { total: 0, pending: 0, flagged: 0, avgRating: "0.0" };
-    const total = reviews.length;
-    const pending = reviews.filter((r) => r.status === "pending").length;
-    const flagged = reviews.filter((r) => r.status === "flagged").length;
-    const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+    if (filteredReviews.length === 0) return { total: 0, pending: 0, flagged: 0, avgRating: "0.0" };
+    const total = filteredReviews.length;
+    const pending = filteredReviews.filter((r) => r.status === "pending").length;
+    const flagged = filteredReviews.filter((r) => r.status === "flagged").length;
+    const avgRating = (filteredReviews.reduce((sum, r) => sum + r.rating, 0) / filteredReviews.length).toFixed(1);
     return { total, pending, flagged, avgRating };
-  }, [reviews]);
+  }, [filteredReviews]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

@@ -47,15 +47,15 @@ export default function ReservationsPage() {
       case "upcoming":
         // Include bookings where checkIn is today or in the future
         return bookings.filter(
-          (b) => 
-            (b.status === "CONFIRMED" || b.status === "PENDING") && 
+          (b) =>
+            (b.status === "CONFIRMED" || b.status === "PENDING") &&
             new Date(b.checkIn) >= startOfToday
         );
       case "past":
         // Include bookings where checkOut is before today
         return bookings.filter(
-          (b) => 
-            (b.status === "CONFIRMED" || b.status === "COMPLETED") && 
+          (b) =>
+            (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
             new Date(b.checkOut) < startOfToday
         );
       case "cancelled":
@@ -69,14 +69,14 @@ export default function ReservationsPage() {
 
   // Calculate counts for each tab
   const upcomingCount = bookings.filter(
-    (b) => 
-      (b.status === "CONFIRMED" || b.status === "PENDING") && 
+    (b) =>
+      (b.status === "CONFIRMED" || b.status === "PENDING") &&
       new Date(b.checkIn) >= startOfToday
   ).length;
 
   const pastCount = bookings.filter(
-    (b) => 
-      (b.status === "CONFIRMED" || b.status === "COMPLETED") && 
+    (b) =>
+      (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
       new Date(b.checkOut) < startOfToday
   ).length;
 
@@ -84,7 +84,7 @@ export default function ReservationsPage() {
 
   const getStatusBadge = (status: string, checkOut: string) => {
     const isPast = new Date(checkOut) < startOfToday;
-    
+
     switch (status) {
       case "CONFIRMED":
         return isPast ? (
@@ -183,8 +183,8 @@ export default function ReservationsPage() {
                   {activeTab === "upcoming"
                     ? "Book your next parking spot and save money"
                     : activeTab === "past"
-                    ? "Your completed trips will appear here"
-                    : "Cancelled reservations will appear here"}
+                      ? "Your completed trips will appear here"
+                      : "Cancelled reservations will appear here"}
                 </p>
                 {activeTab === "upcoming" && (
                   <Link href="/parking">
@@ -200,12 +200,18 @@ export default function ReservationsPage() {
                   <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
                       {/* Location image */}
-                      <div className="w-full md:w-48 h-32 md:h-auto bg-muted">
-                        <img
-                          src={booking.location.images[0] || "/placeholder.svg"}
-                          alt={booking.location.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="relative w-full md:w-64 h-52 shrink-0 overflow-hidden flex items-center justify-center bg-muted">
+                        {booking.location.images?.[0] ? (
+                          <img
+                            src={booking.location.images[0]}
+                            alt={booking.location.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                            <Car className="h-12 w-12 text-primary/30" />
+                          </div>
+                        )}
                       </div>
 
                       {/* Content */}
