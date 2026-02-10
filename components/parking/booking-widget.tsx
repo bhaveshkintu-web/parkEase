@@ -32,7 +32,7 @@ interface BookingWidgetProps {
 
 export function BookingWidget({ location }: BookingWidgetProps) {
   const router = useRouter();
-  const { checkIn, checkOut, setCheckIn, setCheckOut, setLocation } = useBooking();
+  const { checkIn, checkOut, setCheckIn, setCheckOut, setLocation, minBookingDuration } = useBooking();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +63,8 @@ export function BookingWidget({ location }: BookingWidgetProps) {
     }
   };
 
+  const isDurationTooShort = checkOut.getTime() - checkIn.getTime() < minBookingDuration * 60000;
+
   return (
     <div className="sticky top-24 rounded-xl border border-border bg-card p-6 shadow-lg">
       {/* Availability Status */}
@@ -75,6 +77,14 @@ export function BookingWidget({ location }: BookingWidgetProps) {
         )}>
           <AlertCircle className="h-4 w-4" />
           {availability.message}
+        </div>
+      )}
+
+      {/* Duration Warning */}
+      {isDurationTooShort && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          Minimum {minBookingDuration >= 60 ? `${minBookingDuration / 60} hours` : `${minBookingDuration} minutes`} required
         </div>
       )}
 
@@ -119,11 +129,10 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                   onSelect={(date) => {
                     if (date) {
                       const newDate = new Date(date);
-                      newDate.setHours(checkIn.getHours(), checkIn.getMinutes());
+                      newDate.setHours(checkIn.getHours(), checkIn.getMinutes(), 0, 0);
                       setCheckIn(newDate);
-                      if (newDate >= checkOut) {
-                        const newCheckOut = new Date(newDate);
-                        newCheckOut.setHours(newCheckOut.getHours() + 2);
+                      if (newDate.getTime() + minBookingDuration * 60000 > checkOut.getTime()) {
+                        const newCheckOut = new Date(newDate.getTime() + minBookingDuration * 60000);
                         setCheckOut(newCheckOut);
                       }
                       // Don't close immediately to allow time selection
@@ -139,11 +148,10 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                     onValueChange={(value) => {
                       const [hours, minutes] = value.split(':').map(Number);
                       const newDate = new Date(checkIn);
-                      newDate.setHours(hours, minutes);
+                      newDate.setHours(hours, minutes, 0, 0);
                       setCheckIn(newDate);
-                      if (newDate >= checkOut) {
-                        const newCheckOut = new Date(newDate);
-                        newCheckOut.setHours(newCheckOut.getHours() + 2);
+                      if (newDate.getTime() + minBookingDuration * 60000 > checkOut.getTime()) {
+                        const newCheckOut = new Date(newDate.getTime() + minBookingDuration * 60000);
                         setCheckOut(newCheckOut);
                       }
                     }}
@@ -188,12 +196,17 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                   selected={checkOut}
                   onSelect={(date) => {
                     if (date) {
-                      const newDate = new Date(date);
-                      newDate.setHours(checkOut.getHours(), checkOut.getMinutes());
-                      setCheckOut(newDate);
+                      const n = new Date(date);
+                      n.setHours(checkOut.getHours(), checkOut.getMinutes(), 0, 0);
+                      if (checkIn.getTime() + minBookingDuration * 60000 > n.getTime()) {
+                        const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000);
+                        setCheckOut(bumped);
+                      } else {
+                        setCheckOut(n);
+                      }
                     }
                   }}
-                  disabled={(date) => date <= checkIn}
+                  disabled={(date) => date < new Date(new Date(checkIn).setHours(0,0,0,0))}
                   initialFocus
                 />
                 <div className="border-t border-border pt-3">
@@ -202,9 +215,14 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                     value={`${checkOut.getHours().toString().padStart(2, '0')}:${checkOut.getMinutes().toString().padStart(2, '0')}`}
                     onValueChange={(value) => {
                       const [hours, minutes] = value.split(':').map(Number);
-                      const newDate = new Date(checkOut);
-                      newDate.setHours(hours, minutes);
-                      setCheckOut(newDate);
+                      const newCheckOut = new Date(checkOut);
+                      newCheckOut.setHours(hours, minutes, 0, 0);
+                      if (checkIn.getTime() + minBookingDuration * 60000 > newCheckOut.getTime()) {
+                        const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000);
+                        setCheckOut(bumped);
+                      } else {
+                        setCheckOut(newCheckOut);
+                      }
                     }}
                   >
                     <SelectTrigger className="w-full">
@@ -219,7 +237,14 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                         const displayMinute = minute.toString().padStart(2, '0');
                         const ampm = hour < 12 ? 'AM' : 'PM';
                         return (
-                          <SelectItem key={timeString} value={timeString}>
+                          <SelectItem 
+                            key={timeString} 
+                            value={timeString}
+                            disabled={
+                              checkIn.toDateString() === checkOut.toDateString() && 
+                              (hour * 60 + minute) < (checkIn.getHours() * 60 + checkIn.getMinutes() + minBookingDuration)
+                            }
+                          >
                             {displayHour}:{displayMinute} {ampm}
                           </SelectItem>
                         );
@@ -239,7 +264,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
         onClick={handleReserve} 
         className="mb-4 w-full" 
         size="lg"
-        disabled={availability.status === "soldout" || isLoading}
+        disabled={availability.status === "soldout" || isLoading || isDurationTooShort}
       >
         {isLoading ? (
           <>
@@ -261,7 +286,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
       <div className="space-y-2 border-t border-border pt-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {formatCurrency(location.pricePerDay)} x {quote.days} day{quote.days > 1 ? "s" : ""}
+            {formatCurrency(location.pricePerDay)} x {quote.durationText}
           </span>
           <span className="text-foreground">{formatCurrency(quote.basePrice)}</span>
         </div>

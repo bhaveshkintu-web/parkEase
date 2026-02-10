@@ -38,7 +38,7 @@ export function calculatePricing(
   commissionRule?: { type: string; value: number } | null
 ) {
   const durationInHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-  const durationInDays = Math.ceil(durationInHours / 24);
+  const durationInDays = durationInHours / 24;
 
   // 1. Apply Dynamic Pricing Rules
   let multiplier = 1.0;
