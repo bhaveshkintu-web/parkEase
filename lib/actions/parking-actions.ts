@@ -141,32 +141,27 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
       ? Number((location.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
       : 0;
 
-    let availability = null;
-    let pricing = null;
+    const checkIn = ci ? new Date(ci) : new Date();
+    const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
-    if (ci && co) {
-      const checkIn = new Date(ci);
-      const checkOut = new Date(co);
+    const overlappingBookings = await prisma.booking.count({
+      where: {
+        locationId: id,
+        status: { in: ["CONFIRMED", "PENDING"] },
+        AND: [
+          { checkIn: { lt: checkOut } },
+          { checkOut: { gt: checkIn } },
+        ],
+      },
+    });
 
-      const overlappingBookings = await prisma.booking.count({
-        where: {
-          locationId: id,
-          status: { in: ["CONFIRMED", "PENDING"] },
-          AND: [
-            { checkIn: { lt: checkOut } },
-            { checkOut: { gt: checkIn } },
-          ],
-        },
-      });
+    const availability = {
+      totalSpots: location.totalSpots,
+      availableSpots: location.totalSpots - overlappingBookings,
+      isAvailable: location.totalSpots - overlappingBookings > 0
+    };
 
-      availability = {
-        totalSpots: location.totalSpots,
-        availableSpots: location.totalSpots - overlappingBookings,
-        isAvailable: location.totalSpots - overlappingBookings > 0
-      };
-
-      pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
-    }
+    const pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
 
     return {
       success: true,
@@ -175,6 +170,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
         reviewCount,
         rating,
         availability,
+        availableSpots: availability.availableSpots,
         pricing,
         airport: location.airportCode
           ? (require("@/lib/data").airports.find((a: any) => a.code === location.airportCode)?.name || location.airportCode)

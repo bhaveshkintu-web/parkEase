@@ -73,14 +73,17 @@ function ParkingResultsContent() {
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const response = await getParkingLocations();
+      const response = await getParkingLocations({
+        checkIn: checkIn.toISOString(),
+        checkOut: checkOut.toISOString(),
+      });
       if (response.success && response.data) {
         setLocations(response.data);
       }
       setIsLoading(false);
     }
     fetchData();
-  }, []);
+  }, [checkIn, checkOut]);
 
   const days = calculateDays(checkIn, checkOut);
 
@@ -153,7 +156,7 @@ function ParkingResultsContent() {
 
       return true;
     });
-  }, [query, filters, enrichedLocations]);
+  }, [query, filters, enrichedLocations, locationId]);
 
   // Sort locations
   const sortedLocations = useMemo(() => {

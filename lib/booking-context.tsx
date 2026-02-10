@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react";
+import { getGeneralSettings } from "./actions/settings-actions";
 import type { ParkingLocation, GuestInfo, VehicleInfo } from "./types";
 
 interface BookingState {
@@ -22,6 +23,7 @@ interface BookingContextType extends BookingState {
   setSearchQuery: (query: string) => void;
   setParkingType: (type: "airport" | "hourly" | "monthly") => void;
   clearBooking: () => void;
+  minBookingDuration: number;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -35,9 +37,8 @@ const getDefaultCheckIn = () => {
 };
 
 const getDefaultCheckOut = () => {
-  const date = new Date();
-  date.setDate(date.getDate() + 3);
-  date.setHours(date.getHours() + 1, 0, 0, 0);
+  const date = getDefaultCheckIn();
+  date.setHours(date.getHours() + 2);
   return date;
 };
 
@@ -104,8 +105,23 @@ const getInitialState = (): BookingState => ({
 
 export function BookingProvider({ children }: { children: ReactNode }) {
   // Always initialize with defaults to match server SSR
-  const [state, setState] = useState<BookingState>(getInitialState);
+  const [state, setState] = useState<BookingState>(getInitialState());
   const [isInitialized, setIsInitialized] = useState(false);
+  const [minBookingDuration, setMinBookingDuration] = useState(120);
+
+  useEffect(() => {
+    const fetchDuration = async () => {
+      try {
+        const settings = await getGeneralSettings();
+        if (settings.minBookingDuration) {
+          setMinBookingDuration(settings.minBookingDuration);
+        }
+      } catch (error) {
+        console.error("Failed to fetch min duration setting:", error);
+      }
+    };
+    fetchDuration();
+  }, []);
 
   // Load from session storage only on client mount
   useEffect(() => {
@@ -129,12 +145,22 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     loadFromStorage();
   }, []);
 
-  // Persist state to session storage whenever it changes, but only after initialization
   useEffect(() => {
     if (isInitialized) {
       saveBookingState(state);
     }
   }, [state, isInitialized]);
+
+  // Enforce minimum duration globally
+  useEffect(() => {
+    if (state.checkIn && state.checkOut) {
+      const minDurationMs = minBookingDuration * 60 * 1000;
+      if (state.checkOut.getTime() - state.checkIn.getTime() < minDurationMs) {
+        const newCheckOut = new Date(state.checkIn.getTime() + minDurationMs);
+        setState(prev => ({ ...prev, checkOut: newCheckOut }));
+      }
+    }
+  }, [state.checkIn, minBookingDuration]);
 
   const setLocation = useCallback((location: ParkingLocation | null) => {
     setState((prev) => ({ ...prev, location }));
@@ -196,7 +222,8 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setSearchQuery,
     setParkingType,
     clearBooking,
-  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking]);
+    minBookingDuration,
+  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking, minBookingDuration]);
 
   return (
     <BookingContext.Provider value={contextValue}>

@@ -12,6 +12,7 @@ export interface PlatformSettingsData {
   maintenanceMode: boolean;
   allowRegistrations: boolean;
   requireEmailVerification: boolean;
+  minBookingDuration: number;
 }
 
 export interface NotificationSettingsData {
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: SettingValue[] = [
   { key: "platform.maintenanceMode", value: "false", type: "boolean", category: "general", description: "Enable maintenance mode" },
   { key: "platform.allowRegistrations", value: "true", type: "boolean", category: "general", description: "Allow new user registrations" },
   { key: "platform.requireEmailVerification", value: "true", type: "boolean", category: "general", description: "Require email verification for bookings" },
+  { key: "booking.minDuration", value: "120", type: "number", category: "general", description: "Minimum booking duration (minutes)" },
   
   // Notification Settings
   { key: "notifications.emailEnabled", value: "true", type: "boolean", category: "notifications", description: "Enable email notifications" },
@@ -207,6 +209,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       maintenanceMode: settings.maintenanceMode ?? false,
       allowRegistrations: settings.allowRegistrations ?? true,
       requireEmailVerification: settings.requireEmailVerification ?? true,
+      minBookingDuration: settings.minDuration ?? 120,
     };
   } catch (error) {
     console.error("GET_GENERAL_SETTINGS_ERROR:", error);
@@ -218,6 +221,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       maintenanceMode: false,
       allowRegistrations: true,
       requireEmailVerification: true,
+      minBookingDuration: 120,
     };
   }
 }
@@ -322,6 +326,7 @@ export async function updateGeneralSettings(
       maintenanceMode: "platform.maintenanceMode",
       allowRegistrations: "platform.allowRegistrations",
       requireEmailVerification: "platform.requireEmailVerification",
+      minBookingDuration: "booking.minDuration",
     };
     
     for (const [field, value] of Object.entries(data)) {

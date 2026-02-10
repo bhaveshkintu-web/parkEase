@@ -67,7 +67,10 @@ function LocationDetailsContent({ id }: { id: string }) {
   React.useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const locResponse = await getParkingLocationById(id);
+      const locResponse = await getParkingLocationById(id, {
+        checkIn: checkIn.toISOString(),
+        checkOut: checkOut.toISOString(),
+      });
       if (locResponse.success && locResponse.data) {
         setLocationData(locResponse.data);
 
@@ -82,7 +85,7 @@ function LocationDetailsContent({ id }: { id: string }) {
       setIsLoading(false);
     }
     fetchData();
-  }, [id]);
+  }, [id, checkIn, checkOut]);
 
   const { toast } = require("@/hooks/use-toast");
 
