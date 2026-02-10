@@ -44,6 +44,17 @@ import { toast } from "react-toastify";
 
 // No mock data needed anymore
 
+// Helper function to get full shift display text
+const getShiftDisplayText = (shiftKey: string): string => {
+  const shiftMap: Record<string, string> = {
+    "morning": "Morning (6 AM - 2 PM)",
+    "evening": "Evening (2 PM - 10 PM)",
+    "night": "Night (10 PM - 6 AM)",
+    "all": "All Day"
+  };
+  return shiftMap[shiftKey] || shiftKey;
+};
+
 export default function WatchmanActivityPage() {
   const { user } = useAuth();
   const { parkingSessions } = useDataStore();
@@ -63,6 +74,10 @@ export default function WatchmanActivityPage() {
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Watchman profile info for start shift dialog
+  const [watchmanLocationName, setWatchmanLocationName] = useState<string>("Loading...");
+  const [watchmanShiftTime, setWatchmanShiftTime] = useState<string>("Loading...");
 
   // Initialize with empty
   const [activityLogs, setActivityLogs] = useState<WatchmanActivityLog[]>([]);
@@ -188,6 +203,33 @@ export default function WatchmanActivityPage() {
       console.error("Failed to fetch car tracking", e);
     }
   }, []);
+
+  const fetchWatchmanInfo = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/profile");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.watchman) {
+          const locationName = data.watchman.assignedLocations?.[0]?.name || "No location assigned";
+          const shiftKey = data.watchman.shift || "morning";
+          const shiftTime = getShiftDisplayText(shiftKey);
+          setWatchmanLocationName(locationName);
+          setWatchmanShiftTime(shiftTime);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch watchman info", e);
+      setWatchmanLocationName("Unknown location");
+      setWatchmanShiftTime("8 hours typically");
+    }
+  }, []);
+
+  // Fetch watchman info when start shift dialog opens
+  React.useEffect(() => {
+    if (isStartShiftOpen) {
+      fetchWatchmanInfo();
+    }
+  }, [isStartShiftOpen, fetchWatchmanInfo]);
 
   // Fetch activities and active shift on mount
   React.useEffect(() => {
@@ -1128,7 +1170,7 @@ export default function WatchmanActivityPage() {
                   <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Assigned Location</p>
-                    <p className="text-sm text-muted-foreground">Please proceed to your post</p>
+                    <p className="text-sm text-muted-foreground">{watchmanLocationName}</p>
                   </div>
                 </div>
               </div>
@@ -1136,7 +1178,7 @@ export default function WatchmanActivityPage() {
                 <Clock className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Standard Shift Hours</p>
-                  <p className="text-sm text-muted-foreground">8 hours typically</p>
+                  <p className="text-sm text-muted-foreground">{watchmanShiftTime}</p>
                 </div>
               </div>
             </div>
