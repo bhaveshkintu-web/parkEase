@@ -10,6 +10,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  if (!user.password) {
+    return NextResponse.json({ error: "Account does not have a password set. Please use social login or guest checkout." }, { status: 400 });
+  }
+
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

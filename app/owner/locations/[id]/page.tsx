@@ -28,6 +28,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MediaManagementCard } from "@/components/owner/media-management-card";
 
 export default function OwnerLocationDetailsPage() {
   const params = useParams();
@@ -377,29 +378,12 @@ export default function OwnerLocationDetailsPage() {
             )}
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase text-muted-foreground">Location Images</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {location.images && location.images.length > 0 ? (
-                  location.images.map((img: string, i: number) => (
-                    <div key={i} className="aspect-square bg-muted rounded-md overflow-hidden relative">
-                      {/* Placeholder for actual image component */}
-                      <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-                        Image {i + 1}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-2 aspect-[2/1] bg-muted/30 rounded-md flex items-center justify-center text-muted-foreground text-sm border border-dashed">
-                    No images uploaded
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <MediaManagementCard
+            locationId={locationId}
+            images={location.images || []}
+            onImagesChange={(newImages) => setLocation({ ...location, images: newImages })}
+            autoSave={true}
+          />
         </div>
       </div>
     </div>

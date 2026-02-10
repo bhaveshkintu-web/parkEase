@@ -17,6 +17,10 @@ export async function updateUserPassword(
 
     if (!user) throw new Error("User not found");
 
+    if (!user.password) {
+      return { success: false, error: "You do not have a password set. Please use 'Set Password' instead." };
+    }
+
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) return { success: false, error: "Invalid current password" };
 

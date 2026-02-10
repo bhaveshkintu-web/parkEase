@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
@@ -89,12 +89,28 @@ const BrandIcon = ({ brand }: { brand: string }) => {
 function CheckoutContent() {
   const router = useRouter();
   const { toast } = useToast();
-  const { location: contextLocation, checkIn, checkOut } = useBooking();
-  const { user, isAuthenticated } = useAuth();
+  const { 
+    location: contextLocation, 
+    checkIn, 
+    checkOut,
+    guestInfo: contextGuestInfo,
+    vehicleInfo: contextVehicleInfo,
+    setGuestInfo: updateContextGuestInfo,
+    setVehicleInfo: updateContextVehicleInfo
+  } = useBooking();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  const searchParams = useSearchParams();
+  const step = parseInt(searchParams.get("step") || "1");
+
+  const setStep = (newStep: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("step", newStep.toString());
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
   const [isLoading, setIsLoading] = useState(!contextLocation);
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Saved Cards
@@ -110,19 +126,26 @@ function CheckoutContent() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
-  // Guest Info
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  // Guest Info initialized from context or user session
+  const [firstName, setFirstName] = useState(contextGuestInfo?.firstName || "");
+  const [lastName, setLastName] = useState(contextGuestInfo?.lastName || "");
+  const [email, setEmail] = useState(contextGuestInfo?.email || "");
+  const [phone, setPhone] = useState(contextGuestInfo?.phone || "");
 
-  // Vehicle Info
-  const [make, setMake] = useState("");
-  const [model, setModel] = useState("");
-  const [color, setColor] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
+  // Vehicle Info initialized from context
+  const [savedVehicles, setSavedVehicles] = useState<any[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [useNewVehicle, setUseNewVehicle] = useState(true);
+  const [make, setMake] = useState(contextVehicleInfo?.make || "");
+  const [model, setModel] = useState(contextVehicleInfo?.model || "");
+  const [color, setColor] = useState(contextVehicleInfo?.color || "");
+  const [licensePlate, setLicensePlate] = useState(contextVehicleInfo?.licensePlate || "");
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  const isGuestInfoComplete = firstName && lastName && email && phone;
+  const isVehicleInfoComplete = make && model && licensePlate;
+  const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
 
   // Mock Card Info for Demo Mode
   const [cardNumber, setCardNumber] = useState("");
@@ -167,13 +190,23 @@ function CheckoutContent() {
     setIsLoading(false);
   }, [contextLocation, router, toast]);
 
+  // Sync Guest and Vehicle info to context whenever they change
+  useEffect(() => {
+    updateContextGuestInfo({ firstName, lastName, email, phone });
+  }, [firstName, lastName, email, phone, updateContextGuestInfo]);
+
+  useEffect(() => {
+    updateContextVehicleInfo({ make, model, color, licensePlate });
+  }, [make, model, color, licensePlate, updateContextVehicleInfo]);
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Auto-fill Guest Info if empty
-      if (!firstName && user.firstName) setFirstName(user.firstName);
-      if (!lastName && user.lastName) setLastName(user.lastName);
-      if (!email && user.email) setEmail(user.email);
-      if (!phone && user.phone) setPhone(user.phone);
+      // Auto-fill Guest Info from session if both session exists and local state is empty
+      // BUT prioritized session data if we just returned from login
+      if (user.firstName && !firstName) setFirstName(user.firstName);
+      if (user.lastName && !lastName) setLastName(user.lastName);
+      if (user.email && !email) setEmail(user.email);
+      if (user.phone && !phone) setPhone(user.phone);
 
       const fetchSavedCards = async () => {
         try {
@@ -191,24 +224,29 @@ function CheckoutContent() {
           console.error("Failed to fetch saved cards", error);
         }
       };
-      
+
       const fetchVehicles = async () => {
-         try {
-             const vehicles = await getVehicles();
-             
-             if (vehicles && vehicles.length > 0) {
-                 // getVehicles sorts by default first, then newest.
-                 const topVehicle = vehicles[0];
-                 
-                 // Only auto-fill if fields are empty to respect manual edits
-                 if (!make) setMake(topVehicle.make);
-                 if (!model) setModel(topVehicle.model);
-                 if (!color) setColor(topVehicle.color);
-                 if (!licensePlate) setLicensePlate(topVehicle.licensePlate);
-             }
-         } catch (error) {
-             console.error("Failed to fetch vehicles", error);
-         }
+        try {
+          const vehicles = await getVehicles();
+          setSavedVehicles(vehicles || []);
+
+          if (vehicles && vehicles.length > 0) {
+            setUseNewVehicle(false);
+            // getVehicles sorts by default first, then newest.
+            const defaultVehicle = vehicles.find((v: any) => v.isDefault) || vehicles[0];
+            setSelectedVehicleId(defaultVehicle.id);
+
+            // Auto-fill fields for consistency
+            setMake(defaultVehicle.make);
+            setModel(defaultVehicle.model);
+            setColor(defaultVehicle.color || "");
+            setLicensePlate(defaultVehicle.licensePlate);
+          } else {
+            setUseNewVehicle(true);
+          }
+        } catch (error) {
+          console.error("Failed to fetch vehicles", error);
+        }
       };
 
       fetchSavedCards();
@@ -276,10 +314,21 @@ function CheckoutContent() {
 
   // Create PaymentIntent when moving to payment step
   useEffect(() => {
-    if (step === 3 && !clientSecret && isGuestInfoComplete && isVehicleInfoComplete) {
-      createPaymentIntentForCheckout();
+    if (step === 3) {
+      // Don't redirect if we're still loading the auth state
+      if (isAuthLoading) return;
+
+      if (!isAuthenticated) {
+        const currentUrl = window.location.pathname + window.location.search;
+        router.push(`/auth/guest-login?returnUrl=${encodeURIComponent(currentUrl)}`);
+        return;
+      }
+      
+      if (!clientSecret && isGuestInfoComplete && isVehicleInfoComplete) {
+        createPaymentIntentForCheckout();
+      }
     }
-  }, [step]);
+  }, [step, isAuthenticated, isAuthLoading, router, isGuestInfoComplete, isVehicleInfoComplete]);
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -428,11 +477,22 @@ function CheckoutContent() {
     );
   }
 
-  const { days, basePrice, taxes, fees, totalPrice, savings } = quote!;
+  if (!quote) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Invalid Booking Details</h2>
+        <p className="text-muted-foreground mb-6 text-center">
+          We couldn't calculate the pricing for your selection. Please try searching again.
+        </p>
+        <Button onClick={() => router.push("/parking")}>
+          Return to Search
+        </Button>
+      </div>
+    );
+  }
 
-  const isGuestInfoComplete = firstName && lastName && email && phone;
-  const isVehicleInfoComplete = make && model && licensePlate;
-  const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
+  const { days, basePrice, taxes, fees, totalPrice, savings } = quote;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -550,51 +610,115 @@ function CheckoutContent() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-6 pb-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="make">Vehicle Make</Label>
-                        <Input
-                          id="make"
-                          placeholder="Toyota"
-                          value={make}
-                          onChange={(e) => setMake(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="model">Vehicle Model</Label>
-                        <Input
-                          id="model"
-                          placeholder="Camry"
-                          value={model}
-                          onChange={(e) => setModel(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="color">Color (Optional)</Label>
-                        <Input
-                          id="color"
-                          placeholder="Silver"
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="licensePlate">License Plate</Label>
-                        <Input
-                          id="licensePlate"
-                          placeholder="ABC 1234"
-                          value={licensePlate}
-                          onChange={(e) => setLicensePlate(e.target.value)}
-                        />
-                      </div>
+                    <div className="space-y-6">
+                      {/* Saved Vehicles Selection */}
+                      {isAuthenticated && savedVehicles.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Your Saved Vehicles</Label>
+                          <div className="grid gap-3">
+                            {savedVehicles.map((vehicle) => (
+                              <div
+                                key={vehicle.id}
+                                onClick={() => {
+                                  setSelectedVehicleId(vehicle.id);
+                                  setUseNewVehicle(false);
+                                  setMake(vehicle.make);
+                                  setModel(vehicle.model);
+                                  setColor(vehicle.color || "");
+                                  setLicensePlate(vehicle.licensePlate);
+                                }}
+                                className={cn(
+                                  "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                  selectedVehicleId === vehicle.id && !useNewVehicle ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                )}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <CarIcon className="w-6 h-6 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-sm">{vehicle.nickname || `${vehicle.make} ${vehicle.model}`}</p>
+                                    <p className="text-[10px] text-muted-foreground font-medium uppercase">{vehicle.color} • {vehicle.licensePlate}</p>
+                                  </div>
+                                </div>
+                                {selectedVehicleId === vehicle.id && !useNewVehicle && <CheckCircle className="w-5 h-5 text-primary" />}
+                              </div>
+                            ))}
+                            <div
+                              onClick={() => {
+                                setUseNewVehicle(true);
+                                setSelectedVehicleId(null);
+                                // Clear fields if they were filled by a saved vehicle selection
+                                setMake("");
+                                setModel("");
+                                setColor("");
+                                setLicensePlate("");
+                              }}
+                              className={cn(
+                                "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                useNewVehicle ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                              )}
+                            >
+                              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                                <Plus className="w-5 h-5 text-muted-foreground" />
+                              </div>
+                              <p className="font-bold text-sm">Use a new vehicle</p>
+                              {useNewVehicle && <CheckCircle className="ml-auto w-5 h-5 text-primary" />}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Manual Entry Fields */}
+                      {(useNewVehicle || !isAuthenticated || savedVehicles.length === 0) && (
+                        <div className="grid gap-4 sm:grid-cols-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="make">Vehicle Make</Label>
+                            <Input
+                              id="make"
+                              placeholder="Toyota"
+                              value={make}
+                              onChange={(e) => setMake(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="model">Vehicle Model</Label>
+                            <Input
+                              id="model"
+                              placeholder="Camry"
+                              value={model}
+                              onChange={(e) => setModel(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="color">Color (Optional)</Label>
+                            <Input
+                              id="color"
+                              placeholder="Silver"
+                              value={color}
+                              onChange={(e) => setColor(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licensePlate">License Plate</Label>
+                            <Input
+                              id="licensePlate"
+                              placeholder="ABC 1234"
+                              value={licensePlate}
+                              onChange={(e) => setLicensePlate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <Button
+                        className="w-full h-12 rounded-xl"
+                        onClick={() => setStep(3)}
+                        disabled={!isVehicleInfoComplete}
+                      >
+                        Continue to Payment
+                      </Button>
                     </div>
-                    <Button
-                      className="mt-4"
-                      onClick={() => setStep(3)}
-                      disabled={!isVehicleInfoComplete}
-                    >
-                      Continue to Payment
-                    </Button>
                   </AccordionContent>
                 </AccordionItem>
 
@@ -797,7 +921,7 @@ function CheckoutContent() {
                       )}
 
                       {/* Terms Checkbox Moved Here */}
-                      <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
+                      {/* <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
                         <Checkbox
                           id="terms"
                           checked={agreedToTerms}
@@ -814,7 +938,7 @@ function CheckoutContent() {
                           </Link>
                           . I understand that my reservation is subject to availability.
                         </Label>
-                      </div>
+                      </div> */}
 
                       {/* Unified Submit Button for Saved Card or Demo */}
                       {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
@@ -1016,6 +1140,8 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <CheckoutContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

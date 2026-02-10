@@ -32,17 +32,27 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
   return (
     <div className={cn(
       "group overflow-hidden rounded-xl border bg-card transition-all hover:shadow-lg",
-      availability.status === "soldout" 
-        ? "border-border opacity-60" 
+      availability.status === "soldout"
+        ? "border-border opacity-60"
         : "border-border"
     )}>
       <div className="flex flex-col sm:flex-row">
         {/* Image Section */}
-        <div className="relative h-48 w-full bg-gradient-to-br from-primary/20 to-primary/5 sm:h-auto sm:w-48 md:w-56">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Car className="h-16 w-16 text-primary/30" />
+        <div className="relative h-52 w-full shrink-0 bg-muted sm:w-64 md:w-72 overflow-hidden flex items-center justify-center">
+          <div className="absolute inset-0">
+            {location.images && location.images.length > 0 ? (
+              <img
+                src={location.images[0]}
+                alt={location.name}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                <Car className="h-16 w-16 text-primary/30" />
+              </div>
+            )}
           </div>
-          
+
           {/* Top badges */}
           <div className="absolute left-3 top-3 flex flex-col gap-2">
             {quote.savings > 0 && (
@@ -57,7 +67,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
               </Badge>
             )}
           </div>
-          
+
           {/* Bottom badges */}
           <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
             {location.shuttle && (
@@ -137,11 +147,11 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className={cn(
                 "flex items-center gap-1 text-sm font-medium",
-                availability.status === "soldout" 
-                  ? "text-destructive" 
-                  : availability.status === "limited" 
-                  ? "text-amber-600 dark:text-amber-400" 
-                  : "text-primary"
+                availability.status === "soldout"
+                  ? "text-destructive"
+                  : availability.status === "limited"
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-primary"
               )}>
                 {availability.status === "soldout" ? (
                   <AlertCircle className="h-4 w-4" />

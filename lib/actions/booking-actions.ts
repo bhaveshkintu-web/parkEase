@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
 import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
+import { notifyOwnerOfNewBooking } from "@/lib/notifications";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -217,7 +218,8 @@ export async function createBooking(data: any) {
           totalPrice: pricing.total,
           taxes: pricing.taxes,
           fees: pricing.fees,
-          status: BookingStatus.CONFIRMED,
+          ownerEarnings: pricing.ownerEarnings,
+          status: BookingStatus.PENDING,
           confirmationCode,
         },
       });
@@ -227,26 +229,6 @@ export async function createBooking(data: any) {
         await tx.promotion.update({
           where: { id: promotion.id },
           data: { usedCount: { increment: 1 } }
-        });
-      }
-
-      // h. Update Owner Wallet and Create Transaction
-      const ownerWallet = location.owner.wallet;
-      if (ownerWallet) {
-        await tx.wallet.update({
-          where: { id: ownerWallet.id },
-          data: { balance: { increment: pricing.ownerEarnings } }
-        });
-
-        await tx.walletTransaction.create({
-          data: {
-            walletId: ownerWallet.id,
-            type: "CREDIT",
-            amount: pricing.ownerEarnings,
-            description: `Earnings for booking ${confirmationCode}`,
-            status: "SUCCESS",
-            reference: booking.id,
-          }
         });
       }
 
@@ -297,6 +279,11 @@ export async function createBooking(data: any) {
 
     revalidatePath("/account/reservations");
     revalidatePath(`/parking/${locationId}`);
+
+    // Notify owner of new booking (fire and forget)
+    notifyOwnerOfNewBooking(result.id).catch(err => 
+      console.error("Failed to notify owner of new booking:", err)
+    );
 
     return { success: true, data: result };
   } catch (error: any) {
@@ -599,10 +586,115 @@ export async function getBookingByConfirmationCode(code: string) {
  */
 export async function sendEmailReceipt(bookingId: string, customEmail?: string) {
   try {
-    const { sendReservationReceipt } = await import("@/lib/notifications");
     return await sendReservationReceipt(bookingId, customEmail);
   } catch (error) {
     console.error("Failed to trigger email receipt:", error);
     return { success: false, error: "Failed to send email" };
+  }
+}
+
+/**
+ * Approves a pending booking.
+ */
+export async function approveBooking(bookingId: string) {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch booking with location and owner info
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          location: {
+            include: {
+              owner: {
+                include: { wallet: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (!booking) throw new Error("Booking not found");
+      if (booking.status !== "PENDING") throw new Error("Booking is not in pending status");
+
+      // 2. Update Booking Status
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CONFIRMED" },
+      });
+
+      // 3. Update Owner Wallet
+      const ownerWallet = booking.location.owner.wallet;
+      const ownerEarnings = (booking as any).ownerEarnings;
+
+      if (ownerWallet && ownerEarnings) {
+        await tx.wallet.update({
+          where: { id: ownerWallet.id },
+          data: { balance: { increment: ownerEarnings } }
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            walletId: ownerWallet.id,
+            type: "CREDIT",
+            amount: ownerEarnings,
+            description: `Earnings for booking ${booking.confirmationCode} (Approved)`,
+            status: "SUCCESS",
+            reference: booking.id,
+          }
+        });
+      }
+
+      return updatedBooking;
+    });
+
+    revalidatePath("/owner/bookings");
+    revalidatePath("/account/reservations");
+    
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("Failed to approve booking:", error);
+    return { success: false, error: error.message || "Failed to approve reservation" };
+  }
+}
+
+/**
+ * Rejects a pending booking.
+ */
+export async function rejectBooking(bookingId: string, reason: string) {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { location: true }
+      });
+
+      if (!booking) throw new Error("Booking not found");
+      if (booking.status !== "PENDING") throw new Error("Booking is not in pending status");
+
+      // 1. Update status to REJECTED
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: { 
+          status: "REJECTED" as any,
+          rejectionReason: reason 
+        } as any,
+      });
+
+      // 2. Restore available spot
+      await tx.parkingLocation.update({
+        where: { id: booking.locationId },
+        data: { availableSpots: { increment: 1 } }
+      });
+
+      return updatedBooking;
+    });
+
+    revalidatePath("/owner/bookings");
+    revalidatePath("/account/reservations");
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("Failed to reject booking:", error);
+    return { success: false, error: error.message || "Failed to reject reservation" };
   }
 }

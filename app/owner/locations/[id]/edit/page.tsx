@@ -17,6 +17,9 @@ import {
   Search,
   DollarSign,
   Loader2,
+  Upload,
+  X,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +42,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { MediaManagementCard } from "@/components/owner/media-management-card";
 import {
   Popover,
   PopoverContent,
@@ -91,6 +95,7 @@ interface FormData {
   specialInstructions: string;
   latitude: number;
   longitude: number;
+  images: string[];
 }
 
 const initialFormData: FormData = {
@@ -120,6 +125,7 @@ const initialFormData: FormData = {
   specialInstructions: "",
   latitude: 0,
   longitude: 0,
+  images: [],
 };
 
 export default function OwnerEditLocationPage() {
@@ -187,6 +193,7 @@ export default function OwnerEditLocationPage() {
           specialInstructions: "", // TODO: Add to schema
           latitude: data.latitude || 0,
           longitude: data.longitude || 0,
+          images: data.images || [],
         });
       } else {
         toast({
@@ -208,6 +215,7 @@ export default function OwnerEditLocationPage() {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   }, [errors]);
+
 
   // Fetch address suggestions from LocationIQ API
   const fetchSuggestions = async (query: string) => {
@@ -298,12 +306,14 @@ export default function OwnerEditLocationPage() {
         heightLimit: formData.heightLimit || undefined,
         securityFeatures: formData.securityFeatures,
         amenities: formData.amenities,
-        images: [], // Keep existing or handle new uploads
+        images: formData.images,
         shuttle: formData.shuttle,
         covered: formData.covered,
         selfPark: formData.selfPark,
         valet: formData.valetPark,
         open24Hours: formData.open24Hours,
+        cancellationPolicy: formData.cancellationPolicy as any,
+        cancellationDeadline: formData.cancellationDeadline,
       };
 
       const result = await updateParkingLocation(locationId, locationData);
@@ -615,6 +625,13 @@ export default function OwnerEditLocationPage() {
             </div>
           </CardContent>
         </Card>
+
+        <MediaManagementCard
+          locationId={locationId}
+          images={formData.images}
+          onImagesChange={(newImages) => handleInputChange("images", newImages)}
+          autoSave={false}
+        />
       </div>
     </div>
   );

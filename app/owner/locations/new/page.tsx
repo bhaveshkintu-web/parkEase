@@ -112,6 +112,7 @@ interface FormData {
   specialInstructions: string;
   latitude: number;
   longitude: number;
+  images: string[];
 }
 
 interface RedeemStep {
@@ -146,6 +147,7 @@ const initialFormData: FormData = {
   specialInstructions: "",
   latitude: 0,
   longitude: 0,
+  images: [],
 };
 
 const initialRedeemSteps: RedeemStep[] = [
@@ -174,7 +176,7 @@ export default function OwnerNewLocationPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const addressRef = useRef<HTMLDivElement>(null);
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   const progress = Math.round((currentStep / totalSteps) * 100);
 
   useEffect(() => {
@@ -229,6 +231,52 @@ export default function OwnerNewLocationPage() {
     setRedeemSteps((prev) =>
       prev.map((step, i) => (i === index ? { ...step, [field]: value } : step))
     );
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsSubmitting(true);
+    const uploadedUrls: string[] = [...formData.images];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formDataUpload = new FormData();
+        formDataUpload.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formDataUpload,
+        });
+
+        if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+      handleInputChange("images", uploadedUrls);
+      toast({
+        title: "Images uploaded",
+        description: `Successfully uploaded ${files.length} image(s).`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const removeImage = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
   }, []);
 
   // Fetch address suggestions from LocationIQ API
@@ -359,12 +407,14 @@ export default function OwnerNewLocationPage() {
         heightLimit: formData.heightLimit || undefined,
         securityFeatures: formData.securityFeatures,
         amenities: formData.amenities,
-        images: [], // TODO: Implement image upload
+        images: formData.images.length > 0 ? formData.images : ["/placeholder.svg"],
         shuttle: formData.shuttle,
         covered: formData.covered,
         selfPark: formData.selfPark,
         valet: formData.valetPark,
         open24Hours: formData.open24Hours,
+        cancellationPolicy: formData.cancellationPolicy,
+        cancellationDeadline: formData.cancellationDeadline,
       };
 
       // Call the real API
@@ -450,7 +500,8 @@ export default function OwnerNewLocationPage() {
             { num: 1, label: "Location" },
             { num: 2, label: "Pricing" },
             { num: 3, label: "Services" },
-            { num: 4, label: "Review" },
+            { num: 4, label: "Media" },
+            { num: 5, label: "Review" },
           ].map((step, index) => {
             const isActive = currentStep === step.num;
             const isCompleted = currentStep > step.num;
@@ -474,7 +525,7 @@ export default function OwnerNewLocationPage() {
                     {step.label}
                   </span>
                 </div>
-                {index < 3 && (
+                {index < 4 && (
                   <div
                     className={cn(
                       "w-12 sm:w-20 h-1 mx-2",
@@ -1009,8 +1060,76 @@ export default function OwnerNewLocationPage() {
             </Card>
           )}
 
-          {/* Step 4: Review */}
+          {/* Step 4: Media Upload */}
           {currentStep === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-primary" />
+                  Location Media
+                </CardTitle>
+                <CardDescription>
+                  Upload high-quality photos to make your location stand out
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {formData.images.map((url, index) => (
+                    <div key={index} className="group relative aspect-video rounded-lg border overflow-hidden bg-muted">
+                      <img src={url} alt={`Location ${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {index === 0 && (
+                        <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-[10px] text-white py-1 text-center font-bold">
+                          MAIN COVER
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <label
+                    className={cn(
+                      "flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/[0.02] cursor-pointer transition-all gap-2",
+                      isSubmitting && "opacity-50 pointer-events-none"
+                    )}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold uppercase tracking-widest text-foreground">Upload Photos</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP up to 5MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={isSubmitting}
+                    />
+                  </label>
+                </div>
+
+                {formData.images.length === 0 && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>No photos yet</AlertTitle>
+                    <AlertDescription>
+                      Locations with at least 3 photos receive up to 50% more bookings.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 5: Review */}
+          {currentStep === 5 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1046,6 +1165,22 @@ export default function OwnerNewLocationPage() {
                   </div>
 
                   <Separator />
+
+                  {formData.images.length > 0 && (
+                    <>
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-4">Photos ({formData.images.length})</h4>
+                        <div className="flex gap-4 overflow-x-auto pb-2">
+                          {formData.images.map((url, idx) => (
+                            <div key={idx} className="h-20 aspect-video rounded-md border overflow-hidden shrink-0">
+                              <img src={url} alt="" className="h-full w-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <Separator />
+                    </>
+                  )}
 
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-2">Pricing & Capacity</h4>
