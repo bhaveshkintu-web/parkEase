@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
+import { isSameDay, isTomorrow, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,9 @@ export default function WatchmanActivityPage() {
   const [shiftFilter, setShiftFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Shift History Filter
+  const [shiftDateFilter, setShiftDateFilter] = useState("all");
 
   // Shift management states
   const [currentShift, setCurrentShift] = useState<WatchmanShift | null>(null);
@@ -542,6 +546,28 @@ export default function WatchmanActivityPage() {
     });
   }, [shifts, activityLogs]);
 
+  // Filtered shifts based on date selection
+  const filteredShifts = useMemo(() => {
+    const now = new Date();
+    return shiftsWithStats.filter(shift => {
+      const shiftDate = new Date(shift.shiftDate);
+
+      switch (shiftDateFilter) {
+        case "today":
+          return isSameDay(shiftDate, now);
+        case "tomorrow":
+          return isTomorrow(shiftDate);
+        case "week":
+          return isWithinInterval(shiftDate, {
+            start: startOfWeek(now, { weekStartsOn: 1 }),
+            end: endOfWeek(now, { weekStartsOn: 1 })
+          });
+        default:
+          return true;
+      }
+    });
+  }, [shiftsWithStats, shiftDateFilter]);
+
   return (
     <Suspense fallback={null}>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -951,6 +977,19 @@ export default function WatchmanActivityPage() {
                     <CardDescription>View past and scheduled shifts</CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Select value={shiftDateFilter} onValueChange={setShiftDateFilter}>
+                      <SelectTrigger className="w-[130px]">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Shifts</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                      </SelectContent>
+                    </Select>
+
                     <Button variant="outline" onClick={() => {
                       const printWindow = window.open('', '_blank');
                       if (!printWindow) return;
@@ -989,7 +1028,7 @@ export default function WatchmanActivityPage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  ${shiftsWithStats.map(s => `
+                                  ${filteredShifts.map(s => `
                                     <tr>
                                       <td>${new Date(s.shiftDate).toLocaleDateString()}</td>
                                       <td><strong>${s.status.toUpperCase()}</strong></td>
@@ -1026,7 +1065,7 @@ export default function WatchmanActivityPage() {
                     </Button>
                     <Button variant="outline" onClick={() => {
                       const headers = ["Date", "Status", "Location", "Scheduled Start", "Scheduled End", "Actual Start", "Actual End", "Check-ins", "Check-outs", "Incidents"];
-                      const rows = shiftsWithStats.map(s => [
+                      const rows = filteredShifts.map(s => [
                         new Date(s.shiftDate).toLocaleDateString(),
                         s.status,
                         s.parkingName,
@@ -1058,12 +1097,12 @@ export default function WatchmanActivityPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {shiftsWithStats.length === 0 ? (
+                  {filteredShifts.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground border rounded-lg">
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>No shift history found</p>
+                      <p>No shift history found for this filter</p>
                     </div>
-                  ) : shiftsWithStats.map((shift) => (
+                  ) : filteredShifts.map((shift) => (
                     <div
                       key={shift.id}
                       className={`p-4 border rounded-lg ${shift.status === "active"
