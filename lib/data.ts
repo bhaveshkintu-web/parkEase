@@ -40,12 +40,32 @@ export const benefits = [
 
 export function calculateDays(checkIn: Date, checkOut: Date): number {
   const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(diffDays, 1);
+  // Returns pro-rated days (fractional)
+  return diffTime / (1000 * 60 * 60 * 24);
+}
+
+export function formatDuration(checkIn: Date, checkOut: Date): string {
+  const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+  const diffHours = diffTime / (1000 * 60 * 60);
+  
+  if (diffHours < 24) {
+    const hours = Math.round(diffHours);
+    return `${hours} hour${hours !== 1 ? 's' : ''}`;
+  }
+  
+  const days = Math.floor(diffHours / 24);
+  const remainingHours = Math.round(diffHours % 24);
+  
+  if (remainingHours === 0) {
+    return `${days} day${days !== 1 ? 's' : ''}`;
+  }
+  
+  return `${days} day${days !== 1 ? 's' : ''}, ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
 }
 
 export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOut: Date) {
   const days = calculateDays(checkIn, checkOut);
+  const displayDays = Math.ceil(days); // For display in "X days" text if needed, but price is pro-rated
   const basePrice = location.pricePerDay * days;
   const taxes = basePrice * 0.0925; // 9.25% tax
   const fees = 2.99; // Service fee
@@ -56,7 +76,8 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
 
   return {
-    days,
+    days: days,
+    durationText: formatDuration(checkIn, checkOut),
     basePrice,
     taxes,
     fees,

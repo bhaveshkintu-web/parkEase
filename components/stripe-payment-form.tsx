@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertCircle, ShieldCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface StripePaymentFormProps {
   onPaymentSuccess: (paymentIntentId: string) => void;
@@ -221,29 +222,22 @@ export function StripePaymentForm({
       <div className="space-y-4 pt-2">
         {/* Terms Checkbox - Shared placement */}
         <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-          <div className="mt-0.5">
-            <input
-              type="checkbox"
-              id="stripe-terms"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-          </div>
-          {/* <Label htmlFor="stripe-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer font-medium italic">
-            I agree to the Terms of Service & Cancellation Policy. I understand that my reservation is subject to availability.
-          </Label> */}
+          <Checkbox
+            id="terms"
+            checked={agreedToTerms}
+            onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+          />
           <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                                    I agree to the{" "}
-                                    <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                                      Terms of Service
-                                    </Link>{" "}
-                                    and{" "}
-                                    <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                                      Cancellation Policy
-                                    </Link>
-                                    . I understand that my reservation is subject to availability.
-                                  </Label>
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+              Cancellation Policy
+            </Link>
+            . I understand that my reservation is subject to availability.
+          </Label>
         </div>
 
         <Button
