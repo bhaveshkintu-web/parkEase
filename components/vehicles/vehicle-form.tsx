@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { vehicleSchema, type VehicleInput } from "@/lib/validations";
+import { fetchModelsByMake } from "@/lib/vehicle-api";
+import { CAR_MAKES } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,37 +33,6 @@ type Props = {
   onSubmit: (data: VehicleInput) => Promise<void>;
   loading?: boolean;
 };
-
-const CAR_MAKES = [
-  "Acura",
-  "Audi",
-  "BMW",
-  "Buick",
-  "Cadillac",
-  "Chevrolet",
-  "Chrysler",
-  "Dodge",
-  "Ford",
-  "GMC",
-  "Honda",
-  "Hyundai",
-  "Infiniti",
-  "Jeep",
-  "Kia",
-  "Lexus",
-  "Lincoln",
-  "Mazda",
-  "Mercedes-Benz",
-  "Nissan",
-  "Porsche",
-  "Ram",
-  "Subaru",
-  "Tesla",
-  "Toyota",
-  "Volkswagen",
-  "Volvo",
-  "Other",
-];
 
 const COLORS = [
   "Black",
@@ -146,13 +117,44 @@ export function VehicleForm({
 }: Props) {
   const [formData, setFormData] = useState<VehicleInput>(initialData);
   const [saving, setSaving] = useState(false);
+  const [models, setModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!formData.make || formData.make === "Other") {
+        setModels([]);
+        return;
+      }
+
+      setIsFetchingModels(true);
+      try {
+        const fetchedModels = await fetchModelsByMake(formData.make);
+        setModels(fetchedModels);
+      } catch (error) {
+        console.error("Error loading models:", error);
+        setModels([]);
+      } finally {
+        setIsFetchingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [formData.make]);
 
   const handleChange = <K extends keyof VehicleInput>(
     key: K,
     value: VehicleInput[K],
   ) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [key]: value };
+      // Clear model if make changes
+      if (key === "make") {
+        newData.model = "";
+      }
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,10 +224,35 @@ export function VehicleForm({
 
             <div>
               <Label>Model</Label>
-              <Input
-                value={formData.model}
-                onChange={(e) => handleChange("model", e.target.value)}
-              />
+              {isFetchingModels ? (
+                <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Fetching models...</span>
+                </div>
+              ) : models.length > 0 ? (
+                <Select
+                  value={formData.model}
+                  onValueChange={(v) => handleChange("model", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={formData.model}
+                  onChange={(e) => handleChange("model", e.target.value)}
+                  placeholder={formData.make ? "Enter model name" : "Select make first"}
+                />
+              )}
             </div>
           </div>
 
