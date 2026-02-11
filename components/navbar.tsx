@@ -28,6 +28,7 @@ import {
   Building2,
   Users2,
   Search,
+  Heart,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getUserInitials } from "@/lib/user-utils";
@@ -118,6 +119,12 @@ export function Navbar() {
                   <Link href="/account/reservations">
                     <Calendar className="mr-2 h-4 w-4" />
                     Reservations
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/account/favorites">
+                    <Heart className="mr-2 h-4 w-4" />
+                    Favorites
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -235,6 +242,14 @@ export function Navbar() {
                       >
                         <Calendar className="h-5 w-5" />
                         Reservations
+                      </Link>
+                      <Link
+                        href="/account/favorites"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <Heart className="h-5 w-5" />
+                        Favorites
                       </Link>
                       {(user.role.toLowerCase() === "admin" ||
                         user.role.toLowerCase() === "owner" ||

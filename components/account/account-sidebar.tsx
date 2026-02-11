@@ -18,12 +18,14 @@ import {
   MapPin,
   MessageSquare,
   Building2,
+  Heart,
 } from "lucide-react";
 
 const userNavItems = [
   { href: "/account", label: "Dashboard", icon: LayoutDashboard },
   { href: "/account/profile", label: "Profile", icon: User },
   { href: "/account/reservations", label: "Reservations", icon: Calendar },
+  { href: "/account/favorites", label: "Saved Locations", icon: Heart },
   { href: "/account/vehicles", label: "Saved Vehicles", icon: Car },
   { href: "/account/payments", label: "Payment Methods", icon: CreditCard },
   { href: "/account/settings", label: "Settings", icon: Settings },
@@ -84,7 +86,7 @@ export function AccountSidebar() {
               </Link>
             );
           })}
-          
+
 
         </div>
 

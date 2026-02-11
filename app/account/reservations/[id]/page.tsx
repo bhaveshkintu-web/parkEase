@@ -755,9 +755,24 @@ export default function ReservationDetailPage({
                     </div>
                     <Separator />
                     <div className="flex justify-between font-semibold text-lg">
-                      <span className="text-foreground">Total {isCancelled ? "refunded" : "paid"}</span>
+                      <span className="text-foreground">Total paid</span>
                       <span className="text-foreground">{formatCurrency(reservation.totalPrice)}</span>
                     </div>
+                    {isCancelled && (
+                      <>
+                        <div className="flex justify-between text-sm text-red-600">
+                          <span>Refund amount</span>
+                          <span className="font-semibold">
+                            {formatCurrency(
+                              reservation.refunds?.reduce((sum: number, refund: any) => sum + (refund.approvedAmount || 0), 0) || 0
+                            )}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          See Support & Refunds section below for refund details
+                        </p>
+                      </>
+                    )}
                     {!isCancelled && (
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -853,12 +868,29 @@ export default function ReservationDetailPage({
                         </div>
                       ))}
                       {supportStatus.refunds.map((r: any) => (
-                        <div key={r.id} className="text-xs p-2 bg-white rounded border flex flex-col gap-1">
+                        <div key={r.id} className="text-xs p-3 bg-white rounded border space-y-2">
                           <div className="flex justify-between items-center">
-                            <Badge variant="secondary" className="text-[10px] h-4 px-1">{r.status}</Badge>
-                            <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-muted-foreground">Status</span>
+                            <Badge
+                              variant={r.status === 'APPROVED' ? 'default' : r.status === 'REJECTED' ? 'destructive' : 'secondary'}
+                              className="text-[10px] h-4 px-1"
+                            >
+                              {r.status}
+                            </Badge>
                           </div>
-                          <p className="font-semibold text-primary">{formatCurrency(r.amount)}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-muted-foreground">Requested</span>
+                            <span className="font-medium">{formatCurrency(r.amount)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-muted-foreground">Approved</span>
+                            <span className="font-semibold text-primary">
+                              {formatCurrency(r.status === 'REJECTED' ? 0 : (r.approvedAmount || 0))}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground text-right">
+                            {new Date(r.createdAt).toLocaleDateString()}
+                          </div>
                         </div>
                       ))}
                     </CardContent>
