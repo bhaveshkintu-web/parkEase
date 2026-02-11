@@ -96,7 +96,8 @@ function CheckoutContent() {
     guestInfo: contextGuestInfo,
     vehicleInfo: contextVehicleInfo,
     setGuestInfo: updateContextGuestInfo,
-    setVehicleInfo: updateContextVehicleInfo
+    setVehicleInfo: updateContextVehicleInfo,
+    minBookingDuration
   } = useBooking();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
@@ -187,8 +188,20 @@ function CheckoutContent() {
       router.push("/parking");
       return;
     }
+
+    const minDuration = minBookingDuration * 60 * 1000;
+    if (checkOut.getTime() - checkIn.getTime() < minDuration) {
+      toast({
+        title: "Invalid Duration",
+        description: `Minimum booking duration is ${minBookingDuration >= 60 ? `${minBookingDuration / 60} hours` : `${minBookingDuration} minutes`}.`,
+        variant: "destructive",
+      });
+      router.push(`/parking/${contextLocation.id}`);
+      return;
+    }
+    
     setIsLoading(false);
-  }, [contextLocation, router, toast]);
+  }, [contextLocation, checkIn, checkOut, router, toast]);
 
   // Sync Guest and Vehicle info to context whenever they change
   useEffect(() => {
@@ -920,25 +933,27 @@ function CheckoutContent() {
                         </div>
                       )}
 
-                      {/* Terms Checkbox Moved Here */}
-                      {/* <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-                        <Checkbox
-                          id="terms"
-                          checked={agreedToTerms}
-                          onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                        />
-                        <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                          I agree to the{" "}
-                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                            Terms of Service
-                          </Link>{" "}
-                          and{" "}
-                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                            Cancellation Policy
-                          </Link>
-                          . I understand that my reservation is subject to availability.
-                        </Label>
-                      </div> */}
+                      {/* Agreement Checkbox */}
+                      {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
+                          <Checkbox
+                            id="terms"
+                            checked={agreedToTerms}
+                            onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                          />
+                          <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                            I agree to the{" "}
+                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                              Terms of Service
+                            </Link>{" "}
+                            and{" "}
+                            <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                              Cancellation Policy
+                            </Link>
+                            . I understand that my reservation is subject to availability.
+                          </Label>
+                        </div>
+                      )}
 
                       {/* Unified Submit Button for Saved Card or Demo */}
                       {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
@@ -1038,7 +1053,7 @@ function CheckoutContent() {
                         <Clock className="h-4 w-4" />
                         Duration
                       </div>
-                      <span className="font-medium text-foreground">{days} day{days > 1 ? "s" : ""}</span>
+                      <span className="font-medium text-foreground">{quote.durationText}</span>
                     </div>
                   </div>
 
@@ -1077,7 +1092,7 @@ function CheckoutContent() {
                   <div className="space-y-2 border-t border-border pt-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {formatCurrency(bookingLocation.pricePerDay)} x {days} day{days > 1 ? "s" : ""}
+                        {formatCurrency(bookingLocation.pricePerDay)} x {quote.durationText}
                       </span>
                       <span className="text-foreground">{formatCurrency(basePrice)}</span>
                     </div>

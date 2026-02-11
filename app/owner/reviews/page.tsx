@@ -118,9 +118,9 @@ export default function OwnerReviewsPage() {
     fetchData();
   }, [setReviewData]);
 
-  // Filter and sort reviews
-  const filteredReviews = useMemo(() => {
-    let filtered = adminReviews.filter((review) => {
+  // Base filtered reviews (for stats calculation)
+  const baseFilteredReviews = useMemo(() => {
+    return adminReviews.filter((review) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -156,6 +156,13 @@ export default function OwnerReviewsPage() {
         return false;
       }
 
+      return true;
+    });
+  }, [adminReviews, searchQuery, ratingFilter, replyFilter, locationFilter, airportFilter]);
+
+  // Final filtered and sorted reviews
+  const filteredReviews = useMemo(() => {
+    let filtered = baseFilteredReviews.filter((review) => {
       // Tab filter
       if (activeTab === "positive" && review.rating < 4) {
         return false;
@@ -189,7 +196,7 @@ export default function OwnerReviewsPage() {
     });
 
     return filtered;
-  }, [adminReviews, searchQuery, ratingFilter, replyFilter, locationFilter, sortBy, activeTab, airportFilter]); // Added airportFilter to dependencies
+  }, [baseFilteredReviews, sortBy, activeTab]);
 
   // Pagination
   const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
@@ -198,17 +205,18 @@ export default function OwnerReviewsPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Stats
+  // Stats based on filtered data
   const stats = useMemo(() => {
-    const total = adminReviews.length;
-    const avgRating = total > 0 ? adminReviews.reduce((sum, r) => sum + r.rating, 0) / total : 0;
-    const replied = adminReviews.filter((r) => r.ownerReply).length;
-    const positive = adminReviews.filter((r) => r.rating >= 4).length;
-    const negative = adminReviews.filter((r) => r.rating < 4).length;
+    const data = baseFilteredReviews;
+    const total = data.length;
+    const avgRating = total > 0 ? data.reduce((sum, r) => sum + r.rating, 0) / total : 0;
+    const replied = data.filter((r) => r.ownerReply).length;
+    const positive = data.filter((r) => r.rating >= 4).length;
+    const negative = data.filter((r) => r.rating < 4).length;
     const unreplied = total - replied;
 
     return { total, avgRating, replied, unreplied, positive, negative };
-  }, [adminReviews]);
+  }, [baseFilteredReviews]);
 
   // Unique airports and locations for filter
   const airports = filterAirports;

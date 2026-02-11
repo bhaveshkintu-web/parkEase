@@ -50,6 +50,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
     setCheckOut,
     parkingType,
     setParkingType,
+    minBookingDuration,
   } = useBooking();
 
   const [localQuery, setLocalQuery] = useState(searchQuery);
@@ -315,19 +316,18 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-              <Calendar mode="single" selected={checkIn} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkIn.getHours(), checkIn.getMinutes()); setCheckIn(n); if(n>=checkOut) { const nc = new Date(n); nc.setHours(nc.getHours()+24); setCheckOut(nc); } setCheckInOpen(false); }}} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+              <Calendar mode="single" selected={checkIn} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkIn.getHours(), checkIn.getMinutes(), 0, 0); setCheckIn(n); if(n.getTime() + minBookingDuration * 60000 > checkOut.getTime()) { const nc = new Date(n.getTime() + minBookingDuration * 60000); setCheckOut(nc); } setCheckInOpen(false); }}} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus />
               <div className="border-t border-border pt-3">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Drop-off Time</label>
                 <Select
                   value={`${checkIn.getHours().toString().padStart(2, '0')}:${checkIn.getMinutes().toString().padStart(2, '0')}`}
                   onValueChange={(value) => {
                     const [hours, minutes] = value.split(':').map(Number);
-                    const newDate = new Date(checkIn);
-                    newDate.setHours(hours, minutes);
-                    setCheckIn(newDate);
-                    if (newDate >= checkOut) {
-                      const newCheckOut = new Date(newDate);
-                      newCheckOut.setHours(newCheckOut.getHours() + 2);
+                    const newCheckIn = new Date(checkIn);
+                    newCheckIn.setHours(hours, minutes, 0, 0);
+                    setCheckIn(newCheckIn);
+                    if (newCheckIn.getTime() + minBookingDuration * 60000 > checkOut.getTime()) {
+                      const newCheckOut = new Date(newCheckIn.getTime() + minBookingDuration * 60000);
                       setCheckOut(newCheckOut);
                     }
                   }}
@@ -367,16 +367,21 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-               <Calendar mode="single" selected={checkOut} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkOut.getHours(), checkOut.getMinutes()); setCheckOut(n); } }} disabled={(d) => d <= checkIn} initialFocus />
+               <Calendar mode="single" selected={checkOut} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkOut.getHours(), checkOut.getMinutes(), 0, 0); if(checkIn.getTime() + minBookingDuration * 60000 > n.getTime()) { const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000); setCheckOut(bumped); } else { setCheckOut(n); } } }} disabled={(d) => d < new Date(new Date(checkIn).setHours(0,0,0,0))} initialFocus />
               <div className="border-t border-border pt-3">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Pick-up Time</label>
                 <Select
                   value={`${checkOut.getHours().toString().padStart(2, '0')}:${checkOut.getMinutes().toString().padStart(2, '0')}`}
                   onValueChange={(value) => {
                     const [hours, minutes] = value.split(':').map(Number);
-                    const newDate = new Date(checkOut);
-                    newDate.setHours(hours, minutes);
-                    setCheckOut(newDate);
+                    const newCheckOut = new Date(checkOut);
+                    newCheckOut.setHours(hours, minutes, 0, 0);
+                    if (checkIn.getTime() + minBookingDuration * 60000 > newCheckOut.getTime()) {
+                      const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000);
+                      setCheckOut(bumped);
+                    } else {
+                      setCheckOut(newCheckOut);
+                    }
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -391,7 +396,14 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
                       const displayMinute = minute.toString().padStart(2, '0');
                       const ampm = hour < 12 ? 'AM' : 'PM';
                       return (
-                        <SelectItem key={timeString} value={timeString}>
+                        <SelectItem 
+                          key={timeString} 
+                          value={timeString}
+                          disabled={
+                            checkIn.toDateString() === checkOut.toDateString() && 
+                            (hour * 60 + minute) < (checkIn.getHours() * 60 + checkIn.getMinutes() + minBookingDuration)
+                          }
+                        >
                           {displayHour}:{displayMinute} {ampm}
                         </SelectItem>
                       );
