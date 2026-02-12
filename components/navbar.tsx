@@ -163,6 +163,14 @@ export function Navbar() {
                           Dashboard
                         </Link>
                       </DropdownMenuItem>
+                      {user.role.toLowerCase() === "owner" && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/owner/profile">
+                            <Building2 className="mr-2 h-4 w-4" />
+                            Owner Profile
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       {user.role.toLowerCase() === "admin" && (
                         <DropdownMenuItem asChild>
                           <Link href="/admin/approvals/owners">

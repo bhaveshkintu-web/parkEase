@@ -26,6 +26,7 @@ export type User = {
   emailVerified: boolean;
   role: UserRole;
   ownerId?: string;
+  isProfileComplete?: boolean;
   ownerProfile?: any; // Avoiding circular dependency if possible, or just use any for now
   createdAt?: string;
   preferences?: {
@@ -92,7 +93,7 @@ interface AuthContextType extends AuthState {
   uploadAvatar: (file: File) => Promise<{ success: boolean; error?: string }>;
 
   removeAvatar: () => Promise<{ success: boolean; error?: string }>;
-  
+
   updatePreferences: (
     data: any,
   ) => Promise<{ success: boolean; error?: string }>;
@@ -157,6 +158,7 @@ function normalizeUser(raw: any): User {
     emailVerified: Boolean(raw.emailVerified),
     role: raw.role, // Preserve exact role from database (ADMIN, OWNER, CUSTOMER, etc.)
     ownerId: raw.ownerId,
+    isProfileComplete: raw.isProfileComplete,
     ownerProfile: raw.ownerProfile,
     createdAt: raw.createdAt,
     preferences: raw.preferences ?? {
@@ -359,7 +361,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     updatePreferences: async (data: any) => {
       if (!user) return { success: false, error: "Not authenticated" };
-      
+
       try {
         // Determine what's being updated
         if (data.notifications) {
@@ -410,9 +412,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { updateUserSecurityPreferences } = await import("@/lib/actions/auth-actions");
       const result = await updateUserSecurityPreferences(user.id, data);
       if (result.success) {
-         const sessionRes = await fetch("/api/auth/session");
-         const sessionData = await sessionRes.json();
-         if (sessionData?.user) setUser(normalizeUser(sessionData.user));
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user) setUser(normalizeUser(sessionData.user));
       }
       return result;
     },
@@ -432,9 +434,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { verifyUserTwoFactor } = await import("@/lib/actions/auth-actions");
       const result = await verifyUserTwoFactor(user.id, code);
       if (result.success) {
-         const sessionRes = await fetch("/api/auth/session");
-         const sessionData = await sessionRes.json();
-         if (sessionData?.user) setUser(normalizeUser(sessionData.user));
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user) setUser(normalizeUser(sessionData.user));
       }
       return result;
     },

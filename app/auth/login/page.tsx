@@ -67,7 +67,13 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (loginResult.success && loginResult.user) {
-      const dashboardUrl = getDashboardUrlForRole(loginResult.user.role);
+      let dashboardUrl = getDashboardUrlForRole(loginResult.user.role);
+
+      // Redirect new owners to profile setup if they haven't completed it
+      if (loginResult.user.role?.toUpperCase() === "OWNER" && !(loginResult.user as any).isProfileComplete) {
+        dashboardUrl = "/owner/profile";
+      }
+
       router.push(dashboardUrl);
     } else {
       setServerError(loginResult.error || "Login failed");

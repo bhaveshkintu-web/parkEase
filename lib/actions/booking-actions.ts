@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
 import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
-import { notifyOwnerOfNewBooking } from "@/lib/notifications";
+import { notifyOwnerOfNewBooking, sendReservationReceipt } from "@/lib/notifications";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -281,7 +281,7 @@ export async function createBooking(data: any) {
     revalidatePath(`/parking/${locationId}`);
 
     // Notify owner of new booking (fire and forget)
-    notifyOwnerOfNewBooking(result.id).catch(err => 
+    notifyOwnerOfNewBooking(result.id).catch(err =>
       console.error("Failed to notify owner of new booking:", err)
     );
 
@@ -338,29 +338,29 @@ export async function cancelBooking(bookingId: string, reason: string) {
 
     // Default policy if missing (fallback)
     if (!policy) {
-      // If no policy set, assume user gets full refund if > 24h (safe fallback) or 0 (strict)
-      // Choosing to return 0 to be safe and let admin decide, but marking as 'manual review'
-      refundAmount = 0;
+      // If no policy set, assume user gets full refund if > 24h
+      if (hoursUntilCheckIn >= 24) {
+        refundAmount = booking.totalPrice;
+      } else {
+        return { success: false, error: "The cancellation deadline for this reservation has passed. Cancellation is no longer permitted." };
+      }
     } else {
-      const deadlineHours = policy.hours || 24; // Default to 24 if parsing failed
+      const deadlineHours = parseInt(policy.hours) || 24;
+
+      if (policy.type === "strict") {
+        return { success: false, error: "This reservation is non-refundable and cannot be cancelled." };
+      }
+
+      if (hoursUntilCheckIn < deadlineHours) {
+        return { success: false, error: `The cancellation period (${deadlineHours} hours before check-in) has passed. Cancellation is no longer permitted.` };
+      }
 
       switch (policy.type) {
         case "free":
-          if (hoursUntilCheckIn >= deadlineHours) {
-            refundAmount = booking.totalPrice;
-          } else {
-            refundAmount = 0; // Past deadline
-          }
+          refundAmount = booking.totalPrice;
           break;
         case "moderate":
-          if (hoursUntilCheckIn >= deadlineHours) {
-            refundAmount = booking.totalPrice * 0.5;
-          } else {
-            refundAmount = 0;
-          }
-          break;
-        case "strict":
-          refundAmount = 0;
+          refundAmount = booking.totalPrice * 0.5;
           break;
         default:
           refundAmount = 0;
@@ -649,7 +649,7 @@ export async function approveBooking(bookingId: string) {
 
     revalidatePath("/owner/bookings");
     revalidatePath("/account/reservations");
-    
+
     return { success: true, data: result };
   } catch (error: any) {
     console.error("Failed to approve booking:", error);
@@ -674,9 +674,9 @@ export async function rejectBooking(bookingId: string, reason: string) {
       // 1. Update status to REJECTED
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
-        data: { 
+        data: {
           status: "REJECTED" as any,
-          rejectionReason: reason 
+          rejectionReason: reason
         } as any,
       });
 

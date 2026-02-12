@@ -290,10 +290,11 @@ function LocationDetailsContent({ id }: { id: string }) {
             {/* Main Large Image */}
             <div
               className={cn(
-                "relative row-span-2 aspect-auto bg-muted cursor-pointer overflow-hidden group border-r border-background/10 md:border-r-0",
-                location.images && location.images.length === 1 ? "col-span-4" : "col-span-2"
+                "relative row-span-2 aspect-auto bg-muted overflow-hidden group border-r border-background/10 md:border-r-0",
+                location.images && location.images.length === 1 ? "col-span-4" : "col-span-2",
+                location.images && location.images.length > 0 && "cursor-pointer"
               )}
-              onClick={() => openGallery(0)}
+              onClick={() => location.images && location.images.length > 0 && openGallery(0)}
             >
               {location.images && location.images[0] ? (
                 <img
