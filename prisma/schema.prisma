@@ -42,6 +42,19 @@ model User {
   trustedDevices    TrustedDevice[]
   watchmanProfile   Watchman?
   magicTokens       MagicToken[]
+  savedLocations    SavedLocation[]
+}
+
+model SavedLocation {
+  id         String          @id @default(cuid())
+  userId     String
+  locationId String
+  createdAt  DateTime        @default(now())
+  user       User            @relation(fields: [userId], references: [id])
+  location   ParkingLocation @relation(fields: [locationId], references: [id])
+
+  @@unique([userId, locationId])
+  @@index([userId])
 }
 
 model MagicToken {
@@ -128,6 +141,7 @@ model ParkingLocation {
   reviews             Review[]
   watchmanShifts      WatchmanShift[]
   watchmen            Watchman[]         @relation("ParkingLocationToWatchman")
+  savedByUsers        SavedLocation[]
 }
 
 model Booking {
