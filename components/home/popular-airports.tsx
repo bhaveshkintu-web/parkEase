@@ -18,9 +18,11 @@ export function PopularAirports() {
               Book parking at top airports and save up to 60%
             </p>
           </div>
-          <Button variant="ghost" className="hidden gap-2 md:flex">
-            View all airports
-            <ArrowRight className="h-4 w-4" />
+          <Button variant="ghost" className="hidden gap-2 md:flex" asChild>
+            <Link href="/parking">
+              View all airports
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
 
@@ -58,9 +60,11 @@ export function PopularAirports() {
         </div>
 
         <div className="mt-6 text-center md:hidden">
-          <Button variant="outline" className="gap-2 bg-transparent">
-            View all airports
-            <ArrowRight className="h-4 w-4" />
+          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+            <Link href="/parking">
+              View all airports
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>

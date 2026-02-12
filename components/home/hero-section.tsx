@@ -11,9 +11,9 @@ const heroFeatures = [
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-background">
+    <section className="relative bg-gradient-to-br from-primary/10 via-background to-background z-10">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 opacity-30 overflow-hidden">
         <div className="absolute left-1/4 top-1/4 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
       </div>
@@ -48,7 +48,7 @@ export function HeroSection() {
           </div>
 
           {/* Search Widget */}
-          <SearchWidget variant="hero" className="mx-auto max-w-4xl" />
+          <SearchWidget variant="hero" className="mx-auto max-w-4xl relative z-50" />
         </div>
       </div>
     </section>

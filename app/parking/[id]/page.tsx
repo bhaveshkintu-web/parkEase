@@ -13,6 +13,7 @@ import { RedeemStepsCard, SpecialInstructionsCard } from "@/components/parking/r
 import { BookingProvider, useBooking } from "@/lib/booking-context";
 import { getAvailabilityStatus, formatCurrency, calculateQuote } from "@/lib/data";
 import { getParkingLocationById, getNearbyParkingLocations } from "@/lib/actions/parking-actions";
+import { toggleFavorite, checkIsFavorite } from "@/lib/actions/favorites-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,6 +62,8 @@ function LocationDetailsContent({ id }: { id: string }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isGalleryOpen, setIsGalleryOpen] = React.useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
+  const [isFavorite, setIsFavorite] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const { checkIn, checkOut, setLocation } = useBooking();
 
@@ -81,6 +84,10 @@ function LocationDetailsContent({ id }: { id: string }) {
             setNearbyLocations(nearbyResponse.data);
           }
         }
+
+        // Check if favorite
+        const favResponse = await checkIsFavorite(id);
+        setIsFavorite(favResponse.isFavorite);
       }
       setIsLoading(false);
     }
@@ -123,11 +130,35 @@ function LocationDetailsContent({ id }: { id: string }) {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Saved",
-      description: "Location added to your favorites.",
-    });
+  const handleSave = async () => {
+    if (!location) return;
+    setIsSaving(true);
+    try {
+      const result = await toggleFavorite(location.id);
+      if (result.success) {
+        setIsFavorite(!!result.isFavorite);
+        toast({
+          title: result.isFavorite ? "Saved to Favorites" : "Removed from Favorites",
+          description: result.isFavorite
+            ? "Location added to your favorites."
+            : "Location removed from your favorites.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update favorites.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const openGallery = (index: number = 0) => {
@@ -238,9 +269,18 @@ function LocationDetailsContent({ id }: { id: string }) {
                 <Share className="h-4 w-4" />
                 Share
               </Button>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleSave}>
-                <Heart className="h-4 w-4" />
-                Save
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "gap-2 bg-transparent transition-colors",
+                  isFavorite && "text-red-500 hover:text-red-600 border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900"
+                )}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                <Heart className={cn("h-4 w-4 transition-all", isFavorite && "fill-current scale-110")} />
+                {isFavorite ? "Saved" : "Save"}
               </Button>
             </div>
           </div>
@@ -249,7 +289,10 @@ function LocationDetailsContent({ id }: { id: string }) {
           <div className="relative mb-8 grid gap-2 overflow-hidden rounded-xl h-[300px] md:h-[500px] md:grid-cols-4 md:grid-rows-2">
             {/* Main Large Image */}
             <div
-              className="relative col-span-2 row-span-2 aspect-auto bg-muted cursor-pointer overflow-hidden group border-r border-background/10 md:border-r-0"
+              className={cn(
+                "relative row-span-2 aspect-auto bg-muted cursor-pointer overflow-hidden group border-r border-background/10 md:border-r-0",
+                location.images && location.images.length === 1 ? "col-span-4" : "col-span-2"
+              )}
               onClick={() => openGallery(0)}
             >
               {location.images && location.images[0] ? (
@@ -263,7 +306,7 @@ function LocationDetailsContent({ id }: { id: string }) {
                   <Car className="h-24 w-24 text-primary/30" />
                 </div>
               )}
-              {/* Overlay labels moved to top badges section for cleaner look or kept here with reduced visibility */}
+              {/* Overlay labels */}
               <div className="absolute left-4 top-4 flex flex-wrap gap-2 pointer-events-none">
                 {location.shuttle && (
                   <Badge className="gap-1 bg-primary/90 backdrop-blur-md border-none shadow-sm">
@@ -275,43 +318,50 @@ function LocationDetailsContent({ id }: { id: string }) {
             </div>
 
             {/* Thumbnails - Grid approach to look more "equal" */}
-            <div className="hidden md:grid col-span-2 row-span-2 grid-cols-2 grid-rows-2 gap-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="relative overflow-hidden bg-muted cursor-pointer group"
-                  onClick={() => i < (location.images?.length || 0) ? openGallery(i) : openGallery(0)}
-                >
-                  {location.images && location.images[i] ? (
-                    <img
-                      src={location.images[i]}
-                      alt={`${location.name} ${i}`}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-muted/50">
-                      <Car className="h-10 w-10 text-muted-foreground/20" />
-                    </div>
-                  )}
-                  {/* Overlay for more photos tag on the last slot */}
-                  {i === 4 && location.images && location.images.length > 5 && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center text-white font-bold group-hover:bg-black/60 transition-colors">
-                      <span className="text-2xl">+{location.images.length - 4}</span>
-                      <span className="text-[10px] uppercase tracking-wider">Photos</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {location.images && location.images.length > 1 && (
+              <div className={cn(
+                "hidden md:grid col-span-2 row-span-2 gap-2",
+                location.images.length === 2 ? "grid-cols-1 grid-rows-1" :
+                  location.images.length === 3 ? "grid-cols-1 grid-rows-2" :
+                    "grid-cols-2 grid-rows-2"
+              )}>
+                {[1, 2, 3, 4].map((i) => {
+                  if (i >= location.images.length) return null;
 
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute bottom-4 right-4 gap-2 shadow-lg bg-white/80 backdrop-blur-md hover:bg-white text-foreground border-white/20 transition-all active:scale-95"
-              onClick={() => openGallery(0)}
-            >
-              <span className="font-semibold px-1">Show all photos</span>
-            </Button>
+                  return (
+                    <div
+                      key={i}
+                      className="relative overflow-hidden bg-muted cursor-pointer group"
+                      onClick={() => openGallery(i)}
+                    >
+                      <img
+                        src={location.images[i]}
+                        alt={`${location.name} ${i}`}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      {/* Overlay for more photos tag on the last slot */}
+                      {i === 4 && location.images.length > 5 && (
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center text-white font-bold group-hover:bg-black/60 transition-colors">
+                          <span className="text-2xl">+{location.images.length - 4}</span>
+                          <span className="text-[10px] uppercase tracking-wider">Photos</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {location.images && location.images.length > 5 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="absolute bottom-4 right-4 gap-2 shadow-lg bg-white/80 backdrop-blur-md hover:bg-white text-foreground border-white/20 transition-all active:scale-95"
+                onClick={() => openGallery(0)}
+              >
+                <span className="font-semibold px-1">Show all photos</span>
+              </Button>
+            )}
           </div>
 
           {/* Main Content */}
