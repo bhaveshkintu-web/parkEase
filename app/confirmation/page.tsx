@@ -363,7 +363,7 @@ Visit our website at parkease.com for help.
                 <div className="flex items-center justify-between border-t border-border pt-4">
                   <div className="flex items-center gap-2">
                     <Clock className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-foreground">{quote.days} day{quote.days > 1 ? "s" : ""}</span>
+                    <span className="text-foreground">{quote.days.toFixed(2)} day{quote.days > 1 ? "s" : ""}</span>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Total Paid</p>
