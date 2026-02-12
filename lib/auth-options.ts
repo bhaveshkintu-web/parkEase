@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
           const { consumeMagicToken } = await import("@/lib/token-utils");
           const user = await consumeMagicToken(credentials.token);
           if (!user) throw new Error("Invalid or expired token");
-          
+
           return {
             id: user.id,
             email: user.email,
@@ -105,7 +105,7 @@ export const authOptions: NextAuthOptions = {
             token.ownerId = profile.id;
           }
         }
-        
+
         // Fetch preferences
         const prefSettings = await prisma.platformSettings.findMany({
           where: { key: { startsWith: `user:${user.id}:` } }
@@ -139,6 +139,24 @@ export const authOptions: NextAuthOptions = {
         if (defaultPayment) preferences.defaultPaymentId = defaultPayment.id;
 
         token.preferences = preferences;
+      } else if (token.id) {
+        // Refresh user data (like avatar) from DB on session check
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: {
+            firstName: true,
+            lastName: true,
+            phone: true,
+            avatar: true
+          }
+        });
+
+        if (dbUser) {
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
+          token.phone = dbUser.phone;
+          token.avatar = dbUser.avatar;
+        }
       }
 
       // Session Revocation Check
