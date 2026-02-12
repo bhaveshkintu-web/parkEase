@@ -37,9 +37,11 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id },
     });
 
-    if (!ownerProfile) {
+    const isProfileComplete = ownerProfile && ownerProfile.street !== "N/A" && ownerProfile.zipCode !== "N/A";
+
+    if (!isProfileComplete) {
       return NextResponse.json(
-        { error: "Owner profile not found. Please complete your profile first." },
+        { error: "Owner profile is incomplete. Please complete your business details first." },
         { status: 403 }
       );
     }
@@ -138,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     // 6. Response
     // Send notifications asynchronously (don't block response)
-    notifyAdminsOfLocationSubmission(newLocation).catch(err => 
+    notifyAdminsOfLocationSubmission(newLocation).catch(err =>
       console.error("Failed to send location submission notifications:", err)
     );
 

@@ -12,26 +12,32 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   const { user, isLoading, isAuthenticated } = useAuth();
   const [hasProfile, setHasProfile] = React.useState<boolean | null>(null);
 
-  // Check if owner has a profile
+  // Check if owner has a complete profile
   React.useEffect(() => {
     async function checkProfile() {
-      if (user?.role?.toLowerCase() === "owner") {
+      if (user?.role?.toUpperCase() === "OWNER") {
+        // Use the flag from session if available, otherwise fetch
+        const isComplete = (user as any).isProfileComplete;
+        if (typeof isComplete === "boolean") {
+          setHasProfile(isComplete);
+          return;
+        }
+
         try {
           const response = await fetch("/api/owner/profile");
           if (response.ok) {
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-              const profile = await response.json();
-              setHasProfile(!!profile);
-            } else {
-              setHasProfile(false);
-            }
+            const profile = await response.json();
+            // A profile is complete if it exists and has real address data
+            const complete = profile && profile.street !== "N/A" && profile.zipCode !== "N/A";
+            setHasProfile(!!complete);
           } else {
             setHasProfile(false);
           }
         } catch {
           setHasProfile(false);
         }
+      } else {
+        setHasProfile(true); // Non-owners don't need this check here
       }
     }
     if (!isLoading && isAuthenticated) {

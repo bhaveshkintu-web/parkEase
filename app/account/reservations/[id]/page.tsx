@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   MapPin,
   Phone,
@@ -161,8 +162,17 @@ export default function ReservationDetailPage({
   const hoursUntilCheckIn = Math.floor(timeUntilCheckIn / (1000 * 60 * 60));
   const daysUntilCheckIn = Math.floor(hoursUntilCheckIn / 24);
 
+  // Cancellation policy logic
+  const policy = reservation.location?.cancellationPolicy as any;
+  const deadlineHours = parseInt(policy?.hours) || 24;
+  const isCancellable = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn >= deadlineHours);
+  const cancellationDeadlinePassed = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn < deadlineHours);
+  const isStrictPolicy = policy?.type === "strict";
+
   const handleCancelReservation = async () => {
+    if (!isCancellable) return;
     setIsCancelling(true);
+    // ... rest of handleCancelReservation
     try {
       const response = await cancelBooking(id, cancelReason);
       if (response.success) {
@@ -443,20 +453,36 @@ export default function ReservationDetailPage({
             {isUpcoming && (
               <>
                 <Link href={`/account/reservations/${id}/modify`}>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className={!isCancellable && isUpcoming ? "opacity-50 cursor-not-allowed" : ""}>
                     <Edit className="w-4 h-4 mr-2" />
                     Modify
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive bg-transparent"
-                  onClick={() => setShowCancelDialog(true)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "text-destructive hover:text-destructive bg-transparent",
+                      !isCancellable && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                    )}
+                    onClick={() => isCancellable && setShowCancelDialog(true)}
+                    disabled={!isCancellable || isCancelling}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  {!isCancellable && (
+                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
+                      {isStrictPolicy
+                        ? "This reservation is non-refundable."
+                        : cancellationDeadlinePassed
+                          ? `The ${deadlineHours}h cancellation window has passed.`
+                          : "This reservation cannot be cancelled at this time."
+                      }
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -1231,6 +1257,6 @@ export default function ReservationDetailPage({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }
