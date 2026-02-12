@@ -186,7 +186,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {formatCurrency(location.pricePerDay)}/day · {days} day{days > 1 ? "s" : ""} · incl. taxes
+                {formatCurrency(location.pricePerDay)}/day · {days.toFixed(2)} day{days > 1 ? "s" : ""} · incl. taxes
               </p>
             </div>
 
