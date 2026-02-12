@@ -138,12 +138,10 @@ function ParkingResultsContent() {
       }
 
       // Price filter
-      if (
-        location.pricePerDay < filters.priceRange[0] ||
-        location.pricePerDay > filters.priceRange[1]
-      ) {
-        return false;
-      }
+      const [minPrice, maxPrice] = filters.priceRange;
+      if (location.pricePerDay < minPrice) return false;
+      // If maxPrice is at the upper bound (50), show everything above it too
+      if (maxPrice < 50 && location.pricePerDay > maxPrice) return false;
 
       // Amenity filters
       if (filters.shuttle && !location.shuttle) return false;

@@ -89,7 +89,7 @@ export const reservationModifySchema = z.object({
 // Owner profile validations
 export const ownerProfileSchema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters").optional().nullable(),
-  businessType: z.enum(["individual", "company"]).optional().nullable(),
+  businessType: z.enum(["individual", "company", "hotel", "airport"]).optional().nullable(),
   taxId: z.string().nullable().optional(),
   registrationNumber: z.string().nullable().optional(),
   street: z.string().nullable().optional(),

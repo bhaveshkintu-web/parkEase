@@ -17,6 +17,27 @@ export async function POST(
       if (!existingBooking) throw new Error("Booking not found");
       if (existingBooking.status === "CANCELLED") throw new Error("Booking already cancelled");
 
+      // Enforce Cancellation Policy
+      const now = new Date();
+      const checkIn = new Date(existingBooking.checkIn);
+      const hoursUntilCheckIn = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const policy = (existingBooking.location as any)?.cancellationPolicy;
+
+      if (policy) {
+        const deadlineHours = parseInt(policy.hours) || 24;
+        if (policy.type === "strict") {
+          throw new Error("This reservation is non-refundable and cannot be cancelled.");
+        }
+        if (hoursUntilCheckIn < deadlineHours) {
+          throw new Error(`The cancellation period (${deadlineHours} hours before check-in) has passed.`);
+        }
+      } else {
+        // Fallback for missing policy (24h default)
+        if (hoursUntilCheckIn < 24) {
+          throw new Error("The cancellation deadline for this reservation has passed.");
+        }
+      }
+
       // 1. Update Booking Status
       const updatedBooking = await tx.booking.update({
         where: { id },

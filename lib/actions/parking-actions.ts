@@ -28,6 +28,9 @@ export type ParkingLocationSearchResult = {
   airport: string;
   latitude: number;
   longitude: number;
+  selfPark: boolean;
+  open24Hours: boolean;
+  cancellationPolicy: any;
 };
 
 /**
@@ -103,6 +106,9 @@ export async function getParkingLocations(searchParams?: {
           airport: loc.airportCode ? (require("@/lib/data").airports.find((a: any) => a.code === loc.airportCode)?.name || loc.airportCode) : "General",
           latitude: loc.latitude,
           longitude: loc.longitude,
+          selfPark: loc.selfPark,
+          open24Hours: loc.open24Hours,
+          cancellationPolicy: loc.cancellationPolicy,
         };
       });
 
