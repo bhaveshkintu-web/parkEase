@@ -122,7 +122,28 @@ export async function getBookingDetails(bookingId: string) {
  */
 export async function createBooking(data: any) {
   try {
-    const userId = await getAuthUserId();
+    let userId = null;
+    try {
+      userId = await getAuthUserId();
+      console.log(`[createBooking] Session User ID detected: ${userId}`);
+
+      // Crucial Fix: Validate that the userId actually exists in the database
+      // This prevents the P2003 Foreign Key constraint violation if the session is stale
+      if (userId) {
+        const userExists = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true }
+        });
+
+        if (!userExists) {
+          console.warn(`[createBooking] User ${userId} not found in database. Falling back to Guest Booking.`);
+          userId = null;
+        }
+      }
+    } catch (authError) {
+      console.log("[createBooking] No authenticated session, proceeding as Guest.");
+      userId = null;
+    }
 
     // 1. Validation
     const {
