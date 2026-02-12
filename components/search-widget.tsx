@@ -263,37 +263,51 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
           {/* RESULTS DROPDOWN */}
           {showSuggestions && (
-             <div ref={listRef} className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-border bg-card shadow-lg">
-                {results.length > 0 ? (
-                  results.map((item, idx) => (
-                    <button
-                      key={item.id}
-                      data-index={idx}
-                      onClick={() => onSelect(item)}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      className={cn(
-                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-0",
-                        activeIndex === idx ? "bg-primary/10" : "hover:bg-muted"
-                      )}
-                    >
-                      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10")}>
-                         {item.airportCode ? <Plane className="h-5 w-5 text-primary" /> : <Building className="h-5 w-5 text-primary" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-foreground truncate">
-                           {item.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                           {item.city}, {item.country} {item.airportCode && `(${item.airportCode})`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                         <span className="block font-bold text-primary">${item.pricePerDay}</span>
-                         <span className="text-[10px] text-muted-foreground">/day</span>
-                      </div>
-                    </button>
-                  ))
-                ) : (
+             <div ref={listRef} className="absolute left-0 right-0 top-full z-50 mt-1 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+                 {results.length > 0 ? (
+                   <>
+                     <div className="max-h-[400px] overflow-auto">
+                        {results.map((item, idx) => (
+                          <button
+                            key={item.id}
+                            data-index={idx}
+                            onClick={() => onSelect(item)}
+                            onMouseEnter={() => setActiveIndex(idx)}
+                            className={cn(
+                              "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-0",
+                              activeIndex === idx ? "bg-primary/10" : "hover:bg-muted"
+                            )}
+                          >
+                            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10")}>
+                               {item.airportCode ? <Plane className="h-5 w-5 text-primary" /> : <Building className="h-5 w-5 text-primary" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-foreground truncate">
+                                 {item.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                 {item.city}, {item.country} {item.airportCode && `(${item.airportCode})`}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                               <span className="block font-bold text-primary">${item.pricePerDay}</span>
+                               <span className="text-[10px] text-muted-foreground">/day</span>
+                            </div>
+                          </button>
+                        ))}
+                     </div>
+                     <div className="border-t border-border bg-muted/20 p-2">
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className="w-full text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10"
+                         onClick={onSearchClick}
+                       >
+                         View all results {localQuery && `for "${localQuery}"`}
+                       </Button>
+                     </div>
+                   </>
+                 ) : (
                   !isLoading && (
                     <div className="p-4 text-center text-sm text-muted-foreground">
                        {localQuery ? "No locations found" : "Start typing to search..."}

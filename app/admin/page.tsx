@@ -149,7 +149,7 @@ export default function SystemAdminDashboard() {
       {(stats.pendingOwners > 0 || stats.openDisputes > 0 || stats.openTickets > 0 || stats.pendingLocations > 0 || stats.pendingRefunds > 0 || stats.pendingReviews > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {stats.pendingOwners > 0 && (
-            <Link href="/admin/owners?status=pending">
+            <Link href="/admin/approvals/owners">
               <Card className="border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors cursor-pointer border">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
