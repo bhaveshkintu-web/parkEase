@@ -28,6 +28,37 @@ export const airports: Airport[] = [
 export const parkingLocations: any[] = [];
 export const reviews: any[] = [];
 
+export const CAR_MAKES = [
+  "Acura",
+  "Audi",
+  "BMW",
+  "Buick",
+  "Cadillac",
+  "Chevrolet",
+  "Chrysler",
+  "Dodge",
+  "Ford",
+  "GMC",
+  "Honda",
+  "Hyundai",
+  "Infiniti",
+  "Jeep",
+  "Kia",
+  "Lexus",
+  "Lincoln",
+  "Mazda",
+  "Mercedes-Benz",
+  "Nissan",
+  "Porsche",
+  "Ram",
+  "Subaru",
+  "Tesla",
+  "Toyota",
+  "Volkswagen",
+  "Volvo",
+  "Other",
+];
+
 export const benefits = [
   { title: "Free Cancellation", description: "Cancel up to 24 hours before for a full refund", icon: "check" },
   { title: "Best Price Guarantee", description: "Find a lower price? We'll match it", icon: "shield" },
@@ -47,19 +78,19 @@ export function calculateDays(checkIn: Date, checkOut: Date): number {
 export function formatDuration(checkIn: Date, checkOut: Date): string {
   const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
   const diffHours = diffTime / (1000 * 60 * 60);
-  
+
   if (diffHours < 24) {
     const hours = Math.round(diffHours);
     return `${hours} hour${hours !== 1 ? 's' : ''}`;
   }
-  
+
   const days = Math.floor(diffHours / 24);
   const remainingHours = Math.round(diffHours % 24);
-  
+
   if (remainingHours === 0) {
     return `${days} day${days !== 1 ? 's' : ''}`;
   }
-  
+
   return `${days} day${days !== 1 ? 's' : ''}, ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
 }
 

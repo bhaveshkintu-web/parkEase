@@ -8,8 +8,9 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Navbar } from "@/components/navbar";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { useBooking } from "@/lib/booking-context";
-import { formatCurrency, formatDate, formatTime, calculateQuote } from "@/lib/data";
+import { formatCurrency, formatDate, formatTime, calculateQuote, CAR_MAKES } from "@/lib/data";
 import { createBooking } from "@/lib/actions/booking-actions";
+import { fetchModelsByMake } from "@/lib/vehicle-api";
 import { useToast } from "@/hooks/use-toast";
 import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
 import { useAuth } from "@/lib/auth-context";
@@ -20,6 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -89,9 +97,9 @@ const BrandIcon = ({ brand }: { brand: string }) => {
 function CheckoutContent() {
   const router = useRouter();
   const { toast } = useToast();
-  const { 
-    location: contextLocation, 
-    checkIn, 
+  const {
+    location: contextLocation,
+    checkIn,
     checkOut,
     guestInfo: contextGuestInfo,
     vehicleInfo: contextVehicleInfo,
@@ -141,6 +149,8 @@ function CheckoutContent() {
   const [model, setModel] = useState(contextVehicleInfo?.model || "");
   const [color, setColor] = useState(contextVehicleInfo?.color || "");
   const [licensePlate, setLicensePlate] = useState(contextVehicleInfo?.licensePlate || "");
+  const [models, setModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
@@ -199,9 +209,31 @@ function CheckoutContent() {
       router.push(`/parking/${contextLocation.id}`);
       return;
     }
-    
+
     setIsLoading(false);
   }, [contextLocation, checkIn, checkOut, router, toast]);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!make || make === "Other") {
+        setModels([]);
+        return;
+      }
+
+      setIsFetchingModels(true);
+      try {
+        const fetchedModels = await fetchModelsByMake(make);
+        setModels(fetchedModels);
+      } catch (error) {
+        console.error("Error loading models:", error);
+        setModels([]);
+      } finally {
+        setIsFetchingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [make]);
 
   // Sync Guest and Vehicle info to context whenever they change
   useEffect(() => {
@@ -336,7 +368,7 @@ function CheckoutContent() {
         router.push(`/auth/guest-login?returnUrl=${encodeURIComponent(currentUrl)}`);
         return;
       }
-      
+
       if (!clientSecret && isGuestInfoComplete && isVehicleInfoComplete) {
         createPaymentIntentForCheckout();
       }
@@ -687,21 +719,57 @@ function CheckoutContent() {
                         <div className="grid gap-4 sm:grid-cols-2 pt-2 animate-in fade-in slide-in-from-top-2">
                           <div className="space-y-2">
                             <Label htmlFor="make">Vehicle Make</Label>
-                            <Input
-                              id="make"
-                              placeholder="Toyota"
+                            <Select
                               value={make}
-                              onChange={(e) => setMake(e.target.value)}
-                            />
+                              onValueChange={(v) => {
+                                setMake(v);
+                                setModel(""); // Reset model when make changes
+                              }}
+                            >
+                              <SelectTrigger id="make">
+                                <SelectValue placeholder="Select make" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CAR_MAKES.map((m) => (
+                                  <SelectItem key={m} value={m}>
+                                    {m}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="model">Vehicle Model</Label>
-                            <Input
-                              id="model"
-                              placeholder="Camry"
-                              value={model}
-                              onChange={(e) => setModel(e.target.value)}
-                            />
+                            {isFetchingModels ? (
+                              <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Loading...</span>
+                              </div>
+                            ) : models.length > 0 ? (
+                              <Select
+                                value={model}
+                                onValueChange={(v) => setModel(v)}
+                              >
+                                <SelectTrigger id="model">
+                                  <SelectValue placeholder="Select model" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {models.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      {m}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                id="model"
+                                placeholder={make ? "Enter model" : "Select make first"}
+                                value={model}
+                                onChange={(e) => setModel(e.target.value)}
+                              />
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="color">Color (Optional)</Label>

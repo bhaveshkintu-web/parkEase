@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
+import { isSameDay, isTomorrow, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,17 @@ import { toast } from "react-toastify";
 
 // No mock data needed anymore
 
+// Helper function to get full shift display text
+const getShiftDisplayText = (shiftKey: string): string => {
+  const shiftMap: Record<string, string> = {
+    "morning": "Morning (6 AM - 2 PM)",
+    "evening": "Evening (2 PM - 10 PM)",
+    "night": "Night (10 PM - 6 AM)",
+    "all": "All Day"
+  };
+  return shiftMap[shiftKey] || shiftKey;
+};
+
 export default function WatchmanActivityPage() {
   const { user } = useAuth();
   const { parkingSessions } = useDataStore();
@@ -57,12 +69,19 @@ export default function WatchmanActivityPage() {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  // Shift History Filter
+  const [shiftDateFilter, setShiftDateFilter] = useState("all");
+
   // Shift management states
   const [currentShift, setCurrentShift] = useState<WatchmanShift | null>(null);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Watchman profile info for start shift dialog
+  const [watchmanLocationName, setWatchmanLocationName] = useState<string>("Loading...");
+  const [watchmanShiftTime, setWatchmanShiftTime] = useState<string>("Loading...");
 
   // Initialize with empty
   const [activityLogs, setActivityLogs] = useState<WatchmanActivityLog[]>([]);
@@ -188,6 +207,33 @@ export default function WatchmanActivityPage() {
       console.error("Failed to fetch car tracking", e);
     }
   }, []);
+
+  const fetchWatchmanInfo = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchman/profile");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.watchman) {
+          const locationName = data.watchman.assignedLocations?.[0]?.name || "No location assigned";
+          const shiftKey = data.watchman.shift || "morning";
+          const shiftTime = getShiftDisplayText(shiftKey);
+          setWatchmanLocationName(locationName);
+          setWatchmanShiftTime(shiftTime);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch watchman info", e);
+      setWatchmanLocationName("Unknown location");
+      setWatchmanShiftTime("8 hours typically");
+    }
+  }, []);
+
+  // Fetch watchman info when start shift dialog opens
+  React.useEffect(() => {
+    if (isStartShiftOpen) {
+      fetchWatchmanInfo();
+    }
+  }, [isStartShiftOpen, fetchWatchmanInfo]);
 
   // Fetch activities and active shift on mount
   React.useEffect(() => {
@@ -499,6 +545,28 @@ export default function WatchmanActivityPage() {
       };
     });
   }, [shifts, activityLogs]);
+
+  // Filtered shifts based on date selection
+  const filteredShifts = useMemo(() => {
+    const now = new Date();
+    return shiftsWithStats.filter(shift => {
+      const shiftDate = new Date(shift.shiftDate);
+
+      switch (shiftDateFilter) {
+        case "today":
+          return isSameDay(shiftDate, now);
+        case "tomorrow":
+          return isTomorrow(shiftDate);
+        case "week":
+          return isWithinInterval(shiftDate, {
+            start: startOfWeek(now, { weekStartsOn: 1 }),
+            end: endOfWeek(now, { weekStartsOn: 1 })
+          });
+        default:
+          return true;
+      }
+    });
+  }, [shiftsWithStats, shiftDateFilter]);
 
   return (
     <Suspense fallback={null}>
@@ -909,6 +977,19 @@ export default function WatchmanActivityPage() {
                     <CardDescription>View past and scheduled shifts</CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Select value={shiftDateFilter} onValueChange={setShiftDateFilter}>
+                      <SelectTrigger className="w-[130px]">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Shifts</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                      </SelectContent>
+                    </Select>
+
                     <Button variant="outline" onClick={() => {
                       const printWindow = window.open('', '_blank');
                       if (!printWindow) return;
@@ -947,7 +1028,7 @@ export default function WatchmanActivityPage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  ${shiftsWithStats.map(s => `
+                                  ${filteredShifts.map(s => `
                                     <tr>
                                       <td>${new Date(s.shiftDate).toLocaleDateString()}</td>
                                       <td><strong>${s.status.toUpperCase()}</strong></td>
@@ -984,7 +1065,7 @@ export default function WatchmanActivityPage() {
                     </Button>
                     <Button variant="outline" onClick={() => {
                       const headers = ["Date", "Status", "Location", "Scheduled Start", "Scheduled End", "Actual Start", "Actual End", "Check-ins", "Check-outs", "Incidents"];
-                      const rows = shiftsWithStats.map(s => [
+                      const rows = filteredShifts.map(s => [
                         new Date(s.shiftDate).toLocaleDateString(),
                         s.status,
                         s.parkingName,
@@ -1016,12 +1097,12 @@ export default function WatchmanActivityPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {shiftsWithStats.length === 0 ? (
+                  {filteredShifts.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground border rounded-lg">
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>No shift history found</p>
+                      <p>No shift history found for this filter</p>
                     </div>
-                  ) : shiftsWithStats.map((shift) => (
+                  ) : filteredShifts.map((shift) => (
                     <div
                       key={shift.id}
                       className={`p-4 border rounded-lg ${shift.status === "active"
@@ -1128,7 +1209,7 @@ export default function WatchmanActivityPage() {
                   <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Assigned Location</p>
-                    <p className="text-sm text-muted-foreground">Please proceed to your post</p>
+                    <p className="text-sm text-muted-foreground">{watchmanLocationName}</p>
                   </div>
                 </div>
               </div>
@@ -1136,7 +1217,7 @@ export default function WatchmanActivityPage() {
                 <Clock className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Standard Shift Hours</p>
-                  <p className="text-sm text-muted-foreground">8 hours typically</p>
+                  <p className="text-sm text-muted-foreground">{watchmanShiftTime}</p>
                 </div>
               </div>
             </div>
