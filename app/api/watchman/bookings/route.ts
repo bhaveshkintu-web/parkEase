@@ -130,7 +130,10 @@ export async function GET(request: NextRequest) {
                 id: b.id,
                 userId: b.userId,
                 locationId: b.locationId,
-                locationName: (b.location as any).name,
+                location: {
+                    name: (b.location as any)?.name || "Unknown Location"
+                },
+                locationName: (b.location as any)?.name || "Unknown Location",
                 checkIn: b.checkIn.toISOString(),
                 checkOut: b.checkOut.toISOString(),
                 guestInfo: {
@@ -145,7 +148,7 @@ export async function GET(request: NextRequest) {
                     color: b.vehicleColor,
                     licensePlate: b.vehiclePlate,
                 },
-                total: b.totalPrice,
+                totalPrice: b.totalPrice,
                 status: b.status.toLowerCase(),
                 confirmationCode: b.confirmationCode,
                 sessionStatus: b.parkingSession?.status || "pending"

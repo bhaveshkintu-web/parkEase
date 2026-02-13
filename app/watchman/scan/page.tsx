@@ -158,45 +158,66 @@ export default function WatchmanScanPage() {
   const handleScan = (data: string | null) => {
     if (!data) return;
 
+    setManualCode(data);
+    setIsScanning(false);
+    setError("");
+
     // Attempt to find booking by ID or confirmation code
-    const booking = dbBookings.find(
+    let booking = dbBookings.find(
       (b) =>
         b.confirmationCode === data ||
         b.id === data
-    ) || reservations.find(
-      (r) =>
-        r.confirmationCode === data ||
-        r.id === data ||
-        r.qrCode === data
     );
 
-    if (booking) {
-      setIsScanning(false);
-
-      const type = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out";
-
-      if (type === "check_in") {
-        // For real bookings, we should hit an API. For now, let's just log.
-        // The checkInVehicle/checkOutVehicle from data-store are mock.
-        checkInVehicle(booking.id, "");
-        toast({
-          title: "Check-in Successful",
-          description: `Vehicle ${booking.vehicleInfo.licensePlate} checked in via scan.`,
-          variant: "default",
-          className: "bg-green-600 text-white border-none",
-        });
-      } else {
-        checkOutVehicle(booking.id, "");
-        toast({
-          title: "Check-out Successful",
-          description: `Vehicle ${booking.vehicleInfo.licensePlate} checked out via scan.`,
-          variant: "default",
-          className: "bg-blue-600 text-white border-none",
-        });
+    // If not found in DB bookings, try mock reservations
+    if (!booking) {
+      const mockRes = reservations.find(
+        (r) =>
+          r.confirmationCode === data ||
+          r.id === data ||
+          r.qrCode === data
+      );
+      if (mockRes) {
+        booking = {
+          ...mockRes,
+          vehiclePlate: mockRes.vehicleInfo.licensePlate,
+          locationName: mockRes.location.name,
+          total: mockRes.totalPrice,
+          status: mockRes.status
+        };
       }
-
-      router.push("/watchman/sessions");
     }
+
+    if (!booking) {
+      setError("No booking found with this code");
+      return;
+    }
+
+    // Determine if this is a check-in or check-out
+    const type = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out";
+
+    setScanResult({
+      type,
+      booking: {
+        id: booking.id,
+        confirmationCode: booking.confirmationCode,
+        vehiclePlate: booking.vehiclePlate || booking.vehicleInfo.licensePlate,
+        vehicleInfo: {
+          make: booking.vehicleInfo.make,
+          model: booking.vehicleInfo.model,
+          color: booking.vehicleInfo.color,
+        },
+        checkIn: new Date(booking.checkIn),
+        checkOut: new Date(booking.checkOut),
+        location: {
+          name: booking.locationName || booking.location?.name,
+        },
+        guestInfo: {
+          firstName: booking.guestInfo.firstName,
+          lastName: booking.guestInfo.lastName,
+        },
+      },
+    });
   };
 
   const handleStartScan = () => {
@@ -204,19 +225,98 @@ export default function WatchmanScanPage() {
     setError("");
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!scanResult) return;
 
-    if (scanResult.type === "check_in") {
-      checkInVehicle(scanResult.booking.id, notes);
-    } else {
-      checkOutVehicle(scanResult.booking.id, notes);
-    }
+    setIsLoading(true);
+    try {
+      // Find the actual session ID if it exists in dbBookings
+      const dbBooking = dbBookings.find(b => b.id === scanResult.booking.id);
+      let actionProcessed = false;
 
-    setScanResult(null);
-    setNotes("");
-    setManualCode("");
-    router.push("/watchman/sessions");
+      if (dbBooking) {
+        // If it's a real booking, it might have a session ID
+        // We'll try to find or create a session via the API
+        // For now, let's assume we use the sessions API
+        const action = scanResult.type === "check_in" ? "check-in" : "check-out";
+
+        // Try to find the session ID
+        let sessionId = dbBooking.sessionId;
+
+        // If no session ID, we might need to find it by booking ID
+        if (!sessionId) {
+          const sessionsRes = await fetch("/api/watchman/sessions");
+          const sessionsData = await sessionsRes.json();
+          if (sessionsData.success) {
+            const session = sessionsData.sessions.find((s: any) => s.bookingId === scanResult.booking.id);
+            if (session) {
+              sessionId = session.id;
+            }
+          }
+        }
+
+        if (sessionId) {
+          const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action,
+              notes: notes
+            })
+          });
+
+          if (res.ok) {
+            actionProcessed = true;
+          }
+        }
+      }
+
+      // If not processed via session API (either mock or session not found), hit activity API directly
+      if (!actionProcessed) {
+        await fetch("/api/watchman/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: scanResult.type === "check_in" ? "check_in" : "check_out",
+            details: {
+              bookingId: scanResult.booking.id,
+              vehiclePlate: scanResult.booking.vehiclePlate,
+              notes: notes,
+              confirmationCode: scanResult.booking.confirmationCode,
+              isMock: !dbBooking
+            }
+          })
+        });
+      }
+
+      // Still update local mock store for consistency if needed
+      if (scanResult.type === "check_in") {
+        checkInVehicle(scanResult.booking.id, notes);
+      } else {
+        checkOutVehicle(scanResult.booking.id, notes);
+      }
+
+      toast({
+        title: `${scanResult.type === "check_in" ? "Check-in" : "Check-out"} Successful`,
+        description: `Vehicle ${scanResult.booking.vehiclePlate} has been processed.`,
+        variant: "default",
+        className: scanResult.type === "check_in" ? "bg-green-600 text-white" : "bg-blue-600 text-white",
+      });
+
+      setScanResult(null);
+      setNotes("");
+      setManualCode("");
+      router.push("/watchman/sessions");
+    } catch (e: any) {
+      console.error("Error processing scan action:", e);
+      toast({
+        title: "Action Failed",
+        description: e.message || "There was an error processing the request.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -502,12 +602,18 @@ export default function WatchmanScanPage() {
             </Button>
             <Button
               onClick={handleConfirmAction}
+              disabled={isLoading}
               className={`w-full sm:w-auto ${scanResult?.type === "check_in"
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-blue-600 hover:bg-blue-700"
                 }`}
             >
-              {scanResult?.type === "check_in" ? (
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : scanResult?.type === "check_in" ? (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Confirm Check-In

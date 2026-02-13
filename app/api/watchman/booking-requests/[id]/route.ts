@@ -317,6 +317,19 @@ export async function PATCH(
                 requestedStart: new Date(existingRequest.requestedStart).toLocaleString(),
                 requestedEnd: new Date(existingRequest.requestedEnd).toLocaleString(),
             });
+
+            // In-app notification for the watchman
+            if (existingRequest.requestedById) {
+                await prisma.notification.create({
+                    data: {
+                        userId: existingRequest.requestedById,
+                        title: "Booking Request Approved",
+                        message: `The request for ${existingRequest.customerName} at ${existingRequest.parkingName} has been approved.`,
+                        type: "SYSTEM_ALERT" as any,
+                        metadata: { requestId: existingRequest.id, status: "APPROVED", confirmationCode: confCode }
+                    }
+                }).catch(err => console.error("Watchman notification failed:", err));
+            }
         } else if (action === "reject") {
             // Send Rejection Notification
             await sendBookingNotification(existingRequest.customerEmail || "guest@example.com", "REJECTED", {
@@ -324,6 +337,19 @@ export async function PATCH(
                 parkingName: existingRequest.parkingName,
                 rejectionReason: rejectionReason,
             });
+
+            // In-app notification for the watchman
+            if (existingRequest.requestedById) {
+                await prisma.notification.create({
+                    data: {
+                        userId: existingRequest.requestedById,
+                        title: "Booking Request Rejected",
+                        message: `The request for ${existingRequest.customerName} at ${existingRequest.parkingName} has been rejected. Reason: ${rejectionReason}`,
+                        type: "SYSTEM_ALERT" as any,
+                        metadata: { requestId: existingRequest.id, status: "REJECTED" }
+                    }
+                }).catch(err => console.error("Watchman notification failed:", err));
+            }
         }
 
         return NextResponse.json({
