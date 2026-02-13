@@ -42,20 +42,36 @@ export async function getOwnerWatchmen(ownerUserId: string) {
       orderBy: { createdAt: "desc" },
     });
 
-    const formattedWatchmen = watchmen.map((wm: any) => ({
-      id: wm.id,
-      userId: wm.userId,
-      ownerId: wm.ownerId,
-      name: `${wm.user.firstName} ${wm.user.lastName}`,
-      email: wm.user.email,
-      phone: wm.user.phone || "N/A",
-      shift: wm.shift || "morning",
-      status: wm.status as "active" | "inactive",
-      assignedParkingIds: wm.assignedLocations.map((loc: any) => loc.id),
-      todayCheckIns: 0, // Simplified for now
-      todayCheckOuts: 0,
-      createdAt: wm.createdAt,
-    }));
+    // Fetch today's activities for all these watchmen to calculate in/out counts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const watchmanIds = watchmen.map((w: any) => w.id);
+    const todayLogs = await (prisma as any).watchmanActivityLog.findMany({
+      where: {
+        watchmanId: { in: watchmanIds },
+        timestamp: { gte: today },
+        type: { in: ["check_in", "check_out"] }
+      }
+    });
+
+    const formattedWatchmen = watchmen.map((wm: any) => {
+      const wmLogs = todayLogs.filter((log: any) => log.watchmanId === wm.id);
+      return {
+        id: wm.id,
+        userId: wm.userId,
+        ownerId: wm.ownerId,
+        name: `${wm.user.firstName} ${wm.user.lastName}`,
+        email: wm.user.email,
+        phone: wm.user.phone || "N/A",
+        shift: wm.shift || "morning",
+        status: wm.status as "active" | "inactive",
+        assignedParkingIds: wm.assignedLocations.map((loc: any) => loc.id),
+        todayCheckIns: wmLogs.filter((l: any) => l.type === "check_in").length,
+        todayCheckOuts: wmLogs.filter((l: any) => l.type === "check_out").length,
+        createdAt: wm.createdAt,
+      };
+    });
 
     return { success: true, data: formattedWatchmen };
   } catch (error) {

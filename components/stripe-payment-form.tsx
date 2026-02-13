@@ -98,7 +98,7 @@ export function StripePaymentForm({
         fontFamily: 'Geist, system-ui, -apple-system, sans-serif',
         fontWeight: "400",
         "::placeholder": {
-          color: "hsl(var(--muted-foreground))",
+          color: "#6b7280",
         },
       },
       invalid: {
