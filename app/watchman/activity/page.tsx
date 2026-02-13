@@ -123,9 +123,9 @@ export default function WatchmanActivityPage() {
             status: active.status.toLowerCase() as any,
             breaks: [],
             activities: [],
-            totalCheckIns: 0,
-            totalCheckOuts: 0,
-            incidentsReported: 0
+            totalCheckIns: active.totalCheckIns || 0,
+            totalCheckOuts: active.totalCheckOuts || 0,
+            incidentsReported: active.incidentsReported || 0
           });
         } else {
           setCurrentShift(null);
@@ -156,9 +156,9 @@ export default function WatchmanActivityPage() {
             status: s.status.toLowerCase() as any,
             breaks: [],
             activities: [],
-            totalCheckIns: 0,
-            totalCheckOuts: 0,
-            incidentsReported: 0
+            totalCheckIns: s.totalCheckIns || 0,
+            totalCheckOuts: s.totalCheckOuts || 0,
+            incidentsReported: s.incidentsReported || 0
           }));
           setShifts(mappedShifts);
         }
@@ -242,12 +242,18 @@ export default function WatchmanActivityPage() {
       fetchActiveShift();
       fetchHistory();
       fetchCarTracking();
+      fetchWatchmanInfo();
     }
-  }, [user, fetchActivities, fetchActiveShift, fetchHistory, fetchCarTracking]);
+  }, [user, fetchActivities, fetchActiveShift, fetchHistory, fetchCarTracking, fetchWatchmanInfo]);
 
   // Helper to post new activity
   const logActivity = async (type: string, details: any = {}) => {
     try {
+      const refinedDetails = {
+        ...details,
+        location: details.location || (watchmanLocationName !== "Loading..." ? watchmanLocationName : undefined)
+      };
+
       // Optimistic update
       const newActivity: WatchmanActivityLog = {
         id: `temp_${Date.now()}`,
@@ -255,14 +261,14 @@ export default function WatchmanActivityPage() {
         watchmanName: `${user?.firstName} ${user?.lastName}`,
         type: type as any,
         timestamp: new Date(),
-        details
+        details: refinedDetails
       };
       setActivityLogs(prev => [newActivity, ...prev]);
 
       await fetch("/api/watchman/activity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, details })
+        body: JSON.stringify({ type, details: refinedDetails })
       });
 
       // Refetch to sync IDs etc
@@ -529,19 +535,17 @@ export default function WatchmanActivityPage() {
   // Enhanced shift with dynamic stats
   const shiftsWithStats = useMemo(() => {
     return shifts.map(shift => {
-      const start = new Date(shift.actualStart || shift.scheduledStart);
-      const end = shift.actualEnd ? new Date(shift.actualEnd) : new Date();
-
+      const shiftDateStr = new Date(shift.shiftDate).toDateString();
       const shiftLogs = activityLogs.filter(log => {
-        const logTime = new Date(log.timestamp);
-        return logTime >= start && logTime <= end;
+        const logDateStr = new Date(log.timestamp).toDateString();
+        return logDateStr === shiftDateStr;
       });
 
       return {
         ...shift,
-        totalCheckIns: shiftLogs.filter(l => l.type === "check_in").length,
-        totalCheckOuts: shiftLogs.filter(l => l.type === "check_out").length,
-        incidentsReported: shiftLogs.filter(l => l.type === "incident").length,
+        totalCheckIns: Math.max(shift.totalCheckIns || 0, shiftLogs.filter(l => l.type === "check_in").length),
+        totalCheckOuts: Math.max(shift.totalCheckOuts || 0, shiftLogs.filter(l => l.type === "check_out").length),
+        incidentsReported: Math.max(shift.incidentsReported || 0, shiftLogs.filter(l => l.type === "incident").length),
       };
     });
   }, [shifts, activityLogs]);
@@ -833,22 +837,22 @@ export default function WatchmanActivityPage() {
                                 {formatTime(activity.timestamp)}
                               </span>
                             </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                              {activity.details.spotNumber && (
-                                <span className="mr-3">
-                                  <MapPin className="w-3 h-3 inline mr-1" />
+                            <div className="mt-1 text-sm text-muted-foreground flex flex-wrap gap-y-1">
+                              {activity.details.spotNumber && activity.details.spotNumber !== "N/A" && (
+                                <span className="mr-3 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
                                   Spot {activity.details.spotNumber}
                                 </span>
                               )}
                               {activity.details.location && (
-                                <span className="mr-3">
-                                  <MapPin className="w-3 h-3 inline mr-1" />
+                                <span className="mr-3 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
                                   {activity.details.location}
                                 </span>
                               )}
                               {activity.details.bookingId && (
-                                <span>
-                                  <FileText className="w-3 h-3 inline mr-1" />
+                                <span className="flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
                                   #{activity.details.bookingId.slice(-6)}
                                 </span>
                               )}

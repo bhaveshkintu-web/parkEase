@@ -37,7 +37,13 @@ export async function PATCH(
           status: "checked_in",
           checkInTime: new Date(),
         },
-        include: { booking: true }
+        include: {
+          booking: {
+            include: {
+              location: { select: { name: true } }
+            }
+          }
+        }
       });
 
       // Log activity
@@ -50,10 +56,21 @@ export async function PATCH(
             bookingId: updatedSession.bookingId,
             vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
             parkingId: updatedSession.locationId,
-            spotNumber: "N/A" // Add spot logic if exists
+            location: (updatedSession.booking as any)?.location?.name || "Unknown Location"
           }
         }
       });
+
+      // Increment counts on active shift
+      const activeShiftIn = await prisma.watchmanShift.findFirst({
+        where: { watchmanId: watchman.id, status: "ACTIVE" }
+      });
+      if (activeShiftIn) {
+        await prisma.watchmanShift.update({
+          where: { id: activeShiftIn.id },
+          data: { totalCheckIns: { increment: 1 } }
+        });
+      }
 
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
@@ -63,14 +80,20 @@ export async function PATCH(
           status: "checked_out",
           checkOutTime: new Date(),
         },
-        include: { booking: true }
+        include: {
+          booking: {
+            include: {
+              location: { select: { name: true } }
+            }
+          }
+        }
       });
 
       if (updatedSession.bookingId) {
         // Import dynamically to avoid circular dependencies if any, 
         // though here it should be fine.
         const { FinanceService } = await import("@/lib/finance-service");
-        
+
         // 1. Mark booking as COMPLETED
         await prisma.booking.update({
           where: { id: updatedSession.bookingId },
@@ -97,10 +120,21 @@ export async function PATCH(
             bookingId: updatedSession.bookingId,
             vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
             parkingId: updatedSession.locationId,
-            spotNumber: "N/A"
+            location: (updatedSession.booking as any)?.location?.name || "Unknown Location"
           }
         }
       });
+
+      // Increment counts on active shift
+      const activeShiftOut = await prisma.watchmanShift.findFirst({
+        where: { watchmanId: watchman.id, status: "ACTIVE" }
+      });
+      if (activeShiftOut) {
+        await prisma.watchmanShift.update({
+          where: { id: activeShiftOut.id },
+          data: { totalCheckOuts: { increment: 1 } }
+        });
+      }
 
       return NextResponse.json(updatedSession);
     }

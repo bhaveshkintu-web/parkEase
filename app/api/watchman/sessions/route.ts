@@ -27,12 +27,18 @@ export async function GET(request: NextRequest) {
     if (role === "WATCHMAN") {
       const watchman = await prisma.watchman.findUnique({
         where: { userId: sessionUser.id },
-        include: { shifts: { select: { locationId: true } } }
+        include: {
+          shifts: { select: { locationId: true } },
+          assignedLocations: { select: { id: true } }
+        }
       });
 
       if (watchman) {
-        locationIds = watchman.shifts.map(s => s.locationId);
-        // Fallback to owner's locations if no specific shifts assigned
+        const shiftLocationIds = watchman.shifts.map(s => s.locationId);
+        const assignedLocationIds = watchman.assignedLocations.map(l => l.id);
+        locationIds = Array.from(new Set([...shiftLocationIds, ...assignedLocationIds]));
+
+        // Fallback to owner's locations if no specific shifts or assignments
         if (locationIds.length === 0) {
           const ownerLocations = await prisma.parkingLocation.findMany({
             where: { ownerId: watchman.ownerId },
@@ -115,11 +121,149 @@ export async function GET(request: NextRequest) {
         };
       })
     });
-
   } catch (error: any) {
     console.error("Error fetching sessions:", error);
     return NextResponse.json(
       { error: "Failed to fetch sessions", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || (session.user as any).role !== "WATCHMAN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { bookingId, action, notes } = body;
+
+    if (!bookingId || !action) {
+      return NextResponse.json({ error: "Booking ID and action are required" }, { status: 400 });
+    }
+
+    const watchman = await prisma.watchman.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!watchman) {
+      return NextResponse.json({ error: "Watchman not found" }, { status: 404 });
+    }
+
+    // Find booking
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { location: { select: { name: true } } }
+    });
+
+    if (!booking) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    // Find or create session
+    let parkingSession = await prisma.parkingSession.findUnique({
+      where: { bookingId }
+    });
+
+    if (!parkingSession) {
+      parkingSession = await prisma.parkingSession.create({
+        data: {
+          bookingId,
+          locationId: booking.locationId,
+          status: "pending",
+        }
+      });
+    }
+
+    // Process action
+    if (action === "check-in") {
+      parkingSession = await prisma.parkingSession.update({
+        where: { id: parkingSession.id },
+        data: {
+          status: "checked_in",
+          checkInTime: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      // Log activity
+      await prisma.watchmanActivityLog.create({
+        data: {
+          watchmanId: watchman.id,
+          type: "check_in",
+          details: {
+            sessionId: parkingSession.id,
+            bookingId: bookingId,
+            vehiclePlate: booking.vehiclePlate,
+            locationId: booking.locationId,
+            location: (booking as any)?.location?.name || "Unknown Location",
+            notes: notes
+          }
+        }
+      });
+
+      // Increment counts on active shift
+      const activeShiftIn = await prisma.watchmanShift.findFirst({
+        where: { watchmanId: watchman.id, status: "ACTIVE" }
+      });
+      if (activeShiftIn) {
+        await prisma.watchmanShift.update({
+          where: { id: activeShiftIn.id },
+          data: { totalCheckIns: { increment: 1 } }
+        });
+      }
+    } else if (action === "check-out") {
+      parkingSession = await prisma.parkingSession.update({
+        where: { id: parkingSession.id },
+        data: {
+          status: "checked_out",
+          checkOutTime: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      // Update Booking Status
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: "COMPLETED" }
+      });
+
+      // Log activity
+      await prisma.watchmanActivityLog.create({
+        data: {
+          watchmanId: watchman.id,
+          type: "check_out",
+          details: {
+            sessionId: parkingSession.id,
+            bookingId: bookingId,
+            vehiclePlate: booking.vehiclePlate,
+            locationId: booking.locationId,
+            location: (booking as any)?.location?.name || "Unknown Location",
+            notes: notes
+          }
+        }
+      });
+
+      // Increment counts on active shift
+      const activeShiftOut = await prisma.watchmanShift.findFirst({
+        where: { watchmanId: watchman.id, status: "ACTIVE" }
+      });
+      if (activeShiftOut) {
+        await prisma.watchmanShift.update({
+          where: { id: activeShiftOut.id },
+          data: { totalCheckOuts: { increment: 1 } }
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, session: parkingSession });
+
+  } catch (error: any) {
+    console.error("Error processing session:", error);
+    return NextResponse.json(
+      { error: "Failed to process session", details: error.message },
       { status: 500 }
     );
   }

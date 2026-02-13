@@ -235,39 +235,21 @@ export default function WatchmanScanPage() {
       let actionProcessed = false;
 
       if (dbBooking) {
-        // If it's a real booking, it might have a session ID
-        // We'll try to find or create a session via the API
-        // For now, let's assume we use the sessions API
         const action = scanResult.type === "check_in" ? "check-in" : "check-out";
 
-        // Try to find the session ID
-        let sessionId = dbBooking.sessionId;
+        // Use the new sessions POST API which can find or create a session by bookingId
+        const res = await fetch("/api/watchman/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: scanResult.booking.id,
+            action,
+            notes: notes
+          })
+        });
 
-        // If no session ID, we might need to find it by booking ID
-        if (!sessionId) {
-          const sessionsRes = await fetch("/api/watchman/sessions");
-          const sessionsData = await sessionsRes.json();
-          if (sessionsData.success) {
-            const session = sessionsData.sessions.find((s: any) => s.bookingId === scanResult.booking.id);
-            if (session) {
-              sessionId = session.id;
-            }
-          }
-        }
-
-        if (sessionId) {
-          const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action,
-              notes: notes
-            })
-          });
-
-          if (res.ok) {
-            actionProcessed = true;
-          }
+        if (res.ok) {
+          actionProcessed = true;
         }
       }
 

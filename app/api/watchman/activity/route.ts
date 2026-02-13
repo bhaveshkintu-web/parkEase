@@ -104,21 +104,49 @@ export async function POST(request: NextRequest) {
         }
 
         const watchman = await prisma.watchman.findUnique({
-            where: { userId: session.user.id }
+            where: { userId: session.user.id },
+            include: { assignedLocations: { select: { name: true }, take: 1 } }
         });
 
         if (!watchman) {
             return NextResponse.json({ error: "Watchman not found" }, { status: 404 });
         }
 
+        const watchmanLocation = watchman.assignedLocations?.[0]?.name;
+        const refinedDetails = {
+            ...details,
+            location: details?.location || watchmanLocation || "Unknown Location"
+        };
+
         const newLog = await prisma.watchmanActivityLog.create({
             data: {
                 watchmanId: watchman.id,
                 type,
-                details: details || {},
+                details: refinedDetails,
                 timestamp: new Date()
             }
         });
+
+        // Increment counts on active shift if exists
+        if (type === "incident" || type === "check_in" || type === "check_out") {
+            const activeShift = await prisma.watchmanShift.findFirst({
+                where: {
+                    watchmanId: watchman.id,
+                    status: "ACTIVE"
+                }
+            });
+
+            if (activeShift) {
+                await prisma.watchmanShift.update({
+                    where: { id: activeShift.id },
+                    data: {
+                        incidentsReported: type === "incident" ? { increment: 1 } : undefined,
+                        totalCheckIns: type === "check_in" ? { increment: 1 } : undefined,
+                        totalCheckOuts: type === "check_out" ? { increment: 1 } : undefined,
+                    }
+                });
+            }
+        }
 
         return NextResponse.json({ success: true, log: newLog });
 

@@ -363,3 +363,9 @@
 [2026-02-13T02:28:44.221Z] FUZZY FIND: Guessed request ID cmlk9pg08000nu1j0tl77hivo for undefined request
 [2026-02-13T02:39:42.779Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
 [2026-02-13T02:39:42.784Z] FUZZY FIND: Guessed request ID cmlka4el7000vu1j0fa06go5v for undefined request
+[2026-02-13T06:06:32.520Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-13T06:06:32.526Z] FUZZY FIND: Guessed request ID cmlkhhwi20001u1c40j4p12qy for undefined request
+[2026-02-13T06:53:21.416Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-13T06:53:21.421Z] FUZZY FIND: Guessed request ID cmlkj11k1000tu1c4o298pkkt for undefined request
+[2026-02-13T07:58:30.202Z] PATCH /api/watchman/booking-requests/undefined ACTION: approve BODY: {"action":"approve"}
+[2026-02-13T07:58:30.207Z] FUZZY FIND: Guessed request ID cmlkli6xp001du1c4jwz2geyd for undefined request
