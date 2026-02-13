@@ -73,8 +73,8 @@ export default function WatchmanBookingsPage() {
   // Dialog states
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  // Removed isApproveDialogOpen and isRejectDialogOpen state
+
   const [selectedRequest, setSelectedRequest] = useState<WatchmanBookingRequest | null>(null);
 
   const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
@@ -217,79 +217,10 @@ export default function WatchmanBookingsPage() {
     return <Badge className={item.className}>{item.label}</Badge>;
   };
 
-  const updateRequestStatus = async (id: string, status: string, reason?: string) => {
-    try {
-      const response = await fetch(`/api/watchman/booking-requests/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: status === "APPROVED" ? "approve" : status === "REJECTED" ? "reject" : "cancel", rejectionReason: reason }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to update status");
-      }
-      return true;
-    } catch (error: any) {
-      console.error("Update status error:", error);
-      throw error;
-    }
-  };
 
-  const handleApproveRequest = async () => {
-    if (!selectedRequest) return;
 
-    setIsLoading(true);
-    try {
-      await updateRequestStatus(selectedRequest.id, "APPROVED");
-      setIsApproveDialogOpen(false);
-      setSelectedRequest(null);
-      toast({
-        title: "Request Approved",
-        description: "A real booking and active session have been created automatically.",
-      });
-      fetchBookingRequests();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Removed handleApproveRequest and handleRejectRequest as only Owners can update requests.
 
-  const handleRejectRequest = async () => {
-    if (!selectedRequest || !rejectionReason) {
-      toast({
-        title: "Rejection Reason Required",
-        description: "Please provide a reason for rejection",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await updateRequestStatus(selectedRequest.id, "REJECTED", rejectionReason);
-      setIsRejectDialogOpen(false);
-      setSelectedRequest(null);
-      setRejectionReason("");
-      toast({
-        title: "Request Rejected",
-        description: "The booking request has been rejected",
-      });
-      fetchBookingRequests();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const pendingCount = bookingRequests.filter((r) => r.status === "PENDING").length;
   const urgentCount = bookingRequests.filter((r) => r.status === "PENDING" && r.priority === "URGENT").length; // URGENT matched from Prisma enum
@@ -761,70 +692,7 @@ export default function WatchmanBookingsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Approve Dialog */}
-        <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Approve Request</DialogTitle>
-              <DialogDescription>
-                Approving this will automatically create a live booking and start an active parking session for this vehicle.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedRequest && (
-              <div className="py-4 space-y-2 text-sm">
-                <p><span className="text-muted-foreground">Customer:</span> {selectedRequest.customerName}</p>
-                <p><span className="text-muted-foreground">Vehicle:</span> {selectedRequest.vehiclePlate}</p>
-                <p><span className="text-muted-foreground">Amount:</span> {formatCurrency(selectedRequest.estimatedAmount)}</p>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleApproveRequest} disabled={isLoading} className="bg-green-600 hover:bg-green-700">
-                {isLoading ? "Approving..." : "Approve Request"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        {/* Reject Dialog */}
-        <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reject Request</DialogTitle>
-              <DialogDescription>
-                Please provide a reason for rejecting this request.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              {selectedRequest && (
-                <div className="space-y-2 text-sm">
-                  <p><span className="text-muted-foreground">Customer:</span> {selectedRequest.customerName}</p>
-                  <p><span className="text-muted-foreground">Vehicle:</span> {selectedRequest.vehiclePlate}</p>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="rejectionReason">Rejection Reason *</Label>
-                <Textarea
-                  id="rejectionReason"
-                  placeholder="Enter reason for rejection..."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleRejectRequest} disabled={isLoading}>
-                {isLoading ? "Rejecting..." : "Reject Request"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </Suspense>
   );

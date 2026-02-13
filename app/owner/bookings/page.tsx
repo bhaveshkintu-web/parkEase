@@ -766,6 +766,7 @@ export default function OwnerBookingsPage() {
                         <TableHead>Requested By</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Vehicle</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
@@ -808,6 +809,22 @@ export default function OwnerBookingsPage() {
                               <div>
                                 <p className="text-sm font-medium">{request.vehiclePlate}</p>
                                 <p className="text-xs text-muted-foreground capitalize">{request.vehicleType}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p className="font-medium">{request.parkingName}</p>
+                                {request.status === "PENDING" && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {(() => {
+                                      const loc = safeLocations.find(l => l.id === request.parkingId);
+                                      if (!loc) return "Checking slots...";
+                                      return loc.availableSpots > 0
+                                        ? `${loc.availableSpots} spots available`
+                                        : "No spots available";
+                                    })()}
+                                  </p>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1273,9 +1290,9 @@ export default function OwnerBookingsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsBookingRejectOpen(false)}>Cancel</Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleBookingReject} 
+              <Button
+                variant="destructive"
+                onClick={handleBookingReject}
                 disabled={isLoadingRequests || !rejectionReason.trim()}
               >
                 {isLoadingRequests ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
