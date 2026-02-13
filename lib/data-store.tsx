@@ -786,8 +786,8 @@ interface DataStoreContextType {
 
   // Watchman: Sessions
   parkingSessions: ParkingSession[];
-  checkInVehicle: (sessionId: string, watchmanId: string) => Promise<void>;
-  checkOutVehicle: (sessionId: string, watchmanId: string) => Promise<void>;
+  checkInVehicle: (sessionId: string, watchmanId: string) => Promise<{ success: boolean; error?: string }>;
+  checkOutVehicle: (sessionId: string, watchmanId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Admin: Disputes
   disputes: Dispute[];
@@ -1274,25 +1274,49 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
 
   // Parking session operations
   const checkInVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
-    await new Promise((r) => setTimeout(r, 500));
-    setParkingSessions((prev) =>
-      prev.map((s) =>
-        s.id === sessionId
-          ? { ...s, status: "checked_in", checkInTime: new Date(), checkInBy: watchmanId }
-          : s
-      )
-    );
+    try {
+      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "check-in" }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || "Failed to check in");
+      }
+
+      const updatedSession = await res.json();
+      setParkingSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+      );
+      return { success: true };
+    } catch (error: any) {
+      console.error(error);
+      return { success: false, error: error.message };
+    }
   }, []);
 
   const checkOutVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
-    await new Promise((r) => setTimeout(r, 500));
-    setParkingSessions((prev) =>
-      prev.map((s) =>
-        s.id === sessionId
-          ? { ...s, status: "checked_out", checkOutTime: new Date(), checkOutBy: watchmanId }
-          : s
-      )
-    );
+    try {
+      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "check-out" }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || "Failed to check out");
+      }
+
+      const updatedSession = await res.json();
+      setParkingSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+      );
+      return { success: true };
+    } catch (error: any) {
+      console.error(error);
+      return { success: false, error: error.message };
+    }
   }, []);
 
   // Dispute operations

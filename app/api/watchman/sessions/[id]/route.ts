@@ -8,8 +8,9 @@ export async function PATCH(
   props: { params: any }
 ) {
   const session = await getServerSession(authOptions);
+  const userRole = (session?.user?.role as string || "").toUpperCase();
 
-  if (!session || session.user.role !== "WATCHMAN") {
+  if (!session || !["WATCHMAN", "OWNER", "ADMIN"].includes(userRole)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -22,17 +23,33 @@ export async function PATCH(
       return NextResponse.json({ error: "Session ID is missing" }, { status: 400 });
     }
 
-    const watchman = await prisma.watchman.findUnique({
-      where: { userId: session.user.id }
+    // Try to find the session first, either by ID or bookingId
+    let sessionRecord = await prisma.parkingSession.findFirst({
+      where: {
+        OR: [
+          { id: sessionId },
+          { bookingId: sessionId }
+        ]
+      },
+      include: { booking: true }
     });
 
-    if (!watchman) {
-      return NextResponse.json({ error: "Watchman profile not found" }, { status: 404 });
+    if (!sessionRecord) {
+      return NextResponse.json({ error: `Session not found for ID or Booking ID: ${sessionId}` }, { status: 404 });
+    }
+
+    // Role-based profile check fallback
+    let watchmanId = "SYSTEM";
+    if (userRole === "WATCHMAN") {
+      const watchman = await prisma.watchman.findUnique({
+        where: { userId: session.user.id }
+      });
+      if (watchman) watchmanId = watchman.id;
     }
 
     if (action === "check-in") {
       const updatedSession = await prisma.parkingSession.update({
-        where: { id: sessionId },
+        where: { id: sessionRecord.id },
         data: {
           status: "checked_in",
           checkInTime: new Date(),
@@ -40,67 +57,82 @@ export async function PATCH(
         include: { booking: true }
       });
 
-      // Log activity
-      await prisma.watchmanActivityLog.create({
-        data: {
-          watchmanId: watchman.id,
-          type: "check_in",
-          details: {
-            sessionId: updatedSession.id,
-            bookingId: updatedSession.bookingId,
-            vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
-            parkingId: updatedSession.locationId,
-            spotNumber: "N/A" // Add spot logic if exists
+      // Log activity if it's a real watchman
+      if (watchmanId !== "SYSTEM") {
+        await prisma.watchmanActivityLog.create({
+          data: {
+            watchmanId: watchmanId,
+            type: "check_in",
+            details: {
+              sessionId: updatedSession.id,
+              bookingId: updatedSession.bookingId,
+              vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
+              parkingId: updatedSession.locationId,
+              spotNumber: "N/A"
+            }
           }
-        }
-      });
+        });
+      }
 
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
-      const updatedSession = await prisma.parkingSession.update({
-        where: { id: sessionId },
-        data: {
-          status: "checked_out",
-          checkOutTime: new Date(),
-        },
-        include: { booking: true }
-      });
-
-      if (updatedSession.bookingId) {
-        // Import dynamically to avoid circular dependencies if any, 
-        // though here it should be fine.
-        const { FinanceService } = await import("@/lib/finance-service");
-        
-        // 1. Mark booking as COMPLETED
-        await prisma.booking.update({
-          where: { id: updatedSession.bookingId },
-          data: { status: "COMPLETED" }
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedSession = await tx.parkingSession.update({
+          where: { id: sessionRecord.id },
+          data: {
+            status: "checked_out",
+            checkOutTime: new Date(),
+          },
+          include: { booking: true }
         });
 
-        // 2. Credit earnings to owner
-        await FinanceService.creditEarnings(updatedSession.bookingId);
-      }
+        if (updatedSession.bookingId) {
+          const { FinanceService } = await import("@/lib/finance-service");
 
-      // Bonus: Increment available spots back
-      await prisma.parkingLocation.update({
-        where: { id: updatedSession.locationId },
-        data: { availableSpots: { increment: 1 } }
-      });
+          // 1. Mark booking as COMPLETED
+          await tx.booking.update({
+            where: { id: updatedSession.bookingId },
+            data: { status: "COMPLETED" }
+          });
 
-      // Log activity
-      await prisma.watchmanActivityLog.create({
-        data: {
-          watchmanId: watchman.id,
-          type: "check_out",
-          details: {
-            sessionId: updatedSession.id,
-            bookingId: updatedSession.bookingId,
-            vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
-            parkingId: updatedSession.locationId,
-            spotNumber: "N/A"
-          }
+          // 2. Credit earnings to owner
+          await FinanceService.creditEarnings(updatedSession.bookingId);
         }
+
+        // 3. Increment available spots (only if within bounds)
+        const location = await tx.parkingLocation.findUnique({
+          where: { id: updatedSession.locationId },
+          select: { availableSpots: true, totalSpots: true }
+        });
+
+        if (location && location.availableSpots < location.totalSpots) {
+          await tx.parkingLocation.update({
+            where: { id: updatedSession.locationId },
+            data: { availableSpots: { increment: 1 } }
+          });
+        }
+
+        return updatedSession;
       });
+
+      const updatedSession = result;
+
+      // Log activity if it's a real watchman
+      if (watchmanId !== "SYSTEM") {
+        await prisma.watchmanActivityLog.create({
+          data: {
+            watchmanId: watchmanId,
+            type: "check_out",
+            details: {
+              sessionId: updatedSession.id,
+              bookingId: updatedSession.bookingId,
+              vehiclePlate: updatedSession.booking?.vehiclePlate || "Unknown",
+              parkingId: updatedSession.locationId,
+              spotNumber: "N/A"
+            }
+          }
+        });
+      }
 
       return NextResponse.json(updatedSession);
     }

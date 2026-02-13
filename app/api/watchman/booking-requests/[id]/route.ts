@@ -217,95 +217,113 @@ export async function PATCH(
             updatedRequest = { ...existingRequest, ...updateData };
         }
 
-        // If approved, create an actual booking
+        // If approved, handle based on request type
         if (action === "approve") {
             const { generateConfirmationCode } = await import("@/lib/data");
-            const confCode = `PKE-${generateConfirmationCode()}`;
+            const confCode = existingRequest.requestType === "WALK_IN" ? `PKE-${generateConfirmationCode()}` : null;
 
             try {
-                console.log("Starting transaction for booking creation...");
+                console.log(`Starting transaction for ${existingRequest.requestType} approval...`);
                 await (prisma as any).$transaction(async (tx: any) => {
-                    logInfo(`Creating booking for request ${existingRequest.id}`);
-                    const newBooking = await tx.booking.create({
-                        data: {
-                            userId: existingRequest.requestedById || null,
-                            locationId: existingRequest.parkingId,
-                            checkIn: new Date(existingRequest.requestedStart),
-                            checkOut: new Date(existingRequest.requestedEnd),
-                            guestFirstName: (existingRequest.customerName || "Guest").split(' ')[0],
-                            guestLastName: (existingRequest.customerName || "User").split(' ').slice(1).join(' ') || "User",
-                            guestEmail: existingRequest.customerEmail || "guest@example.com",
-                            guestPhone: existingRequest.customerPhone || "",
-                            vehicleMake: existingRequest.vehicleMake || "Unknown",
-                            vehicleModel: existingRequest.vehicleModel || existingRequest.vehicleType || "Sedan",
-                            vehicleColor: existingRequest.vehicleColor || "Unknown",
-                            vehiclePlate: existingRequest.vehiclePlate,
-                            totalPrice: Number(existingRequest.estimatedAmount) || 0,
-                            taxes: (Number(existingRequest.estimatedAmount) || 0) * 0.1,
-                            fees: 2.99,
-                            status: "CONFIRMED",
-                            confirmationCode: confCode,
+                    if (existingRequest.requestType === "WALK_IN") {
+                        // Create NEW booking for walk-ins
+                        logInfo(`Creating walk-in booking for request ${existingRequest.id}`);
+                        const newBooking = await tx.booking.create({
+                            data: {
+                                userId: existingRequest.requestedById || null,
+                                locationId: existingRequest.parkingId,
+                                checkIn: new Date(existingRequest.requestedStart),
+                                checkOut: new Date(existingRequest.requestedEnd),
+                                guestFirstName: (existingRequest.customerName || "Guest").split(' ')[0],
+                                guestLastName: (existingRequest.customerName || "User").split(' ').slice(1).join(' ') || "User",
+                                guestEmail: existingRequest.customerEmail || "guest@example.com",
+                                guestPhone: existingRequest.customerPhone || "",
+                                vehicleMake: existingRequest.vehicleMake || "Unknown",
+                                vehicleModel: existingRequest.vehicleModel || existingRequest.vehicleType || "Sedan",
+                                vehicleColor: existingRequest.vehicleColor || "Unknown",
+                                vehiclePlate: existingRequest.vehiclePlate,
+                                totalPrice: Number(existingRequest.estimatedAmount) || 0,
+                                taxes: (Number(existingRequest.estimatedAmount) || 0) * 0.1,
+                                fees: 2.99,
+                                status: "CONFIRMED",
+                                confirmationCode: confCode!,
+                            }
+                        });
+
+                        // 2. Create ParkingSession
+                        await tx.parkingSession.create({
+                            data: {
+                                bookingId: newBooking.id,
+                                locationId: existingRequest.parkingId,
+                                status: "RESERVED",
+                            },
+                        });
+
+                        // 3. Decrement available spots (only if within bounds)
+                        await tx.parkingLocation.update({
+                            where: { id: existingRequest.parkingId },
+                            data: { availableSpots: { decrement: 1 } }
+                        });
+
+                        // Update the request with the new booking ID
+                        await tx.bookingRequest.update({
+                            where: { id: existingRequest.id },
+                            data: { bookingId: newBooking.id }
+                        });
+                    } else if (existingRequest.requestType === "EARLY_CHECKOUT" && existingRequest.originalBookingId) {
+                        // Handle early checkout
+                        logInfo(`Processing early checkout for booking ${existingRequest.originalBookingId}`);
+
+                        // 1. Update Booking status to COMPLETED
+                        await tx.booking.update({
+                            where: { id: existingRequest.originalBookingId },
+                            data: {
+                                status: "COMPLETED",
+                                checkOut: new Date() // Set checkout to now
+                            }
+                        });
+
+                        // 2. Update Session status
+                        await tx.parkingSession.update({
+                            where: { bookingId: existingRequest.originalBookingId },
+                            data: {
+                                status: "checked_out",
+                                checkOutTime: new Date()
+                            }
+                        });
+
+                        // 3. Increment available spots (only if within bounds)
+                        const loc = await tx.parkingLocation.findUnique({
+                            where: { id: existingRequest.parkingId },
+                            select: { availableSpots: true, totalSpots: true }
+                        });
+
+                        if (loc && loc.availableSpots < loc.totalSpots) {
+                            await tx.parkingLocation.update({
+                                where: { id: existingRequest.parkingId },
+                                data: { availableSpots: { increment: 1 } }
+                            });
                         }
-                    });
+                    } else if (existingRequest.requestType === "EXTENSION" && existingRequest.originalBookingId) {
+                        // Handle extension
+                        logInfo(`Processing extension for booking ${existingRequest.originalBookingId}`);
 
-                    logInfo(`Booking created: ${newBooking.id}.`);
-
-                    logInfo(`Updating available spots for location ${existingRequest.parkingId}`);
-                    // Update available spots (decrement)
-                    await tx.parkingLocation.update({
-                        where: { id: existingRequest.parkingId },
-                        data: { availableSpots: { decrement: 1 } }
-                    });
+                        // 1. Update Booking checkout time
+                        await tx.booking.update({
+                            where: { id: existingRequest.originalBookingId },
+                            data: {
+                                checkOut: new Date(existingRequest.requestedEnd),
+                                totalPrice: { increment: Number(existingRequest.estimatedAmount) || 0 }
+                            }
+                        });
+                        // No spot change for extension (already occupied)
+                    }
                 });
                 logInfo("Approval transaction completed successfully.");
             } catch (err: any) {
-                console.log("Prisma booking create failed, trying raw query fallback...", err.message);
-                logInfo(`Prisma failed: ${err.message}. Using raw SQL fallback.`);
-
-                const bookingId = `b_${Math.random().toString(36).substring(2, 11)}`;
-                const sessionId = `s_${Math.random().toString(36).substring(2, 11)}`;
-
-                // Insert booking with raw SQL
-                await prisma.$executeRaw`
-                    INSERT INTO "Booking" (
-                        "id", "userId", "locationId", "checkIn", "checkOut", 
-                        "guestFirstName", "guestLastName", "guestEmail", "guestPhone", 
-                        "vehicleMake", "vehicleModel", "vehicleColor", "vehiclePlate", 
-                        "totalPrice", "taxes", "fees", "status", "confirmationCode", "createdAt", "updatedAt"
-                    ) VALUES (
-                        ${bookingId}, 
-                        ${existingRequest.requestedById || null}, 
-                        ${existingRequest.parkingId}, 
-                        ${new Date(existingRequest.requestedStart)}, 
-                        ${new Date(existingRequest.requestedEnd)},
-                        ${(existingRequest.customerName || "Guest").split(' ')[0]}, 
-                        ${(existingRequest.customerName || "User").split(' ').slice(1).join(' ') || "User"}, 
-                        ${existingRequest.customerEmail || "guest@example.com"}, 
-                        ${existingRequest.customerPhone || ""},
-                        ${existingRequest.vehicleMake || "Unknown"}, 
-                        ${existingRequest.vehicleModel || existingRequest.vehicleType || "Sedan"}, 
-                        ${existingRequest.vehicleColor || "Unknown"}, 
-                        ${existingRequest.vehiclePlate},
-                        ${Number(existingRequest.estimatedAmount) || 0}, 
-                        ${(Number(existingRequest.estimatedAmount) || 0) * 0.1}, 
-                        ${2.99}, 
-                        ${"CONFIRMED"}::"BookingStatus", 
-                        ${confCode}, 
-                        NOW(), 
-                        NOW()
-                    )
-                `;
-
-                logInfo(`Booking ${bookingId} created via raw SQL.`);
-
-                // Update available spots
-                await prisma.$executeRaw`
-                    UPDATE "ParkingLocation" 
-                    SET "availableSpots" = "availableSpots" - 1, "updatedAt" = NOW()
-                    WHERE id = ${existingRequest.parkingId}
-                `;
-
-                logInfo("Raw SQL fallback completed successfully.");
+                console.log("Transaction failed:", err.message);
+                logInfo(`Transaction failed: ${err.message}`);
+                throw err; // Re-throw to be caught by outer catch
             }
 
             // Send Approval Notification
