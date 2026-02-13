@@ -81,9 +81,9 @@ export async function getOverviewMetrics(dateRange: DateRange): Promise<Overview
         gte: dateRange.startDate,
         lte: dateRange.endDate,
       },
-      status: 'completed',
+      status: 'SUCCESS',
       booking: {
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
       },
     },
   });
@@ -96,9 +96,9 @@ export async function getOverviewMetrics(dateRange: DateRange): Promise<Overview
         gte: previousPeriod.startDate,
         lte: previousPeriod.endDate,
       },
-      status: 'completed',
+      status: 'SUCCESS',
       booking: {
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
       },
     },
   });
@@ -110,6 +110,7 @@ export async function getOverviewMetrics(dateRange: DateRange): Promise<Overview
         gte: dateRange.startDate,
         lte: dateRange.endDate,
       },
+      status: { notIn: ['CANCELLED', 'REJECTED'] },
     },
   });
 
@@ -120,6 +121,7 @@ export async function getOverviewMetrics(dateRange: DateRange): Promise<Overview
         gte: previousPeriod.startDate,
         lte: previousPeriod.endDate,
       },
+      status: { notIn: ['CANCELLED', 'REJECTED'] },
     },
   });
 
@@ -184,9 +186,9 @@ export async function getRevenueTrend(dateRange: DateRange): Promise<{ data: Rev
         gte: dateRange.startDate,
         lte: dateRange.endDate,
       },
-      status: 'completed',
+      status: 'SUCCESS',
       booking: {
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
       },
     },
     select: {
@@ -202,6 +204,7 @@ export async function getRevenueTrend(dateRange: DateRange): Promise<{ data: Rev
         gte: dateRange.startDate,
         lte: dateRange.endDate,
       },
+      status: { notIn: ['CANCELLED', 'REJECTED'] },
     },
     select: {
       createdAt: true,
@@ -257,6 +260,7 @@ export async function getBookingDistribution(dateRange: DateRange): Promise<{ ca
         gte: dateRange.startDate,
         lte: dateRange.endDate,
       },
+      status: { notIn: ['CANCELLED', 'REJECTED'] },
     },
     include: {
       location: {
@@ -284,10 +288,10 @@ export async function getBookingDistribution(dateRange: DateRange): Promise<{ ca
     const checkOut = new Date(booking.checkOut);
     const durationDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (booking.location.airportCode) {
-      airportCount++;
-    } else if (durationDays >= MONTHLY_THRESHOLD) {
+    if (durationDays >= MONTHLY_THRESHOLD) {
       monthlyCount++;
+    } else if (booking.location.airportCode) {
+      airportCount++;
     } else if (durationDays <= DAILY_THRESHOLD) {
       dailyCount++;
     } else {
@@ -332,7 +336,7 @@ export async function getTopLocations(dateRange: DateRange, limit: number = 10):
             gte: dateRange.startDate,
             lte: dateRange.endDate,
           },
-          status: { not: 'CANCELLED' },
+          status: { notIn: ['CANCELLED', 'REJECTED'] },
         },
         include: {
           payment: {
@@ -346,7 +350,7 @@ export async function getTopLocations(dateRange: DateRange, limit: number = 10):
   // Calculate metrics for each location
   const locationMetrics: TopLocationData[] = locations.map((location) => {
     const validPayments = location.bookings
-      .filter((b) => b.payment && b.payment.status === 'completed')
+      .filter((b) => b.payment && b.payment.status === 'SUCCESS')
       .map((b) => b.payment!.amount);
 
     const revenue = validPayments.reduce((sum, amt) => sum + amt, 0);
