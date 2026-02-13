@@ -1280,10 +1280,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "check-in" }),
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || "Failed to check in");
-      }
+      if (!res.ok) throw new Error("Failed to check in");
 
       const updatedSession = await res.json();
       setParkingSessions((prev) =>
@@ -1303,10 +1300,7 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "check-out" }),
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || "Failed to check out");
-      }
+      if (!res.ok) throw new Error("Failed to check out");
 
       const updatedSession = await res.json();
       setParkingSessions((prev) =>
