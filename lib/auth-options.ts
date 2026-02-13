@@ -99,10 +99,13 @@ export const authOptions: NextAuthOptions = {
         if ((user as any).role === "OWNER") {
           const profile = await prisma.ownerProfile.findUnique({
             where: { userId: user.id },
-            select: { id: true }
+            select: { id: true, street: true, zipCode: true }
           });
           if (profile) {
             token.ownerId = profile.id;
+            token.isProfileComplete = profile.street !== "N/A" && profile.zipCode !== "N/A";
+          } else {
+            token.isProfileComplete = false;
           }
         }
 
@@ -187,6 +190,7 @@ export const authOptions: NextAuthOptions = {
         session.user.avatar = token.avatar as string | null;
         (session.user as any).isGuest = token.isGuest as boolean;
         (session.user as any).ownerId = token.ownerId as string | undefined;
+        (session.user as any).isProfileComplete = token.isProfileComplete as boolean | undefined;
         (session.user as any).preferences = token.preferences;
       }
       return session;

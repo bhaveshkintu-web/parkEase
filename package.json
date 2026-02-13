@@ -16,7 +16,7 @@
     "seed": "prisma db seed"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.js"
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
