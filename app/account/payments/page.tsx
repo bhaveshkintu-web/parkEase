@@ -172,7 +172,7 @@ export default function PaymentsPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between relative z-10">
                   <div className="flex items-start gap-5">
-                    <div className={`w-14 h-9 rounded-md flex items-center justify-center text-white font-black text-xs shadow-md transition-transform hover:scale-105 ${
+                    <div className={`px-3 min-w-[56px] h-9 rounded-md flex items-center justify-center text-white font-black text-xs shadow-md transition-transform hover:scale-105 ${
                       payment.brand.toLowerCase() === 'visa' ? 'bg-[#1A1F71]' :
                       payment.brand.toLowerCase() === 'mastercard' ? 'bg-[#EB001B]' :
                       payment.brand.toLowerCase() === 'amex' ? 'bg-[#0070D1]' : 'bg-slate-700'

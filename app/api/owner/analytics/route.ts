@@ -97,14 +97,30 @@ export async function GET(req: NextRequest) {
       status: l.status.toLowerCase()
     }));
 
-    const watchmanList = watchmen.map(w => ({
-      id: w.id,
-      name: w.user ? `${w.user.firstName} ${w.user.lastName}` : "Unknown",
-      shift: "N/A",
-      todayCheckIns: 0,
-      todayCheckOuts: 0,
-      status: w.status.toLowerCase()
-    }));
+    // Fetch today's activities for all watchmen to calculate in/out counts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const watchmanIds = watchmen.map(w => w.id);
+    const todayLogs = await prisma.watchmanActivityLog.findMany({
+      where: {
+        watchmanId: { in: watchmanIds },
+        timestamp: { gte: today },
+        type: { in: ["check_in", "check_out"] }
+      }
+    });
+
+    const watchmanList = watchmen.map(w => {
+      const wLogs = todayLogs.filter(log => log.watchmanId === w.id);
+      return {
+        id: w.id,
+        name: w.user ? `${w.user.firstName} ${w.user.lastName}` : "Unknown",
+        shift: w.shift || "morning",
+        todayCheckIns: wLogs.filter(l => l.type === "check_in").length,
+        todayCheckOuts: wLogs.filter(l => l.type === "check_out").length,
+        status: w.status.toLowerCase()
+      };
+    });
 
     return NextResponse.json({
       stats: {
