@@ -35,6 +35,7 @@ interface ScanResult {
   type: "check_in" | "check_out";
   booking: {
     id: string;
+    sessionId?: string;
     confirmationCode: string;
     vehiclePlate: string;
     vehicleInfo: {
@@ -135,6 +136,7 @@ export default function WatchmanScanPage() {
       type: (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out",
       booking: {
         id: booking.id,
+        sessionId: booking.sessionId,
         confirmationCode: booking.confirmationCode,
         vehiclePlate: booking.vehiclePlate || booking.vehicleInfo.licensePlate,
         vehicleInfo: {
@@ -155,7 +157,7 @@ export default function WatchmanScanPage() {
     });
   };
 
-  const handleScan = (data: string | null) => {
+  const handleScan = async (data: string | null) => {
     if (!data) return;
 
     setManualCode(data);

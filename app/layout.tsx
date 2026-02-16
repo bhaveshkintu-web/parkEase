@@ -1,6 +1,6 @@
 import React from "react"
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+// import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
@@ -8,8 +8,8 @@ import { BookingProvider } from '@/lib/booking-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+// const _geist = Geist({ subsets: ["latin"] });
+// const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'ParkEase | Find & Reserve Parking Near Airports, Events & More',

@@ -88,8 +88,7 @@ export function FilterSidebar({
     localFilters.evCharging,
     localFilters.open24Hours,
     localFilters.freeCancellation,
-    localFilters.priceRange[0] > 0,
-    localFilters.priceRange[1] < 50,
+    localFilters.priceRange[0] > 0 || localFilters.priceRange[1] < 50,
   ].filter(Boolean).length;
 
   return (

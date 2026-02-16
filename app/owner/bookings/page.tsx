@@ -63,7 +63,7 @@ import {
   FileText,
   RotateCw,
 } from "lucide-react";
-import type { Reservation, AdminReview } from "@/lib/types";
+import type { Reservation, AdminReview, Booking } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useCallback } from "react";
 import Loading from "./loading";
@@ -149,7 +149,7 @@ export default function OwnerBookingsPage() {
 
     // Status filter
     if (statusFilter !== "all") {
-      result = result.filter((b) => b.status === statusFilter);
+      result = result.filter((b) => b.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
     // Location filter
@@ -200,21 +200,23 @@ export default function OwnerBookingsPage() {
 
     return {
       total: safeReservations.length,
-      pending: safeReservations.filter((b) => b.status === "pending").length,
-      confirmed: safeReservations.filter((b) => b.status === "confirmed").length,
-      cancelled: safeReservations.filter((b) => b.status === "cancelled").length,
+      pending: safeReservations.filter((b) => b.status.toLowerCase() === "pending").length,
+      confirmed: safeReservations.filter((b) => b.status.toLowerCase() === "confirmed").length,
+      cancelled: safeReservations.filter((b) => b.status.toLowerCase() === "cancelled").length,
+      completed: safeReservations.filter((b) => b.status.toLowerCase() === "completed").length,
       todayCheckIns: safeReservations.filter(
-        (b) => new Date(b.checkIn) >= today && new Date(b.checkIn) < tomorrow && b.status === "confirmed"
+        (b) => new Date(b.checkIn) >= today && new Date(b.checkIn) < tomorrow && b.status.toLowerCase() === "confirmed"
       ).length,
       revenue: safeReservations
-        .filter((b) => b.status === "confirmed")
+        .filter((b) => ["confirmed", "completed"].includes(b.status.toLowerCase()))
         .reduce((sum, b) => sum + b.totalPrice, 0),
-      pendingRequests: bookingRequests.filter(r => r.status === "PENDING").length,
+      pendingRequests: bookingRequests.filter(r => r.status.toUpperCase() === "PENDING").length,
     };
   }, [safeReservations, bookingRequests]);
 
   // Status badge component
-  const getStatusBadge = (status: Reservation["status"]) => {
+  const getStatusBadge = (status: Booking["status"] | string) => {
+    const normalizedStatus = status.toLowerCase();
     const config = {
       pending: {
         variant: "secondary" as const,
@@ -227,6 +229,12 @@ export default function OwnerBookingsPage() {
         icon: CheckCircle2,
         label: "Confirmed",
         className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      },
+      completed: {
+        variant: "outline" as const,
+        icon: CheckCircle2,
+        label: "Completed",
+        className: "bg-blue-100 text-blue-700 border-blue-200",
       },
       cancelled: {
         variant: "destructive" as const,
@@ -241,7 +249,7 @@ export default function OwnerBookingsPage() {
         className: "bg-rose-100 text-rose-700 border-rose-200",
       },
     };
-    const item = config[status] || config.pending;
+    const item = (config as any)[normalizedStatus] || config.pending;
     const Icon = item.icon;
     return (
       <Badge variant="outline" className={item.className}>

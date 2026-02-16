@@ -151,7 +151,8 @@ export async function GET(request: NextRequest) {
                 totalPrice: b.totalPrice,
                 status: b.status.toLowerCase(),
                 confirmationCode: b.confirmationCode,
-                sessionStatus: b.parkingSession?.status || "pending"
+                sessionStatus: b.parkingSession?.status || "pending",
+                sessionId: b.parkingSession?.id
             }))
         });
 
