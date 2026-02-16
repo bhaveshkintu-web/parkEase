@@ -12,9 +12,10 @@ export async function GET(request: NextRequest) {
         }
 
         const sessionUser = session.user as any;
+        const role = sessionUser.role?.toUpperCase();
 
         // Ensure user is watchman
-        if (sessionUser.role !== "WATCHMAN" && sessionUser.role !== "OWNER") {
+        if (role !== "WATCHMAN" && role !== "OWNER") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
         // Get watchman details
         let watchmanId = "";
 
-        if (sessionUser.role === "WATCHMAN") {
+        if (role === "WATCHMAN") {
             const watchman = await prisma.watchman.findUnique({
                 where: { userId: sessionUser.id }
             });
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session || !session.user || session.user.role !== "WATCHMAN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
+            return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
         }
 
         const body = await request.json();

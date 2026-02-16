@@ -232,52 +232,15 @@ export default function WatchmanScanPage() {
 
     setIsLoading(true);
     try {
-      // Find the actual session ID if it exists in dbBookings
-      const dbBooking = dbBookings.find(b => b.id === scanResult.booking.id);
-      let actionProcessed = false;
-
-      if (dbBooking) {
-        const action = scanResult.type === "check_in" ? "check-in" : "check-out";
-
-        // Use the new sessions POST API which can find or create a session by bookingId
-        const res = await fetch("/api/watchman/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: scanResult.booking.id,
-            action,
-            notes: notes
-          })
-        });
-
-        if (res.ok) {
-          actionProcessed = true;
-        }
-      }
-
-      // If not processed via session API (either mock or session not found), hit activity API directly
-      if (!actionProcessed) {
-        await fetch("/api/watchman/activity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: scanResult.type === "check_in" ? "check_in" : "check_out",
-            details: {
-              bookingId: scanResult.booking.id,
-              vehiclePlate: scanResult.booking.vehiclePlate,
-              notes: notes,
-              confirmationCode: scanResult.booking.confirmationCode,
-              isMock: !dbBooking
-            }
-          })
-        });
-      }
-
-      // Still update local mock store for consistency if needed
+      let result;
       if (scanResult.type === "check_in") {
-        checkInVehicle(scanResult.booking.id, notes);
+        result = await checkInVehicle(scanResult.booking.id, notes);
       } else {
-        checkOutVehicle(scanResult.booking.id, notes);
+        result = await checkOutVehicle(scanResult.booking.id, notes);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || "Action failed");
       }
 
       toast({

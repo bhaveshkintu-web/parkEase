@@ -8,9 +8,8 @@ export async function PATCH(
   props: { params: any }
 ) {
   const session = await getServerSession(authOptions);
-
-  if (!session || session.user.role !== "WATCHMAN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || session.user.role?.toUpperCase() !== "WATCHMAN") {
+    return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
   }
 
   try {

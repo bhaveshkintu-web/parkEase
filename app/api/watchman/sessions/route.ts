@@ -62,7 +62,10 @@ export async function GET(request: NextRequest) {
 
     // Prepare filter
     const whereClause: any = {
-      locationId: { in: locationIds }
+      locationId: { in: locationIds },
+      booking: {
+        status: { not: "CANCELLED" }
+      }
     };
 
     if (statusFilter && statusFilter !== "all") {
@@ -73,6 +76,7 @@ export async function GET(request: NextRequest) {
       } else if (statusFilter === "overstay") {
         whereClause.status = { in: ["CHECKED_IN", "checked_in"] };
         whereClause.booking = {
+          ...whereClause.booking,
           checkOut: { lt: new Date() }
         };
       } else {
@@ -133,8 +137,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || (session.user as any).role !== "WATCHMAN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
+      return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -160,6 +164,10 @@ export async function POST(request: NextRequest) {
 
     if (!booking) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    if (booking.status === "CANCELLED") {
+      return NextResponse.json({ error: "This booking has been cancelled and cannot be processed." }, { status: 400 });
     }
 
     // Find or create session
