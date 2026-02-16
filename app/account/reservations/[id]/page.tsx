@@ -149,7 +149,8 @@ export default function ReservationDetailPage({
   const checkOutDate = new Date(reservation.checkOut);
 
   const isUpcoming = (reservation.status === "CONFIRMED" || reservation.status === "PENDING") && checkInDate > now;
-  const isActive = reservation.status === "CONFIRMED" && checkInDate <= now && checkOutDate >= now;
+  const isCheckedIn = reservation.parkingSession?.status === "checked_in" && reservation.parkingSession?.checkInTime;
+  const isActive = reservation.status === "CONFIRMED" && isCheckedIn && checkOutDate >= now;
   const isPast = (reservation.status === "CONFIRMED" || reservation.status === "COMPLETED") && checkOutDate < now;
   const isCancelled = reservation.status === "CANCELLED";
 
@@ -359,6 +360,16 @@ export default function ReservationDetailPage({
         className: "bg-blue-50 text-blue-700 border-blue-200",
         icon: Car,
         description: "Your vehicle is currently parked",
+      };
+    }
+    // New status for when booking time has started but not checked in
+    if (reservation.status === "CONFIRMED" && checkInDate <= now && checkOutDate >= now && !isCheckedIn) {
+      return {
+        label: "Ready for Check-in",
+        variant: "default" as const,
+        className: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: Clock,
+        description: "Your booking has started. Please check in at the facility.",
       };
     }
     return {

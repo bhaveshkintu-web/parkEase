@@ -117,7 +117,7 @@ export interface Booking {
   totalPrice: number;
   taxes: number;
   fees: number;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
   confirmationCode: string;
   qrCode: string;
   createdAt: Date;
