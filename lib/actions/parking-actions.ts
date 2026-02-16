@@ -254,6 +254,9 @@ export async function getOwnerLocations(userId: string) {
       return { success: false, error: "Owner profile not found" };
     }
 
+    // Auto-fix any incorrect availability data (one-time logic during fetch)
+    await syncAllLocationsAvailability();
+
     const locations = await prisma.parkingLocation.findMany({
       where: { ownerId: ownerProfile.id },
       orderBy: { createdAt: 'desc' },
@@ -349,10 +352,27 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
 
     const { cancellationPolicy, cancellationDeadline, ...rest } = result.data;
 
+    const current = await prisma.parkingLocation.findUnique({
+      where: { id },
+      select: { totalSpots: true, availableSpots: true }
+    });
+
+    if (!current) return { success: false, error: "Location not found" };
+
+    const newTotalSpots = rest.totalSpots;
+    let newAvailableSpots = current.availableSpots;
+
+    // If total spots changed, recalculate available spots based on existing occupancy
+    if (newTotalSpots !== current.totalSpots) {
+      const occupiedSpots = Math.max(0, current.totalSpots - current.availableSpots);
+      newAvailableSpots = Math.max(0, newTotalSpots - occupiedSpots);
+    }
+
     const updatedLocation = await prisma.parkingLocation.update({
       where: { id },
       data: {
         ...rest,
+        availableSpots: newAvailableSpots,
         cancellationPolicy: {
           type: cancellationPolicy,
           hours: parseInt(cancellationDeadline) || 0,
@@ -404,6 +424,37 @@ export async function updateLocationImages(id: string, images: string[]) {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update location images"
     };
+  }
+}
+
+/**
+ * Utility to fix existing incorrect availability data across all locations.
+ * Clamps availableSpots to totalSpots if it currently exceeds it.
+ */
+export async function syncAllLocationsAvailability() {
+  try {
+    const locations = await prisma.parkingLocation.findMany({
+      select: { id: true, totalSpots: true, availableSpots: true }
+    });
+
+    const fixPromises = locations
+      .filter(loc => loc.availableSpots > loc.totalSpots)
+      .map(loc =>
+        prisma.parkingLocation.update({
+          where: { id: loc.id },
+          data: { availableSpots: loc.totalSpots }
+        })
+      );
+
+    if (fixPromises.length > 0) {
+      await Promise.all(fixPromises);
+      console.log(`✅ Sanity check complete: Fixed ${fixPromises.length} locations with incorrect availability.`);
+    }
+
+    return { success: true, fixedCount: fixPromises.length };
+  } catch (error) {
+    console.error("Failed to sync location availability:", error);
+    return { success: false, error: "Failed to perform sanity check" };
   }
 }
 

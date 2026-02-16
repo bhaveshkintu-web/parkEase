@@ -331,6 +331,8 @@ export async function cancelBooking(bookingId: string, reason: string) {
           select: {
             id: true,
             cancellationPolicy: true,
+            availableSpots: true,
+            totalSpots: true,
           }
         }
       }
@@ -415,15 +417,17 @@ export async function cancelBooking(bookingId: string, reason: string) {
         },
       });
 
-      // Restore available spot
-      await tx.parkingLocation.update({
-        where: { id: booking.locationId },
-        data: {
-          availableSpots: {
-            increment: 1
+      // Restore available spot (only if within bounds)
+      if (booking.location && booking.location.availableSpots < booking.location.totalSpots) {
+        await tx.parkingLocation.update({
+          where: { id: booking.locationId },
+          data: {
+            availableSpots: {
+              increment: 1
+            }
           }
-        }
-      });
+        });
+      }
 
       return updatedBooking;
     });
@@ -701,11 +705,13 @@ export async function rejectBooking(bookingId: string, reason: string) {
         } as any,
       });
 
-      // 2. Restore available spot
-      await tx.parkingLocation.update({
-        where: { id: booking.locationId },
-        data: { availableSpots: { increment: 1 } }
-      });
+      // 2. Restore available spot (only if within bounds)
+      if (booking.location && booking.location.availableSpots < booking.location.totalSpots) {
+        await tx.parkingLocation.update({
+          where: { id: booking.locationId },
+          data: { availableSpots: { increment: 1 } }
+        });
+      }
 
       return updatedBooking;
     });

@@ -57,35 +57,46 @@ export async function PATCH(
 
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
-      const updatedSession = await prisma.parkingSession.update({
-        where: { id: sessionId },
-        data: {
-          status: "checked_out",
-          checkOutTime: new Date(),
-        },
-        include: { booking: true }
-      });
-
-      if (updatedSession.bookingId) {
-        // Import dynamically to avoid circular dependencies if any, 
-        // though here it should be fine.
-        const { FinanceService } = await import("@/lib/finance-service");
-        
-        // 1. Mark booking as COMPLETED
-        await prisma.booking.update({
-          where: { id: updatedSession.bookingId },
-          data: { status: "COMPLETED" }
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedSession = await tx.parkingSession.update({
+          where: { id: sessionId },
+          data: {
+            status: "checked_out",
+            checkOutTime: new Date(),
+          },
+          include: { booking: true }
         });
 
-        // 2. Credit earnings to owner
-        await FinanceService.creditEarnings(updatedSession.bookingId);
-      }
+        if (updatedSession.bookingId) {
+          const { FinanceService } = await import("@/lib/finance-service");
 
-      // Bonus: Increment available spots back
-      await prisma.parkingLocation.update({
-        where: { id: updatedSession.locationId },
-        data: { availableSpots: { increment: 1 } }
+          // 1. Mark booking as COMPLETED
+          await tx.booking.update({
+            where: { id: updatedSession.bookingId },
+            data: { status: "COMPLETED" }
+          });
+
+          // 2. Credit earnings to owner
+          await FinanceService.creditEarnings(updatedSession.bookingId);
+        }
+
+        // 3. Increment available spots (only if within bounds)
+        const location = await tx.parkingLocation.findUnique({
+          where: { id: updatedSession.locationId },
+          select: { availableSpots: true, totalSpots: true }
+        });
+
+        if (location && location.availableSpots < location.totalSpots) {
+          await tx.parkingLocation.update({
+            where: { id: updatedSession.locationId },
+            data: { availableSpots: { increment: 1 } }
+          });
+        }
+
+        return updatedSession;
       });
+
+      const updatedSession = result;
 
       // Log activity
       await prisma.watchmanActivityLog.create({
