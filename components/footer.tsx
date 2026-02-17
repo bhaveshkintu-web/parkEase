@@ -51,7 +51,7 @@ export function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Car className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">{platformName}</span>
+              <span className="text-xl font-bold text-foreground" suppressHydrationWarning>{platformName}</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
               Find and reserve parking spots near airports, events, and city centers.
@@ -93,7 +93,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
             © {new Date().getFullYear()} {platformName}. All rights reserved.
           </p>
           <div className="flex items-center gap-4">

@@ -58,7 +58,7 @@ export function Navbar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Car className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">{platformName}</span>
+            <span className="text-xl font-bold text-foreground" suppressHydrationWarning>{platformName}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
