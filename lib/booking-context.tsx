@@ -93,19 +93,27 @@ const saveBookingState = (state: BookingState) => {
 };
 
 // Helper to get default state
-const getInitialState = (): BookingState => ({
+const getInitialState = (defaultCheckIn?: Date, defaultCheckOut?: Date): BookingState => ({
   location: null,
-  checkIn: getDefaultCheckIn(),
-  checkOut: getDefaultCheckOut(),
+  checkIn: defaultCheckIn || getDefaultCheckIn(),
+  checkOut: defaultCheckOut || getDefaultCheckOut(),
   guestInfo: null,
   vehicleInfo: null,
   searchQuery: "",
   parkingType: "airport",
 });
 
-export function BookingProvider({ children }: { children: ReactNode }) {
+export function BookingProvider({ 
+  children,
+  defaultCheckIn,
+  defaultCheckOut 
+}: { 
+  children: ReactNode;
+  defaultCheckIn?: Date;
+  defaultCheckOut?: Date;
+}) {
   // Always initialize with defaults to match server SSR
-  const [state, setState] = useState<BookingState>(getInitialState());
+  const [state, setState] = useState<BookingState>(() => getInitialState(defaultCheckIn, defaultCheckOut));
   const [isInitialized, setIsInitialized] = useState(false);
   const [minBookingDuration, setMinBookingDuration] = useState(120);
 

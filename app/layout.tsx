@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata } from 'next'
 // import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
 import { BookingProvider } from '@/lib/booking-context'
@@ -50,7 +50,10 @@ export default function RootLayout({
         <AuthProvider>
           <DataStoreProvider>
             <SettingsProvider>
-              <BookingProvider>
+              <BookingProvider
+                  defaultCheckIn={new Date(Date.now() + 60 * 60 * 1000)} // Next hour
+                  defaultCheckOut={new Date(Date.now() + 3 * 60 * 60 * 1000)} // +3 hours
+                >
                 {children}
                 <Toaster />
               </BookingProvider>
