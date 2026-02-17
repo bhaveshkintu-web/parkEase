@@ -99,17 +99,21 @@ export default function OwnerAnalyticsPage() {
       confirmedBookings,
       pendingBookings,
       cancelledBookings,
-      activeLocations: myLocations.filter((l) => l.status === "active").length,
+      activeLocations: myLocations.filter((l) => l.status === "ACTIVE").length,
       totalLocations: myLocations.length,
       activeWatchmen: watchmen.filter((w) => w.status === "active").length,
       totalWatchmen: watchmen.length,
     };
   }, [myLocations, reservations, watchmen]);
 
-  // Generate booking trend data
-  const bookingTrendData = useMemo(() => {
+  const [bookingTrendData, setBookingTrendData] = useState<any[]>([]);
+  const [hourlyOccupancy, setHourlyOccupancy] = useState<any[]>([]);
+
+  // Generate booking trend data and occupancy on client mount
+  React.useEffect(() => {
+    // Trend Data
     const now = new Date();
-    const data = [];
+    const trendData = [];
     const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
 
     for (let i = days - 1; i >= 0; i--) {
@@ -122,18 +126,16 @@ export default function OwnerAnalyticsPage() {
       const checkIns = Math.floor(bookings * 0.8);
       const checkOuts = Math.floor(bookings * 0.7);
 
-      data.push({
+      trendData.push({
         date: dayLabel,
         bookings,
         checkIns,
         checkOuts,
       });
     }
-    return data;
-  }, [timeRange]);
+    setBookingTrendData(trendData);
 
-  // Occupancy by hour data
-  const hourlyOccupancy = useMemo(() => {
+    // Hourly Occupancy
     const hours = [];
     for (let i = 0; i < 24; i++) {
       const hour = i.toString().padStart(2, "0") + ":00";
@@ -153,8 +155,8 @@ export default function OwnerAnalyticsPage() {
         occupancy: Math.round(occupancy),
       });
     }
-    return hours;
-  }, []);
+    setHourlyOccupancy(hours);
+  }, [timeRange]);
 
   // Location performance data
   const locationPerformance = useMemo(() => {

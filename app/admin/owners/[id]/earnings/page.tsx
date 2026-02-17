@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   DollarSign,
@@ -139,13 +139,13 @@ export default function OwnerEarningsPage() {
           title="Total Revenue"
           value={`$${owner.stats.totalRevenue.toLocaleString()}`}
           icon={DollarSign}
-          trend={{ value: 12.5, isPositive: true }}
+          trend={{ value: 12.5, label: "vs last month", isPositive: true }}
         />
         <StatCard
           title="Net Earnings"
           value={`$${owner.stats.totalEarnings.toLocaleString()}`}
           icon={Wallet}
-          trend={{ value: 8.3, isPositive: true }}
+          trend={{ value: 8.3, label: "vs last month", isPositive: true }}
         />
         <StatCard
           title="Commission Paid"
