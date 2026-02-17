@@ -308,7 +308,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r bg-card h-[calc(100vh-64px)] sticky top-16">
+      <aside className="hidden lg:flex w-64 flex-col border-r bg-card">
         <SidebarContent />
       </aside>
 
