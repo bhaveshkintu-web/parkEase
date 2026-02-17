@@ -33,20 +33,22 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { getUserInitials } from "@/lib/user-utils";
 import { NotificationCenter } from "@/components/notification-center";
+import { usePlatformName } from "@/hooks/use-settings";
 
 const navLinks = [
   { href: "/parking", label: "Parking", icon: Car },
   { href: "/find-booking", label: "Find My Booking", icon: Search },
-  { href: "#", label: "Insurance", icon: Shield },
-  { href: "#", label: "Car Wash", icon: Droplets },
-  { href: "#", label: "Gas", icon: Fuel },
-  { href: "#", label: "EV Chargers", icon: Zap },
+  // { href: "#", label: "Insurance", icon: Shield },
+  // { href: "#", label: "Car Wash", icon: Droplets },
+  // { href: "#", label: "Gas", icon: Fuel },
+  // { href: "#", label: "EV Chargers", icon: Zap },
   { href: "/partner-with-us", label: "Partner With Us", icon: Building2 },
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const platformName = usePlatformName();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -56,7 +58,7 @@ export function Navbar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Car className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">ParkEase</span>
+            <span className="text-xl font-bold text-foreground">{platformName}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">

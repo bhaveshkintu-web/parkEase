@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
 import { BookingProvider } from '@/lib/booking-context'
+import { SettingsProvider } from '@/lib/contexts/settings-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -44,10 +45,12 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           <DataStoreProvider>
-            <BookingProvider>
-              {children}
-              <Toaster />
-            </BookingProvider>
+            <SettingsProvider>
+              <BookingProvider>
+                {children}
+                <Toaster />
+              </BookingProvider>
+            </SettingsProvider>
           </DataStoreProvider>
         </AuthProvider>
         <Analytics />
