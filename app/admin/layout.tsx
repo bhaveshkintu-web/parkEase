@@ -41,9 +41,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="flex">
+      <div className="flex flex-1">
         <AdminSidebar role={role as "admin" | "owner" | "watchman"} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
       </div>

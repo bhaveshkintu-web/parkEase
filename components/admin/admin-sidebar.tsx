@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LayoutDashboard, MapPin, MessageSquare, Users, Wallet, Settings, BarChart3, Tag, Percent, FileText, AlertTriangle, QrCode, Car, Clock, Shield, Menu, ChevronRight, LogOut, Type as type, LucideIcon, Building2, Banknote } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { usePlatformName } from "@/hooks/use-settings";
 
 interface NavItem {
   label: string;
@@ -136,6 +137,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ role }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const platformName = usePlatformName();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [counts, setCounts] = useState<any>({});
 
@@ -208,10 +210,10 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-lg font-bold text-primary-foreground">P</span>
+            <span className="text-lg font-bold text-primary-foreground">{platformName?.[0] || 'P'}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground truncate">ParkEase</p>
+            <p className="font-semibold text-foreground truncate">{platformName}</p>
             <p className="text-xs text-muted-foreground">{roleLabels[role]}</p>
           </div>
         </div>
@@ -306,7 +308,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r bg-card h-[calc(100vh-64px)] sticky top-16">
+      <aside className="hidden lg:flex w-64 flex-col border-r bg-card">
         <SidebarContent />
       </aside>
 

@@ -12,9 +12,10 @@ export async function GET(request: NextRequest) {
         }
 
         const sessionUser = session.user as any;
+        const role = sessionUser.role?.toUpperCase();
 
         // Ensure user is watchman
-        if (sessionUser.role !== "WATCHMAN" && sessionUser.role !== "OWNER") {
+        if (role !== "WATCHMAN" && role !== "OWNER") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
         // Get watchman details
         let watchmanId = "";
 
-        if (sessionUser.role === "WATCHMAN") {
+        if (role === "WATCHMAN") {
             const watchman = await prisma.watchman.findUnique({
                 where: { userId: sessionUser.id }
             });
@@ -92,8 +93,8 @@ export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session || !session.user || session.user.role !== "WATCHMAN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
+            return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
         }
 
         const body = await request.json();
@@ -104,21 +105,49 @@ export async function POST(request: NextRequest) {
         }
 
         const watchman = await prisma.watchman.findUnique({
-            where: { userId: session.user.id }
+            where: { userId: session.user.id },
+            include: { assignedLocations: { select: { name: true }, take: 1 } }
         });
 
         if (!watchman) {
             return NextResponse.json({ error: "Watchman not found" }, { status: 404 });
         }
 
+        const watchmanLocation = watchman.assignedLocations?.[0]?.name;
+        const refinedDetails = {
+            ...details,
+            location: details?.location || watchmanLocation || "Unknown Location"
+        };
+
         const newLog = await prisma.watchmanActivityLog.create({
             data: {
                 watchmanId: watchman.id,
                 type,
-                details: details || {},
+                details: refinedDetails,
                 timestamp: new Date()
             }
         });
+
+        // Increment counts on active shift if exists
+        if (type === "incident" || type === "check_in" || type === "check_out") {
+            const activeShift = await prisma.watchmanShift.findFirst({
+                where: {
+                    watchmanId: watchman.id,
+                    status: "ACTIVE"
+                }
+            });
+
+            if (activeShift) {
+                await prisma.watchmanShift.update({
+                    where: { id: activeShift.id },
+                    data: {
+                        incidentsReported: type === "incident" ? { increment: 1 } : undefined,
+                        totalCheckIns: type === "check_in" ? { increment: 1 } : undefined,
+                        totalCheckOuts: type === "check_out" ? { increment: 1 } : undefined,
+                    }
+                });
+            }
+        }
 
         return NextResponse.json({ success: true, log: newLog });
 

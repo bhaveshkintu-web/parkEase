@@ -24,12 +24,14 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Car, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { usePlatformName } from "@/hooks/use-settings";
 import Loading from "./loading";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoading: authLoading } = useAuth();
+  const platformName = usePlatformName();
 
   const [formData, setFormData] = useState<LoginInput>({
     email: "",
@@ -90,7 +92,7 @@ export default function LoginPage() {
                 <Car className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="text-2xl font-bold text-foreground">
-                ParkEase
+                {platformName}
               </span>
             </Link>
           </div>

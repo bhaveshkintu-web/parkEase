@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
 import { BookingProvider } from '@/lib/booking-context'
+import { SettingsProvider } from '@/lib/contexts/settings-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: [
+      {
+        url: '/favicon.ico',
+        sizes: 'any',
+      },
       {
         url: '/icon-light-32x32.png',
         media: '(prefers-color-scheme: light)',
@@ -44,13 +49,15 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           <DataStoreProvider>
-            <BookingProvider>
-              {children}
-              <Toaster />
-            </BookingProvider>
+            <SettingsProvider>
+              <BookingProvider>
+                {children}
+                <Toaster />
+              </BookingProvider>
+            </SettingsProvider>
           </DataStoreProvider>
         </AuthProvider>
-        <Analytics />
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )

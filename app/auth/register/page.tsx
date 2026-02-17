@@ -19,11 +19,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Car, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { usePlatformName } from "@/hooks/use-settings";
 
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { register, isLoading: authLoading } = useAuth();
+  const platformName = usePlatformName();
   const returnUrl = searchParams.get("returnUrl");
 
   const [formData, setFormData] = useState<RegisterInput>({
@@ -111,14 +113,14 @@ function RegisterContent() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Car className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">ParkEase</span>
+            <span className="text-2xl font-bold text-foreground">{platformName}</span>
           </Link>
         </div>
 
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Create an account</CardTitle>
-            <CardDescription>Get started with ParkEase today</CardDescription>
+            <CardDescription>Get started with {platformName} today</CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>

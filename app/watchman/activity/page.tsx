@@ -83,10 +83,13 @@ export default function WatchmanActivityPage() {
   const [watchmanLocationName, setWatchmanLocationName] = useState<string>("Loading...");
   const [watchmanShiftTime, setWatchmanShiftTime] = useState<string>("Loading...");
 
-  // Initialize with empty
   const [activityLogs, setActivityLogs] = useState<WatchmanActivityLog[]>([]);
   const [shifts, setShifts] = useState<WatchmanShift[]>([]);
   const [carTracking, setCarTracking] = useState<any[]>([]);
+
+  // View details states
+  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
+  const [selectedShiftForDetails, setSelectedShiftForDetails] = useState<WatchmanShift | null>(null);
 
   const fetchActivities = React.useCallback(async () => {
     try {
@@ -123,9 +126,9 @@ export default function WatchmanActivityPage() {
             status: active.status.toLowerCase() as any,
             breaks: [],
             activities: [],
-            totalCheckIns: 0,
-            totalCheckOuts: 0,
-            incidentsReported: 0
+            totalCheckIns: active.totalCheckIns || 0,
+            totalCheckOuts: active.totalCheckOuts || 0,
+            incidentsReported: active.incidentsReported || 0
           });
         } else {
           setCurrentShift(null);
@@ -156,9 +159,9 @@ export default function WatchmanActivityPage() {
             status: s.status.toLowerCase() as any,
             breaks: [],
             activities: [],
-            totalCheckIns: 0,
-            totalCheckOuts: 0,
-            incidentsReported: 0
+            totalCheckIns: s.totalCheckIns || 0,
+            totalCheckOuts: s.totalCheckOuts || 0,
+            incidentsReported: s.incidentsReported || 0
           }));
           setShifts(mappedShifts);
         }
@@ -242,12 +245,18 @@ export default function WatchmanActivityPage() {
       fetchActiveShift();
       fetchHistory();
       fetchCarTracking();
+      fetchWatchmanInfo();
     }
-  }, [user, fetchActivities, fetchActiveShift, fetchHistory, fetchCarTracking]);
+  }, [user, fetchActivities, fetchActiveShift, fetchHistory, fetchCarTracking, fetchWatchmanInfo]);
 
   // Helper to post new activity
   const logActivity = async (type: string, details: any = {}) => {
     try {
+      const refinedDetails = {
+        ...details,
+        location: details.location || (watchmanLocationName !== "Loading..." ? watchmanLocationName : undefined)
+      };
+
       // Optimistic update
       const newActivity: WatchmanActivityLog = {
         id: `temp_${Date.now()}`,
@@ -255,14 +264,14 @@ export default function WatchmanActivityPage() {
         watchmanName: `${user?.firstName} ${user?.lastName}`,
         type: type as any,
         timestamp: new Date(),
-        details
+        details: refinedDetails
       };
       setActivityLogs(prev => [newActivity, ...prev]);
 
       await fetch("/api/watchman/activity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, details })
+        body: JSON.stringify({ type, details: refinedDetails })
       });
 
       // Refetch to sync IDs etc
@@ -529,19 +538,17 @@ export default function WatchmanActivityPage() {
   // Enhanced shift with dynamic stats
   const shiftsWithStats = useMemo(() => {
     return shifts.map(shift => {
-      const start = new Date(shift.actualStart || shift.scheduledStart);
-      const end = shift.actualEnd ? new Date(shift.actualEnd) : new Date();
-
+      const shiftDateStr = new Date(shift.shiftDate).toDateString();
       const shiftLogs = activityLogs.filter(log => {
-        const logTime = new Date(log.timestamp);
-        return logTime >= start && logTime <= end;
+        const logDateStr = new Date(log.timestamp).toDateString();
+        return logDateStr === shiftDateStr;
       });
 
       return {
         ...shift,
-        totalCheckIns: shiftLogs.filter(l => l.type === "check_in").length,
-        totalCheckOuts: shiftLogs.filter(l => l.type === "check_out").length,
-        incidentsReported: shiftLogs.filter(l => l.type === "incident").length,
+        totalCheckIns: Math.max(shift.totalCheckIns || 0, shiftLogs.filter(l => l.type === "check_in").length),
+        totalCheckOuts: Math.max(shift.totalCheckOuts || 0, shiftLogs.filter(l => l.type === "check_out").length),
+        incidentsReported: Math.max(shift.incidentsReported || 0, shiftLogs.filter(l => l.type === "incident").length),
       };
     });
   }, [shifts, activityLogs]);
@@ -833,22 +840,22 @@ export default function WatchmanActivityPage() {
                                 {formatTime(activity.timestamp)}
                               </span>
                             </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                              {activity.details.spotNumber && (
-                                <span className="mr-3">
-                                  <MapPin className="w-3 h-3 inline mr-1" />
+                            <div className="mt-1 text-sm text-muted-foreground flex flex-wrap gap-y-1">
+                              {activity.details.spotNumber && activity.details.spotNumber !== "N/A" && (
+                                <span className="mr-3 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
                                   Spot {activity.details.spotNumber}
                                 </span>
                               )}
                               {activity.details.location && (
-                                <span className="mr-3">
-                                  <MapPin className="w-3 h-3 inline mr-1" />
+                                <span className="mr-3 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
                                   {activity.details.location}
                                 </span>
                               )}
                               {activity.details.bookingId && (
-                                <span>
-                                  <FileText className="w-3 h-3 inline mr-1" />
+                                <span className="flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
                                   #{activity.details.bookingId.slice(-6)}
                                 </span>
                               )}
@@ -1181,7 +1188,14 @@ export default function WatchmanActivityPage() {
                             <p className="text-lg font-bold text-red-600">{shift.incidentsReported}</p>
                             <p className="text-xs text-muted-foreground">Incidents</p>
                           </div>
-                          <Button variant="ghost" size="icon">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedShiftForDetails(shift);
+                              setIsViewDetailsOpen(true);
+                            }}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
@@ -1266,6 +1280,88 @@ export default function WatchmanActivityPage() {
               <Button variant="destructive" onClick={handleEndShift} disabled={isLoading}>
                 {isLoading ? "Ending..." : "End Shift"}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Shift Details Dialog */}
+        <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Shift Details - {selectedShiftForDetails && formatDate(selectedShiftForDetails.shiftDate)}</DialogTitle>
+              <DialogDescription>
+                Detailed activity log for this shift at {selectedShiftForDetails?.parkingName}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedShiftForDetails && (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 bg-green-50 rounded-lg text-center">
+                    <p className="text-xl font-bold text-green-600">{selectedShiftForDetails.totalCheckIns}</p>
+                    <p className="text-xs text-muted-foreground">Check-ins</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg text-center">
+                    <p className="text-xl font-bold text-blue-600">{selectedShiftForDetails.totalCheckOuts}</p>
+                    <p className="text-xs text-muted-foreground">Check-outs</p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-lg text-center">
+                    <p className="text-xl font-bold text-red-600">{selectedShiftForDetails.incidentsReported}</p>
+                    <p className="text-xs text-muted-foreground">Incidents</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Shift Timeline</h3>
+                  <div className="relative pl-6 border-l-2 border-muted space-y-6">
+                    {(() => {
+                      const shiftLogs = activityLogs.filter(log => {
+                        const logDate = new Date(log.timestamp);
+                        const shiftDateStr = new Date(selectedShiftForDetails.shiftDate).toDateString();
+                        const sameDay = logDate.toDateString() === shiftDateStr;
+
+                        // Try matching by location if available in both
+                        const logLoc = (log.details as any)?.location;
+                        const shiftLoc = selectedShiftForDetails.parkingName;
+                        const sameLocation = !logLoc || !shiftLoc || logLoc === shiftLoc;
+
+                        return sameDay && sameLocation;
+                      }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                      if (shiftLogs.length === 0) {
+                        return <p className="text-sm text-muted-foreground py-4 text-center">No activity records found for this shift.</p>;
+                      }
+
+                      return shiftLogs.map((log) => (
+                        <div key={log.id} className="relative">
+                          <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-background border-2 border-primary" />
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <Badge className={getActivityBadgeColor(log.type)}>
+                                {getActivityLabel(log.type)}
+                              </Badge>
+                              {log.details.vehiclePlate && (
+                                <span className="ml-2 font-medium">{log.details.vehiclePlate}</span>
+                              )}
+                              {log.details.notes && (
+                                <p className="mt-1 text-sm text-muted-foreground italic">&quot;{log.details.notes}&quot;</p>
+                              )}
+                              {log.details.spotNumber && (
+                                <p className="text-xs text-muted-foreground mt-1">Spot: {log.details.spotNumber}</p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{formatTime(log.timestamp)}</span>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

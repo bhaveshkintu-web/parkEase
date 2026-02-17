@@ -1273,18 +1273,19 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   }, [wallet]);
 
   // Parking session operations
-  const checkInVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+  const checkInVehicle = useCallback(async (id: string, notes?: string) => {
     try {
-      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-        method: "PATCH",
+      const res = await fetch("/api/watchman/sessions", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-in" }),
+        body: JSON.stringify({ bookingId: id, action: "check-in", notes }),
       });
       if (!res.ok) throw new Error("Failed to check in");
 
-      const updatedSession = await res.json();
+      const data = await res.json();
+      const updatedSession = data.session;
       setParkingSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+        prev.map((s) => (s.bookingId === id ? updatedSession : s))
       );
       return { success: true };
     } catch (error: any) {
@@ -1293,18 +1294,19 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const checkOutVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+  const checkOutVehicle = useCallback(async (id: string, notes?: string) => {
     try {
-      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-        method: "PATCH",
+      const res = await fetch("/api/watchman/sessions", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-out" }),
+        body: JSON.stringify({ bookingId: id, action: "check-out", notes }),
       });
       if (!res.ok) throw new Error("Failed to check out");
 
-      const updatedSession = await res.json();
+      const data = await res.json();
+      const updatedSession = data.session;
       setParkingSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+        prev.map((s) => (s.bookingId === id ? updatedSession : s))
       );
       return { success: true };
     } catch (error: any) {
