@@ -386,17 +386,17 @@ export default function WatchmanBookingsPage() {
                         >
                           <div className="flex items-start gap-4">
                             <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${isCheckIn ? "bg-green-100" : "bg-blue-100"
+                              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${booking.sessionStatus === "checked_in" ? "bg-blue-100" : isCheckIn ? "bg-green-100" : "bg-blue-100"
                                 }`}
                             >
-                              <Car className={`w-6 h-6 ${isCheckIn ? "text-green-600" : "text-blue-600"}`} />
+                              <Car className={`w-6 h-6 ${booking.sessionStatus === "checked_in" ? "text-blue-600" : isCheckIn ? "text-green-600" : "text-blue-600"}`} />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-bold text-foreground">{plate}</p>
                                 {getStatusBadge(booking.status)}
                                 <Badge variant="outline" className="text-xs">
-                                  {isCheckIn ? "Check-in" : "Check-out"}
+                                  {booking.status?.toLowerCase() === "completed" ? "Completed" : booking.sessionStatus === "checked_in" ? "Checked In" : "Awaiting In"}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
@@ -419,21 +419,23 @@ export default function WatchmanBookingsPage() {
                               <p className="font-semibold text-foreground">{formatCurrency(booking.totalPrice)}</p>
                               <p className="text-xs text-muted-foreground">{formatDate(checkInDate)}</p>
                             </div>
-                            <Link href="/watchman/scan">
-                              <Button size="sm" variant={isCheckIn ? "default" : "secondary"}>
-                                {isCheckIn ? (
-                                  <>
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    Check In
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle className="w-4 h-4 mr-1" />
-                                    Check Out
-                                  </>
-                                )}
-                              </Button>
-                            </Link>
+                            {booking.status?.toLowerCase() !== "completed" && booking.sessionStatus !== "checked_out" && (
+                              <Link href="/watchman/scan">
+                                <Button size="sm" variant={booking.sessionStatus === "checked_in" ? "secondary" : "default"}>
+                                  {booking.sessionStatus === "checked_in" ? (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      Check Out
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      Check In
+                                    </>
+                                  )}
+                                </Button>
+                              </Link>
+                            )}
                           </div>
                         </div>
                       );
