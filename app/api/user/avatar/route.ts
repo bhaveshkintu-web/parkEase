@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 
@@ -48,9 +50,13 @@ async function uploadAvatarToCloudinary(buffer: Buffer, mimeType: string): Promi
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
-    const file = formData.get("avatar") as File;
-    const userId = formData.get("userId") as string;
+    const file = formData.get("file") as File;
 
     if (!file || file.size === 0) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -67,7 +73,7 @@ export async function POST(req: Request) {
     const avatarUrl = await uploadAvatarToCloudinary(buffer, mimeType);
 
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: session.user.id },
       data: { avatar: avatarUrl },
     });
 
@@ -82,12 +88,23 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const { userId } = await req.json();
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { avatar: null },
-  });
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { avatar: null },
+    });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("AVATAR_DELETE_ERROR:", error);
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
 }
