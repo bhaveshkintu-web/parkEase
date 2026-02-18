@@ -104,7 +104,7 @@ export default function DemoAccessPage() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Car className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">ParkEase</span>
+            <span className="text-xl font-bold text-foreground">ParkZipply</span>
           </Link>
           {isAuthenticated && user && (
             <div className="flex items-center gap-4">
@@ -128,10 +128,10 @@ export default function DemoAccessPage() {
               Demo Access
             </Badge>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3 text-balance">
-              Explore ParkEase by Role
+              Explore ParkZipply by Role
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto text-pretty">
-              Choose a demo account to experience all features available for each role. 
+              Choose a demo account to experience all features available for each role.
               No registration required - instant access to fully functional dashboards.
             </p>
           </div>
@@ -174,9 +174,8 @@ export default function DemoAccessPage() {
               return (
                 <Card
                   key={role}
-                  className={`relative overflow-hidden transition-all ${
-                    isCurrentRole ? "ring-2 ring-primary" : ""
-                  }`}
+                  className={`relative overflow-hidden transition-all ${isCurrentRole ? "ring-2 ring-primary" : ""
+                    }`}
                 >
                   {isCurrentRole && (
                     <div className="absolute top-3 right-3">

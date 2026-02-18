@@ -87,7 +87,7 @@ export default function SettingsPage() {
   const [defaultPaymentId, setDefaultPaymentId] = useState(
     user?.preferences?.defaultPaymentId || "no-default"
   );
-  
+
   // Sync state with user preferences when they load or change
   useEffect(() => {
     if (user?.preferences) {
@@ -284,9 +284,9 @@ export default function SettingsPage() {
 
     if (result.success) {
       const dataStr = JSON.stringify(result.data, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const exportFileDefaultName = 'parkease-user-data.json';
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+      const exportFileDefaultName = 'parkzipply-user-data.json';
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -655,21 +655,21 @@ export default function SettingsPage() {
                   variant="outline"
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={async () => {
-                   try {
-                    const result = await revokeAllSessions();
-                    if (result.success) {
+                    try {
+                      const result = await revokeAllSessions();
+                      if (result.success) {
+                        toast({
+                          title: "Sessions revoked",
+                          description: "You have been signed out of all other devices.",
+                        });
+                      }
+                    } catch (err) {
                       toast({
-                        title: "Sessions revoked",
-                        description: "You have been signed out of all other devices.",
+                        title: "Error",
+                        description: "Failed to revoke sessions",
+                        variant: "destructive",
                       });
                     }
-                   } catch (err) {
-                    toast({
-                      title: "Error",
-                      description: "Failed to revoke sessions",
-                      variant: "destructive",
-                    });
-                   }
                   }}
                 >
                   Sign Out All Devices

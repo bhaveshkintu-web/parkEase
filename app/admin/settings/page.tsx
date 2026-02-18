@@ -121,8 +121,8 @@ export default function AdminSettingsPage() {
 
   // General Settings State
   const [generalSettings, setGeneralSettings] = useState<PlatformSettingsData>({
-    platformName: "ParkEase",
-    supportEmail: "support@parkease.com",
+    platformName: "ParkZipply",
+    supportEmail: "support@parkzipply.com",
     termsOfServiceUrl: "/terms",
     privacyPolicyUrl: "/privacy",
     maintenanceMode: false,
@@ -694,15 +694,15 @@ export default function AdminSettingsPage() {
                     type="number"
                     className="w-24 text-right"
                     value={generalSettings.minBookingDuration}
-                    onChange={(e) => 
+                    onChange={(e) =>
                       setGeneralSettings((prev) => ({
                         ...prev,
                         minBookingDuration: parseInt(e.target.value) || 0,
                       }))
                     }
                   />
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     disabled={isSaving}
                     onClick={async () => {
@@ -895,8 +895,8 @@ export default function AdminSettingsPage() {
                           {promo.type === "percentage"
                             ? `${promo.value}%`
                             : promo.type === "fixed"
-                            ? `$${promo.value}`
-                            : `${promo.value} day${promo.value > 1 ? "s" : ""}`}
+                              ? `$${promo.value}`
+                              : `${promo.value} day${promo.value > 1 ? "s" : ""}`}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {promo.usedCount || 0} / {promo.usageLimit || "∞"}
@@ -1283,8 +1283,8 @@ export default function AdminSettingsPage() {
               {isSaving
                 ? "Saving..."
                 : editingCommission
-                ? "Update Rule"
-                : "Add Rule"}
+                  ? "Update Rule"
+                  : "Add Rule"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1359,8 +1359,8 @@ export default function AdminSettingsPage() {
                     {promoForm.type === "percentage"
                       ? "%"
                       : promoForm.type === "fixed"
-                      ? "$"
-                      : ""}
+                        ? "$"
+                        : ""}
                   </span>
                   <Input
                     type="number"

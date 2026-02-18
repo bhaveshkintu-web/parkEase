@@ -16,8 +16,8 @@ interface SettingsContextType {
 }
 
 const defaultGeneralSettings: PlatformSettingsData = {
-  platformName: "ParkEase",
-  supportEmail: "support@parkease.com",
+  platformName: "ParkZipply",
+  supportEmail: "support@parkzipply.com",
   termsOfServiceUrl: "/terms",
   privacyPolicyUrl: "/privacy",
   maintenanceMode: false,
