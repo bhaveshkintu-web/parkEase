@@ -1,10 +1,11 @@
 import React from "react"
 import type { Metadata } from 'next'
 // import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
 import { BookingProvider } from '@/lib/booking-context'
+import { SettingsProvider } from '@/lib/contexts/settings-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: [
+      {
+        url: '/favicon.ico',
+        sizes: 'any',
+      },
       {
         url: '/icon-light-32x32.png',
         media: '(prefers-color-scheme: light)',
@@ -44,13 +49,18 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           <DataStoreProvider>
-            <BookingProvider>
-              {children}
-              <Toaster />
-            </BookingProvider>
+            <SettingsProvider>
+              <BookingProvider
+                  defaultCheckIn={new Date(Date.now() + 60 * 60 * 1000)} // Next hour
+                  defaultCheckOut={new Date(Date.now() + 3 * 60 * 60 * 1000)} // +3 hours
+                >
+                {children}
+                <Toaster />
+              </BookingProvider>
+            </SettingsProvider>
           </DataStoreProvider>
         </AuthProvider>
-        <Analytics />
+        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true' && <Analytics />}
       </body>
     </html>
   )

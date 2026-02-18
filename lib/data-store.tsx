@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type {
   SavedVehicle,
   PaymentMethod,
@@ -857,28 +857,45 @@ interface DataStoreContextType {
 const DataStoreContext = createContext<DataStoreContextType | undefined>(undefined);
 
 export function DataStoreProvider({ children }: { children: React.ReactNode }) {
+  // Initialize with empty/safe defaults to avoid hydration mismatch
   const [vehicles, setVehicles] = useState<SavedVehicle[]>([]);
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [adminReviews, setAdminReviews] = useState<AdminReview[]>(generateAdminReviews());
-  const [adminLocations, setAdminLocations] = useState<AdminParkingLocation[]>(generateAdminLocations());
+  const [adminReviews, setAdminReviews] = useState<AdminReview[]>([]);
+  const [adminLocations, setAdminLocations] = useState<AdminParkingLocation[]>([]);
   const [watchmen, setWatchmen] = useState<Watchman[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [parkingSessions, setParkingSessions] = useState<ParkingSession[]>(generateMockParkingSessions());
-  const [disputes, setDisputes] = useState<Dispute[]>(generateMockDisputes());
-  const [parkingApprovals, setParkingApprovals] = useState<ParkingApproval[]>(generateMockParkingApprovals());
-  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>(generateMockRefundRequests());
-  const [commissionRules, setCommissionRules] = useState<CommissionRule[]>(generateMockCommissionRules());
-  const [pricingRules, setPricingRules] = useState<PricingRule[]>(generateMockPricingRules());
-  const [promotions, setPromotions] = useState<Promotion[]>(generateMockPromotions());
-  const [cmsPages, setCmsPages] = useState<CMSPage[]>(generateMockCMSPages());
-  const [users, setUsers] = useState<User[]>(generateMockUsers());
-  const [ownerProfiles, setOwnerProfiles] = useState<OwnerProfile[]>(generateMockOwnerProfiles());
+  const [parkingSessions, setParkingSessions] = useState<ParkingSession[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [parkingApprovals, setParkingApprovals] = useState<ParkingApproval[]>([]);
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
+  const [commissionRules, setCommissionRules] = useState<CommissionRule[]>([]);
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [cmsPages, setCmsPages] = useState<CMSPage[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [ownerProfiles, setOwnerProfiles] = useState<OwnerProfile[]>([]);
   const [currentOwnerProfile, setCurrentOwnerProfile] = useState<OwnerProfile | null>(null);
   const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Load mock data on client mount
+  useEffect(() => {
+    setAdminReviews(generateAdminReviews());
+    setAdminLocations(generateAdminLocations());
+    setParkingSessions(generateMockParkingSessions());
+    setDisputes(generateMockDisputes());
+    setParkingApprovals(generateMockParkingApprovals());
+    setRefundRequests(generateMockRefundRequests());
+    setCommissionRules(generateMockCommissionRules());
+    setPricingRules(generateMockPricingRules());
+    setPromotions(generateMockPromotions());
+    setCmsPages(generateMockCMSPages());
+    setUsers(generateMockUsers());
+    setOwnerProfiles(generateMockOwnerProfiles());
+  }, []);
 
   const initializeForUser = useCallback(async (userId: string) => {
     if (currentUserId === userId) return;
@@ -1273,18 +1290,19 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
   }, [wallet]);
 
   // Parking session operations
-  const checkInVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+  const checkInVehicle = useCallback(async (id: string, notes?: string) => {
     try {
-      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-        method: "PATCH",
+      const res = await fetch("/api/watchman/sessions", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-in" }),
+        body: JSON.stringify({ bookingId: id, action: "check-in", notes }),
       });
       if (!res.ok) throw new Error("Failed to check in");
 
-      const updatedSession = await res.json();
+      const data = await res.json();
+      const updatedSession = data.session;
       setParkingSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+        prev.map((s) => (s.bookingId === id ? updatedSession : s))
       );
       return { success: true };
     } catch (error: any) {
@@ -1293,18 +1311,19 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const checkOutVehicle = useCallback(async (sessionId: string, watchmanId: string) => {
+  const checkOutVehicle = useCallback(async (id: string, notes?: string) => {
     try {
-      const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-        method: "PATCH",
+      const res = await fetch("/api/watchman/sessions", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-out" }),
+        body: JSON.stringify({ bookingId: id, action: "check-out", notes }),
       });
       if (!res.ok) throw new Error("Failed to check out");
 
-      const updatedSession = await res.json();
+      const data = await res.json();
+      const updatedSession = data.session;
       setParkingSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? updatedSession : s))
+        prev.map((s) => (s.bookingId === id ? updatedSession : s))
       );
       return { success: true };
     } catch (error: any) {

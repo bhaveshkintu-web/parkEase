@@ -232,70 +232,15 @@ export default function WatchmanScanPage() {
 
     setIsLoading(true);
     try {
-      // Find the actual session ID if it exists in dbBookings
-      const dbBooking = dbBookings.find(b => b.id === scanResult.booking.id);
-      let actionProcessed = false;
-
-      if (dbBooking) {
-        // If it's a real booking, it might have a session ID
-        // We'll try to find or create a session via the API
-        // For now, let's assume we use the sessions API
-        const action = scanResult.type === "check_in" ? "check-in" : "check-out";
-
-        // Try to find the session ID
-        let sessionId = dbBooking.sessionId;
-
-        // If no session ID, we might need to find it by booking ID
-        if (!sessionId) {
-          const sessionsRes = await fetch("/api/watchman/sessions");
-          const sessionsData = await sessionsRes.json();
-          if (sessionsData.success) {
-            const session = sessionsData.sessions.find((s: any) => s.bookingId === scanResult.booking.id);
-            if (session) {
-              sessionId = session.id;
-            }
-          }
-        }
-
-        if (sessionId) {
-          const res = await fetch(`/api/watchman/sessions/${sessionId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action,
-              notes: notes
-            })
-          });
-
-          if (res.ok) {
-            actionProcessed = true;
-          }
-        }
-      }
-
-      // If not processed via session API (either mock or session not found), hit activity API directly
-      if (!actionProcessed) {
-        await fetch("/api/watchman/activity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: scanResult.type === "check_in" ? "check_in" : "check_out",
-            details: {
-              bookingId: scanResult.booking.id,
-              vehiclePlate: scanResult.booking.vehiclePlate,
-              notes: notes,
-              confirmationCode: scanResult.booking.confirmationCode,
-              isMock: !dbBooking
-            }
-          })
-        });
-      }
-
-      // Still update local mock store for consistency if needed
+      let result;
       if (scanResult.type === "check_in") {
-        checkInVehicle(scanResult.booking.id, notes);
+        result = await checkInVehicle(scanResult.booking.id, notes);
       } else {
-        checkOutVehicle(scanResult.booking.id, notes);
+        result = await checkOutVehicle(scanResult.booking.id, notes);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || "Action failed");
       }
 
       toast({

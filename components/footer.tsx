@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Car, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { usePlatformName } from "@/hooks/use-settings";
 
 const footerLinks = {
   Services: [
@@ -37,6 +40,8 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const platformName = usePlatformName();
+  
   return (
     <footer className="border-t border-border bg-card">
       <div className="container px-4 py-12 md:py-16">
@@ -46,7 +51,7 @@ export function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Car className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">ParkEase</span>
+              <span className="text-xl font-bold text-foreground" suppressHydrationWarning>{platformName}</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
               Find and reserve parking spots near airports, events, and city centers.
@@ -88,8 +93,8 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ParkEase. All rights reserved.
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+            © {new Date().getFullYear()} {platformName}. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">

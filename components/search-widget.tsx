@@ -325,7 +325,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Drop-off</span>
-                <span className="text-sm">{formatDate(checkIn)} {formatTime(checkIn)}</span>
+                <span className="text-sm" suppressHydrationWarning>{formatDate(checkIn)} {formatTime(checkIn)}</span>
               </div>
             </Button>
           </PopoverTrigger>
@@ -376,7 +376,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-col items-start">
                 <span className="text-[10px] text-muted-foreground">Pick-up</span>
-                <span className="text-sm">{formatDate(checkOut)} {formatTime(checkOut)}</span>
+                <span className="text-sm" suppressHydrationWarning>{formatDate(checkOut)} {formatTime(checkOut)}</span>
               </div>
             </Button>
           </PopoverTrigger>

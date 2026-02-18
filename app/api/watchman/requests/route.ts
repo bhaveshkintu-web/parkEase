@@ -7,8 +7,8 @@ import { notifyOwnerOfBookingRequest, notifyAdminsOfBookingRequest } from "@/lib
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "WATCHMAN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || session.user.role?.toUpperCase() !== "WATCHMAN") {
+    return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
   }
 
   try {
@@ -52,8 +52,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "WATCHMAN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || session.user.role?.toUpperCase() !== "WATCHMAN") {
+    return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
   }
 
   try {
@@ -80,10 +80,10 @@ export async function POST(request: Request) {
     });
 
     // Trigger notifications asynchronously
-    notifyOwnerOfBookingRequest(newRequest.id).catch(err => 
+    notifyOwnerOfBookingRequest(newRequest.id).catch(err =>
       console.error("Failed to notify owner after request creation:", err)
     );
-    notifyAdminsOfBookingRequest(newRequest.id).catch(err => 
+    notifyAdminsOfBookingRequest(newRequest.id).catch(err =>
       console.error("Failed to notify admins after request creation:", err)
     );
 
