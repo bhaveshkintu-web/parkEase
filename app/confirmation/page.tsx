@@ -91,7 +91,7 @@ RESERVATION DETAILS
 -------------------
 Drop-off: ${formatDate(checkIn)} ${formatTime(checkIn)}
 Pick-up: ${formatDate(checkOut)} ${formatTime(checkOut)}
-Duration: ${quote.days} day(s)
+Duration: ${quote.days.toFixed(2)} day(s)
 
 GUEST INFORMATION
 -----------------
@@ -312,7 +312,15 @@ Visit our website at parkzipply.com for help.
                 <div className="flex gap-4">
                   <div className="h-24 w-24 shrink-0 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
                     <div className="flex h-full items-center justify-center">
-                      <Car className="h-10 w-10 text-primary/40" />
+                      {bookingLocation?.images?.length > 0 ? (
+                        <img
+                          src={bookingLocation.images[0]}
+                          alt="Location"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Car className="h-10 w-10 text-primary/40" />
+                      )}
                     </div>
                   </div>
                   <div className="flex-1">
