@@ -284,7 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateProfile: async (data: Partial<User>) => {
       try {
         const response = await fetch("/api/auth/profile", {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });

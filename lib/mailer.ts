@@ -1,7 +1,25 @@
 import nodemailer from "nodemailer";
 
+/**
+ * Returns the correct base URL for the app.
+ * Priority: APP_URL → NEXTAUTH_URL → VERCEL_URL (auto-set by Vercel in production)
+ */
+function getAppUrl(): string {
+  if (process.env.APP_URL && !process.env.APP_URL.includes("localhost")) {
+    return process.env.APP_URL;
+  }
+  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+    return process.env.NEXTAUTH_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Fallback to APP_URL (works for local dev)
+  return process.env.APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
+
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.APP_URL}/auth/verify-email?token=${token}`;
+  const verifyUrl = `${getAppUrl()}/auth/verify-email?token=${token}`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
@@ -94,7 +112,7 @@ export async function sendBookingNotification(email: string, status: string, det
 }
 
 export async function sendResetPasswordEmail(email: string, token: string) {
-  const resetUrl = `${process.env.APP_URL}/auth/reset-password?token=${token}`;
+  const resetUrl = `${getAppUrl()}/auth/reset-password?token=${token}`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
@@ -160,7 +178,7 @@ export async function sendResetPasswordEmail(email: string, token: string) {
 //   }
 // }
 export async function sendWatchmanWelcomeEmail(email: string, name: string, password: string) {
-  const loginUrl = `${process.env.APP_URL}/auth/login`;
+  const loginUrl = `${getAppUrl()}/auth/login`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
@@ -213,7 +231,7 @@ export async function sendWatchmanWelcomeEmail(email: string, name: string, pass
 }
 
 export async function sendWelcomeEmail(email: string, name: string, password: string, role: string) {
-  const loginUrl = `${process.env.APP_URL}/auth/login`;
+  const loginUrl = `${getAppUrl()}/auth/login`;
 
   try {
     const port = Number(process.env.SMTP_PORT);
