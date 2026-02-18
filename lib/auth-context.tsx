@@ -37,6 +37,7 @@ export type User = {
     };
     defaultVehicleId?: string;
     defaultPaymentId?: string;
+    lastRevokedAt?: string | null;
   };
 };
 
@@ -114,29 +115,29 @@ interface AuthContextType extends AuthState {
 ======================= */
 
 
-const AUTH_STORAGE_KEY = "parkease_auth";
+const AUTH_STORAGE_KEY = "parkzipply_auth";
 
 export const DEMO_ACCOUNTS = {
   customer: {
-    email: "customer@example.com",
+    email: "customer@parkzipply.com",
     password: "password123",
     dashboardUrl: "/account",
     description: "Search and book parking spots, manage your vehicles and reservations.",
   },
   owner: {
-    email: "owner@example.com",
+    email: "owner@parkzipply.com",
     password: "password123",
     dashboardUrl: "/owner",
     description: "Manage your parking locations, watchmen staff, and track earnings.",
   },
   watchman: {
-    email: "watchman@example.com",
+    email: "watchman@parkzipply.com",
     password: "password123",
     dashboardUrl: "/watchman",
     description: "Scan QR codes, manage vehicle check-ins and check-outs at locations.",
   },
   admin: {
-    email: "admin@example.com",
+    email: "admin@parkzipply.com",
     password: "password123",
     dashboardUrl: "/admin",
     description: "Full platform oversight, user management, and system-wide analytics.",

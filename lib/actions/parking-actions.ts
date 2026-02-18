@@ -322,10 +322,20 @@ export async function deleteLocation(id: string) {
         error: "Cannot delete location with existing bookings. Try deactivating it instead."
       };
     }
-
-    await prisma.parkingLocation.delete({
-      where: { id },
-    });
+    // await prisma.parkingLocation.update({
+    //   where: { id },
+    // });
+    // 2. Perform deletion in a transaction to handle foreign key constraints
+    await prisma.$transaction([
+      prisma.locationAnalytics.deleteMany({ where: { locationId: id } }),
+      prisma.pricingRule.deleteMany({ where: { locationId: id } }),
+      prisma.watchmanShift.deleteMany({ where: { locationId: id } }),
+      prisma.review.deleteMany({ where: { locationId: id } }),
+      prisma.parkingSession.deleteMany({ where: { locationId: id } }),
+      prisma.savedLocation.deleteMany({ where: { locationId: id } }),
+      prisma.bookingRequest.deleteMany({ where: { parkingId: id } }),
+      prisma.parkingLocation.delete({ where: { id } }),
+    ]);
 
     return { success: true };
   } catch (error) {

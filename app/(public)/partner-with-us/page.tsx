@@ -91,17 +91,17 @@ export default function PartnerWithUsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      
+
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative bg-primary py-20 text-primary-foreground">
           <div className="container px-4">
             <div className="max-w-3xl">
               <h1 className="mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-                Partner with ParkEase and Grow Your Business
+                Partner with ParkZipply and Grow Your Business
               </h1>
-              <p className="mb-8 text-xl opacity-90">
-                Join thousands of parking lot owners who trust ParkEase to fill their spaces and maximize their revenue.
+              <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-10">
+                Join thousands of parking lot owners who trust ParkZipply to fill their spaces and maximize their revenue.
               </p>
               {!isSubmitted && (
                 <Button size="lg" variant="secondary" className="font-semibold" asChild>
@@ -187,7 +187,7 @@ export default function PartnerWithUsPage() {
                     </div>
                     <div className="mt-12 pt-8 border-t">
                       <p className="text-sm text-muted-foreground">
-                        Need immediate assistance? Contact our support team at <span className="font-semibold text-primary">partners@parkease.com</span> or call us at <span className="font-semibold text-primary">+1 (800) PARKEASE</span>.
+                        Need immediate assistance? Contact our support team at <span className="font-semibold text-primary">partners@parkzipply.com</span> or call us at <span className="font-semibold text-primary">+1 (800) PARKZIPPLY</span>.
                       </p>
                     </div>
                   </CardContent>
@@ -199,7 +199,7 @@ export default function PartnerWithUsPage() {
                     <p className="mb-8 text-lg text-muted-foreground">
                       Fill out the form and our partnership team will reach out within 24-48 hours to help you get set up.
                     </p>
-                    
+
                     <ul className="space-y-4">
                       {[
                         "No upfront costs or listing fees",
@@ -333,7 +333,7 @@ export default function PartnerWithUsPage() {
                         <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isSubmitting}>
                           {isSubmitting ? "Submitting..." : "Submit Inquiry"}
                         </Button>
-                        
+
                         <p className="text-xs text-center text-muted-foreground mt-4">
                           By submitting this form, you agree to our Terms of Service and Privacy Policy.
                         </p>

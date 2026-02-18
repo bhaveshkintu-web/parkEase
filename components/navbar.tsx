@@ -76,14 +76,14 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             className="hidden gap-2 sm:flex bg-transparent"
           >
             <Download className="h-4 w-4" />
             Get App
-          </Button>
+          </Button> */}
 
           {isAuthenticated && <NotificationCenter />}
 
@@ -307,13 +307,13 @@ export function Navbar() {
                           Try Demo
                         </Link>
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         className="w-full gap-2 bg-transparent"
                       >
                         <Download className="h-4 w-4" />
                         Get App
-                      </Button>
+                      </Button> */}
                       <Button className="w-full" asChild>
                         <Link
                           href="/auth/login"

@@ -11,7 +11,7 @@ export function AppDownload() {
               Get an Extra 5% Off in the App
             </h2>
             <p className="mb-6 max-w-xl text-primary-foreground/80">
-              Download the ParkEase app for exclusive deals, easy booking management, 
+              Download the ParkZipply app for exclusive deals, easy booking management,
               and real-time notifications about your reservations.
             </p>
 
@@ -55,7 +55,7 @@ export function AppDownload() {
                   <span className="text-2xl font-bold text-primary-foreground">P</span>
                 </div>
                 <p className="text-center text-sm font-medium text-foreground">
-                  ParkEase
+                  ParkZipply
                 </p>
                 <p className="mt-1 text-center text-xs text-muted-foreground">
                   Park smarter, save more

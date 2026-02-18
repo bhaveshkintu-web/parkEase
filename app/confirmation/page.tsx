@@ -38,7 +38,7 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
   const { location: contextLocation, checkIn: contextCheckIn, checkOut: contextCheckOut } = useBooking();
-  
+
   const { toast } = useToast();
   const [booking, setBooking] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +50,7 @@ function ConfirmationContent() {
         setIsLoading(false);
         return;
       }
-      
+
       const response = await getBookingByConfirmationCode(code);
       if (response.success && response.data) {
         setBooking(response.data);
@@ -77,7 +77,7 @@ function ConfirmationContent() {
 
   const handleDownload = () => {
     const receiptContent = `
-PARKEASE RESERVATION RECEIPT
+PARKZIPPLY RESERVATION RECEIPT
 ===========================
 Confirmation Code: ${confirmationCode}
 Status: CONFIRMED
@@ -91,7 +91,7 @@ RESERVATION DETAILS
 -------------------
 Drop-off: ${formatDate(checkIn)} ${formatTime(checkIn)}
 Pick-up: ${formatDate(checkOut)} ${formatTime(checkOut)}
-Duration: ${quote.days} day(s)
+Duration: ${quote.days.toFixed(2)} day(s)
 
 GUEST INFORMATION
 -----------------
@@ -112,15 +112,15 @@ Taxes & Fees: ${formatCurrency(quote.taxes + quote.fees)}
 TOTAL PAID: ${formatCurrency(quote.totalPrice)}
 
 ===========================
-Thank you for booking with ParkEase!
-Visit our website at parkease.com for help.
+Thank you for booking with ParkZipply!
+Visit our website at parkzipply.com for help.
     `.trim();
 
     const blob = new Blob([receiptContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `ParkEase-Reservation-${confirmationCode}.txt`;
+    link.download = `ParkZipply-Reservation-${confirmationCode}.txt`;
     link.click();
     URL.revokeObjectURL(url);
 
@@ -138,13 +138,13 @@ Visit our website at parkease.com for help.
 
     const start = formatDateICS(checkIn);
     const end = formatDateICS(checkOut);
-    
+
     const icsContent = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//ParkEase//Reservation//EN",
+      "PRODID:-//ParkZipply//Reservation//EN",
       "BEGIN:VEVENT",
-      `UID:${confirmationCode}@parkease.com`,
+      `UID:${confirmationCode}@parkzipply.com`,
       `DTSTAMP:${formatDateICS(new Date())}`,
       `DTSTART:${start}`,
       `DTEND:${end}`,
@@ -159,7 +159,7 @@ Visit our website at parkease.com for help.
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `ParkEase-${confirmationCode}.ics`;
+    link.download = `ParkZipply-${confirmationCode}.ics`;
     link.click();
     URL.revokeObjectURL(url);
 
@@ -199,7 +199,7 @@ Visit our website at parkease.com for help.
   // Use DB data if available, otherwise fallback to context (for immediate post-booking view)
   const confirmationCode = booking?.confirmationCode || code || "";
   const bookingLocation = booking?.location || contextLocation;
-  
+
   if (!bookingLocation) {
     return (
       <div className="mx-auto max-w-3xl py-12 text-center">
@@ -312,7 +312,15 @@ Visit our website at parkease.com for help.
                 <div className="flex gap-4">
                   <div className="h-24 w-24 shrink-0 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
                     <div className="flex h-full items-center justify-center">
-                      <Car className="h-10 w-10 text-primary/40" />
+                      {bookingLocation?.images?.length > 0 ? (
+                        <img
+                          src={bookingLocation.images[0]}
+                          alt="Location"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Car className="h-10 w-10 text-primary/40" />
+                      )}
                     </div>
                   </div>
                   <div className="flex-1">
@@ -544,14 +552,14 @@ Visit our website at parkease.com for help.
                 <Navigation className="h-4 w-4" />
                 Get Directions
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="gap-2 bg-transparent"
                 onClick={() => {
                   const SUPPORT_PHONE = "(800) 555-0199";
                   const facilityPhone = bookingLocation.shuttleInfo?.phone || bookingLocation.owner?.user?.phone;
                   const phoneToCall = facilityPhone || SUPPORT_PHONE;
-                  
+
                   if (phoneToCall) {
                     window.location.href = `tel:${phoneToCall.replace(/[^\d+]/g, '')}`;
                   } else {

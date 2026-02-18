@@ -364,7 +364,7 @@ export default function ContentManagementPage() {
                       <div className="space-y-2">
                         <Label className="text-xs">Meta Title</Label>
                         <Input
-                          placeholder="Privacy Policy | ParkEase"
+                          placeholder="Privacy Policy | ParkZipply"
                           value={formData.metaTitle}
                           onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
                           className="text-xs h-8 bg-muted/10 border-border/30"
@@ -373,7 +373,7 @@ export default function ContentManagementPage() {
                       <div className="space-y-2">
                         <Label className="text-xs">Meta Description</Label>
                         <textarea
-                          placeholder="Learn how ParkEase protects your privacy..."
+                          placeholder="Learn how ParkZipply protects your privacy..."
                           value={formData.metaDescription}
                           onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
                           rows={3}
@@ -626,7 +626,7 @@ export default function ContentManagementPage() {
               <div className="space-y-1">
                 <DialogTitle className="text-2xl font-bold">Preview: {previewPage?.title}</DialogTitle>
                 <DialogDescription className="font-mono text-primary animate-pulse">
-                  parkease.com/{previewPage?.slug}
+                  parkzipply.com/{previewPage?.slug}
                 </DialogDescription>
               </div>
               <Badge

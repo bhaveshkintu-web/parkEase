@@ -8,10 +8,10 @@ async function main() {
 
   // 1. Create Admins and Support Users
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@parkease.com' },
+    where: { email: 'admin@parkzipply.com' },
     update: {},
     create: {
-      email: 'admin@parkease.com',
+      email: 'admin@parkzipply.com',
       firstName: 'Admin',
       lastName: 'User',
       password: hashedPassword,
@@ -21,10 +21,10 @@ async function main() {
   });
 
   const support = await prisma.user.upsert({
-    where: { email: 'support@parkease.com' },
+    where: { email: 'support@parkzipply.com' },
     update: {},
     create: {
-      email: 'support@parkease.com',
+      email: 'support@parkzipply.com',
       firstName: 'Support',
       lastName: 'Agent',
       password: hashedPassword,
@@ -160,80 +160,80 @@ async function main() {
   const existingDispute1 = await prisma.dispute.findFirst({ where: { bookingId: booking1.id } });
   if (!existingDispute1) {
     await prisma.dispute.create({
-        data: {
-          bookingId: booking1.id,
-          userId: customer1.id,
-          subject: 'Double Charged',
-          description: 'I was charged twice for my stay. I only stayed for one day but my credit card shows two charges of $57.00.',
-          type: DisputeType.REFUND,
-          status: DisputeStatus.OPEN,
-          priority: DisputePriority.HIGH,
-          auditLogs: {
-            create: {
-              action: 'CREATED',
-              notes: 'Customer raised a dispute about double charging.',
-            }
+      data: {
+        bookingId: booking1.id,
+        userId: customer1.id,
+        subject: 'Double Charged',
+        description: 'I was charged twice for my stay. I only stayed for one day but my credit card shows two charges of $57.00.',
+        type: DisputeType.REFUND,
+        status: DisputeStatus.OPEN,
+        priority: DisputePriority.HIGH,
+        auditLogs: {
+          create: {
+            action: 'CREATED',
+            notes: 'Customer raised a dispute about double charging.',
           }
         }
-      });
+      }
+    });
   }
 
   const existingDispute2 = await prisma.dispute.findFirst({ where: { bookingId: booking2.id } });
   if (!existingDispute2) {
     const dispute2 = await prisma.dispute.create({
-        data: {
-          bookingId: booking2.id,
-          userId: customer2.id,
-          subject: 'Shuttle was late',
-          description: 'The shuttle took 45 minutes to arrive at the airport. I almost missed my flight.',
-          type: DisputeType.SERVICE,
-          status: DisputeStatus.IN_PROGRESS,
-          priority: DisputePriority.MEDIUM,
-          assignedAdminId: support.id,
-          auditLogs: {
-            create: {
-              action: 'CREATED',
-              notes: 'Customer complaining about shuttle delay.',
-            }
+      data: {
+        bookingId: booking2.id,
+        userId: customer2.id,
+        subject: 'Shuttle was late',
+        description: 'The shuttle took 45 minutes to arrive at the airport. I almost missed my flight.',
+        type: DisputeType.SERVICE,
+        status: DisputeStatus.IN_PROGRESS,
+        priority: DisputePriority.MEDIUM,
+        assignedAdminId: support.id,
+        auditLogs: {
+          create: {
+            action: 'CREATED',
+            notes: 'Customer complaining about shuttle delay.',
           }
         }
-      });
-    
-      await prisma.disputeAuditLog.create({
-        data: {
-          disputeId: dispute2.id,
-          adminId: support.id,
-          action: 'ASSIGNED',
-          notes: 'Assigned to support agent for investigation.',
-        }
-      });
+      }
+    });
+
+    await prisma.disputeAuditLog.create({
+      data: {
+        disputeId: dispute2.id,
+        adminId: support.id,
+        action: 'ASSIGNED',
+        notes: 'Assigned to support agent for investigation.',
+      }
+    });
   }
 
   // 6. Create Support Tickets
   const existingTicket1 = await prisma.supportTicket.findFirst({ where: { email: 'bob@example.com', subject: 'How to cancel?' } });
   if (!existingTicket1) {
     await prisma.supportTicket.create({
-        data: {
-          name: 'Bob Wilson',
-          email: 'bob@example.com',
-          subject: 'How to cancel?',
-          message: 'I need to cancel my booking for next week. How do I do that?',
-          status: TicketStatus.OPEN,
-        }
-      });
+      data: {
+        name: 'Bob Wilson',
+        email: 'bob@example.com',
+        subject: 'How to cancel?',
+        message: 'I need to cancel my booking for next week. How do I do that?',
+        status: TicketStatus.OPEN,
+      }
+    });
   }
 
   const existingTicket2 = await prisma.supportTicket.findFirst({ where: { email: 'alice@example.com', subject: 'Partner inquiry' } });
   if (!existingTicket2) {
     await prisma.supportTicket.create({
-        data: {
-          name: 'Alice Brown',
-          email: 'alice@example.com',
-          subject: 'Partner inquiry',
-          message: 'I have a parking lot near the airport and would like to list it on your platform.',
-          status: TicketStatus.IN_PROGRESS,
-        }
-      });
+      data: {
+        name: 'Alice Brown',
+        email: 'alice@example.com',
+        subject: 'Partner inquiry',
+        message: 'I have a parking lot near the airport and would like to list it on your platform.',
+        status: TicketStatus.IN_PROGRESS,
+      }
+    });
   }
 
   console.log('Seed data checked/created successfully!');

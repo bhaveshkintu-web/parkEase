@@ -1087,7 +1087,15 @@ function CheckoutContent() {
                   <div className="flex gap-4">
                     <div className="h-20 w-20 shrink-0 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
                       <div className="flex h-full items-center justify-center">
-                        <CarIcon className="h-8 w-8 text-primary/40" />
+                        {bookingLocation?.images?.length > 0 ? (
+                          <img
+                            src={bookingLocation.images[0]}
+                            alt="Location"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <CarIcon className="h-8 w-8 text-primary/40" />
+                        )}
                       </div>
                     </div>
                     <div>
