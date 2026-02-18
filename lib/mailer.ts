@@ -177,7 +177,7 @@ export async function sendWatchmanWelcomeEmail(email: string, name: string, pass
     });
 
     const info = await transporter.sendMail({
-      from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Team" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Welcome to ParkZipply - Your Watchman Account Credentials",
       html: `
