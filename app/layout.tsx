@@ -13,7 +13,7 @@ import './globals.css'
 // const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'ParkEase | Find & Reserve Parking Near Airports, Events & More',
+  title: 'ParkZipply | Find & Reserve Parking Near Airports, Events & More',
   description: 'Book affordable airport parking, event parking, and daily parking spots. Compare prices, read reviews, and reserve your spot in seconds.',
   generator: 'v0.app',
   icons: {
@@ -51,9 +51,9 @@ export default function RootLayout({
           <DataStoreProvider>
             <SettingsProvider>
               <BookingProvider
-                  defaultCheckIn={new Date(Date.now() + 60 * 60 * 1000)} // Next hour
-                  defaultCheckOut={new Date(Date.now() + 3 * 60 * 60 * 1000)} // +3 hours
-                >
+                defaultCheckIn={new Date(Date.now() + 60 * 60 * 1000)} // Next hour
+                defaultCheckOut={new Date(Date.now() + 3 * 60 * 60 * 1000)} // +3 hours
+              >
                 {children}
                 <Toaster />
               </BookingProvider>

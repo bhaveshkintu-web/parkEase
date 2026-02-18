@@ -18,7 +18,7 @@ export async function sendVerificationEmail(email: string, token: string) {
     });
 
     const info = await transporter.sendMail({
-      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Verify your email",
       html: `
@@ -69,7 +69,7 @@ export async function sendBookingNotification(email: string, status: string, det
     });
 
     await transporter.sendMail({
-      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
       to: email,
       subject: `Booking Request ${isApproved ? "Approved" : "Rejected"}`,
       html: `
@@ -83,7 +83,7 @@ export async function sendBookingNotification(email: string, status: string, det
         ` : `
           <p>Reason: ${details.rejectionReason || "No specific reason provided."}</p>
         `}
-        <p>Thank you for using ParkEase!</p>
+        <p>Thank you for using ParkZipply!</p>
       `,
     });
 
@@ -111,7 +111,7 @@ export async function sendResetPasswordEmail(email: string, token: string) {
     });
 
     const info = await transporter.sendMail({
-      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Reset your password",
       html: `
@@ -179,11 +179,11 @@ export async function sendWatchmanWelcomeEmail(email: string, name: string, pass
     const info = await transporter.sendMail({
       from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Welcome to ParkEase - Your Watchman Account Credentials",
+      subject: "Welcome to ParkZipply - Your Watchman Account Credentials",
       html: `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #0d9488;">Welcome to the Team, ${name}!</h2>
-        <p>You have been added as a watchman on the ParkEase platform. You can now log in to manage your shift and parking activities.</p>
+        <p>You have been added as a watchman on the ParkZipply platform. You can now log in to manage your shift and parking activities.</p>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 0;"><strong>Login Email:</strong> ${email}</p>
@@ -199,7 +199,7 @@ export async function sendWatchmanWelcomeEmail(email: string, name: string, pass
         </p>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
       </div>
     `,
     });
@@ -232,10 +232,10 @@ export async function sendWelcomeEmail(email: string, name: string, password: st
     const info = await transporter.sendMail({
       from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Welcome to ParkEase - Your Account Credentials",
+      subject: "Welcome to ParkZipply - Your Account Credentials",
       html: `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #0d9488;">Welcome to ParkEase, ${name}!</h2>
+        <h2 style="color: #0d9488;">Welcome to ParkZipply, ${name}!</h2>
         <p>Your account has been created successfully. You can now log in to the platform.</p>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -284,10 +284,10 @@ export async function sendMagicLink(email: string, magicLink: string) {
     await transporter.sendMail({
       from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Sign in to ParkEase",
+      subject: "Sign in to ParkZipply",
       html: `
       <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #0d9488;">Sign in to ParkEase</h2>
+        <h2 style="color: #0d9488;">Sign in to ParkZipply</h2>
         <p>Click the link below to sign in to your account. This link will expire in 15 minutes.</p>
         
         <div style="margin: 30px 0;">

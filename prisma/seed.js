@@ -9,7 +9,7 @@ async function main() {
   // 🔹 ADMIN
   await prisma.user.create({
     data: {
-      email: "admin@parkease.com",
+      email: "admin@parkzipply.com",
       firstName: "System",
       lastName: "Admin",
       password,
@@ -22,7 +22,7 @@ async function main() {
   // 🔹 OWNER
   await prisma.user.create({
     data: {
-      email: "owner@parkease.com",
+      email: "owner@parkzipply.com",
       firstName: "Parking",
       lastName: "Owner",
       password,
@@ -35,7 +35,7 @@ async function main() {
   // 🔹 CUSTOMER
   await prisma.user.create({
     data: {
-      email: "customer@parkease.com",
+      email: "customer@parkzipply.com",
       firstName: "Normal",
       lastName: "Customer",
       password,
@@ -48,7 +48,7 @@ async function main() {
   // 🔹 WATCHMAN
   await prisma.user.create({
     data: {
-      email: "watchman@parkease.com",
+      email: "watchman@parkzipply.com",
       firstName: "Gate",
       lastName: "Watchman",
       password,

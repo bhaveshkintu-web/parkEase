@@ -25,7 +25,7 @@ async function main() {
             update: {},
             create: {
                 userId: user.id,
-                businessName: "ParkEase Testing",
+                businessName: "ParkZipply Testing",
                 businessType: "individual",
                 street: "Main St",
                 city: "New York",

@@ -36,7 +36,7 @@ export function Testimonials() {
             What Our Customers Say
           </h2>
           <p className="text-muted-foreground">
-            Join millions of happy travelers who trust ParkEase
+            Join millions of happy travelers who trust ParkZipply
           </p>
         </div>
 
@@ -52,11 +52,10 @@ export function Testimonials() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
-                    className={`h-4 w-4 ${
-                      i < testimonial.rating
+                    className={`h-4 w-4 ${i < testimonial.rating
                         ? "fill-accent text-accent"
                         : "text-muted"
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
@@ -98,7 +97,7 @@ export function Testimonials() {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Travelers</p>
-              <p className="text-xs text-muted-foreground">Trust ParkEase</p>
+              <p className="text-xs text-muted-foreground">Trust ParkZipply</p>
             </div>
           </div>
 

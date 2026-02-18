@@ -24,7 +24,7 @@ async function main() {
         update: {},
         create: {
             userId: ownerUser.id,
-            businessName: "ParkEase Owner",
+            businessName: "ParkZipply Owner",
             businessType: "individual",
             street: "Main St", city: "New York", state: "NY", zipCode: "10001", country: "USA",
             status: "approved", verificationStatus: "verified"

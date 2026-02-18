@@ -3,12 +3,12 @@
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import * as React from "react";
-import { 
-  Mail, 
-  Phone, 
-  MessageSquare, 
-  Clock, 
-  HelpCircle, 
+import {
+  Mail,
+  Phone,
+  MessageSquare,
+  Clock,
+  HelpCircle,
   ChevronRight,
   ShieldCheck,
   Zap,
@@ -18,11 +18,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { submitSupportTicket } from "@/lib/actions/support-actions";
@@ -39,7 +39,7 @@ export default function SupportPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {
       toast({
         title: "Missing fields",
@@ -52,7 +52,7 @@ export default function SupportPage() {
     setIsSubmitting(true);
     try {
       const result = await submitSupportTicket(formData);
-      
+
       if (result.success) {
         toast({
           title: "Message Sent!",
@@ -103,7 +103,7 @@ export default function SupportPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      
+
       <main className="flex-1">
         {/* Hero Section */}
         <section className="bg-primary/5 py-12 md:py-20 border-b border-primary/10">
@@ -119,11 +119,11 @@ export default function SupportPage() {
 
         <div className="container px-4 py-12 md:py-16">
           <div className="grid gap-12 lg:grid-cols-3">
-            
+
             {/* Contact Options */}
             <div className="lg:col-span-1 space-y-6">
               <h2 className="text-2xl font-bold mb-6">Contact Us</h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors">
                   <div className="bg-primary/10 p-3 rounded-lg text-primary">
@@ -132,8 +132,8 @@ export default function SupportPage() {
                   <div>
                     <h3 className="font-semibold text-lg">Email Support</h3>
                     <p className="text-sm text-muted-foreground mb-2">Typically replies within 2 hours</p>
-                    <a href="mailto:support@parkease.com" className="text-primary font-medium hover:underline">
-                      support@parkease.com
+                    <a href="mailto:support@parkzipply.com" className="text-primary font-medium hover:underline">
+                      support@parkzipply.com
                     </a>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function SupportPage() {
                     <h3 className="font-semibold text-lg">Call Us</h3>
                     <p className="text-sm text-muted-foreground mb-2">Available 24/7 for urgent issues</p>
                     <a href="tel:+18007275327" className="text-primary font-medium hover:underline">
-                      +1 (800) PARKEASE
+                      +1 (800) PARKZIPPLY
                     </a>
                   </div>
                 </div>
@@ -182,7 +182,7 @@ export default function SupportPage() {
 
             {/* Support Form & FAQs */}
             <div className="lg:col-span-2 space-y-12">
-              
+
               {/* FAQ Section */}
               <section>
                 <div className="flex items-center gap-2 mb-6">
@@ -216,9 +216,9 @@ export default function SupportPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="name" className="text-sm font-medium">Name</label>
-                      <Input 
-                        id="name" 
-                        placeholder="Your name" 
+                      <Input
+                        id="name"
+                        placeholder="Your name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         disabled={isSubmitting}
@@ -226,10 +226,10 @@ export default function SupportPage() {
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="email" className="text-sm font-medium">Email</label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="Your email" 
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Your email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         disabled={isSubmitting}
@@ -238,9 +238,9 @@ export default function SupportPage() {
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="subject" className="text-sm font-medium">Subject</label>
-                    <Input 
-                      id="subject" 
-                      placeholder="What can we help you with?" 
+                    <Input
+                      id="subject"
+                      placeholder="What can we help you with?"
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       disabled={isSubmitting}
@@ -248,16 +248,16 @@ export default function SupportPage() {
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="message" className="text-sm font-medium">Message</label>
-                    <Textarea 
-                      id="message" 
-                      placeholder="Describe your issue in detail..." 
-                      className="min-h-[150px]" 
+                    <Textarea
+                      id="message"
+                      placeholder="Describe your issue in detail..."
+                      className="min-h-[150px]"
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </div>
-                  <Button 
+                  <Button
                     type="submit"
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 text-lg"
                     disabled={isSubmitting}
