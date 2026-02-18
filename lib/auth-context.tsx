@@ -37,6 +37,7 @@ export type User = {
     };
     defaultVehicleId?: string;
     defaultPaymentId?: string;
+    lastRevokedAt?: string | null;
   };
 };
 
