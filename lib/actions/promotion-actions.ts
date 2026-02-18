@@ -47,6 +47,59 @@ export async function getActivePromotions() {
   }
 }
 
+export async function getApplicablePromotions(
+  bookingAmount: number,
+  userId?: string
+) {
+  try {
+    const now = new Date();
+    const promos = await prisma.promotion.findMany({
+      where: {
+        isActive: true,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+      orderBy: { value: "desc" }, // Start with highest value
+    });
+
+    return promos.map((promo) => {
+      let isApplicable = true;
+      let error = "";
+
+      if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
+        isApplicable = false;
+        error = "Usage limit reached";
+      }
+
+      if (promo.minBookingValue && bookingAmount < promo.minBookingValue) {
+        isApplicable = false;
+        error = `Add ${(promo.minBookingValue - bookingAmount).toFixed(2)} more to unlock`;
+      }
+
+      // Calculate discount amount
+      let discountAmount = 0;
+      if (promo.type === "percentage") {
+        discountAmount = (bookingAmount * promo.value) / 100;
+        if (promo.maxDiscount && discountAmount > promo.maxDiscount) {
+          discountAmount = promo.maxDiscount;
+        }
+      } else if (promo.type === "fixed") {
+        discountAmount = promo.value;
+      }
+
+      return {
+        ...promo,
+        isApplicable,
+        error,
+        potentialDiscount: Math.round(discountAmount * 100) / 100,
+      };
+    });
+  } catch (error) {
+    console.error("GET_APPLICABLE_PROMOTIONS_ERROR:", error);
+    return [];
+  }
+}
+
 export async function validatePromoCode(
   code: string,
   bookingAmount: number,
@@ -176,8 +229,8 @@ export async function addPromotion(data: any, adminId?: string) {
           entityType: "promotion",
           entityId: promo.id,
           action: "create",
-          previousValue: null,
-          newValue: promo,
+          previousValue: undefined,
+          newValue: promo as any,
           changedBy: adminId,
         },
       });
@@ -220,8 +273,8 @@ export async function updatePromotion(id: string, data: any, adminId?: string) {
           entityType: "promotion",
           entityId: promo.id,
           action: data.isActive !== undefined && data.isActive !== existing?.isActive ? "toggle" : "update",
-          previousValue: existing,
-          newValue: promo,
+          previousValue: existing as any,
+          newValue: promo as any,
           changedBy: adminId,
         },
       });
@@ -251,8 +304,8 @@ export async function deletePromotion(id: string, adminId?: string) {
           entityType: "promotion",
           entityId: id,
           action: "delete",
-          previousValue: existing,
-          newValue: null,
+          previousValue: existing as any,
+          newValue: undefined,
           changedBy: adminId,
         },
       });
