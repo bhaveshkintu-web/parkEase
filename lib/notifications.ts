@@ -1,6 +1,23 @@
 import { prisma } from "./prisma";
 import nodemailer from "nodemailer";
 
+/**
+ * Returns the correct base URL for the app.
+ * Priority: APP_URL → NEXTAUTH_URL → VERCEL_URL (auto-set by Vercel in production)
+ */
+function getAppUrl(): string {
+  if (process.env.APP_URL && !process.env.APP_URL.includes("localhost")) {
+    return process.env.APP_URL;
+  }
+  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+    return process.env.NEXTAUTH_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
+
 // Local enum definition until Prisma client is regenerated
 export enum NotificationType {
   DISPUTE_CREATED = "DISPUTE_CREATED",
@@ -69,7 +86,7 @@ export async function notifyAdminsOfBookingRequest(requestId: string) {
             </div>
 
             <p>Please log in to the admin dashboard to approve or reject this request.</p>
-            <a href="${process.env.APP_URL}/admin/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+            <a href="${getAppUrl()}/admin/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
@@ -144,7 +161,7 @@ export async function notifyOwnerOfBookingRequest(requestId: string) {
           </div>
 
           <p>Please log in to your owner dashboard to approve or reject this request.</p>
-          <a href="${process.env.APP_URL}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+          <a href="${getAppUrl()}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
           
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
@@ -250,7 +267,7 @@ export async function notifyOwnerOfNewBooking(bookingId: string) {
           </div>
 
           <p>Please log in to your owner dashboard to ${booking.status === "PENDING" ? "approve or reject" : "view"} this booking.</p>
-          <a href="${process.env.APP_URL}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+          <a href="${getAppUrl()}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
           
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
@@ -385,12 +402,12 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-              <a href="${process.env.APP_URL}/account/reservations/${bookingId}" style="display: inline-block; background-color: #0d9488; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Reservation Online</a>
+              <a href="${getAppUrl()}/account/reservations/${bookingId}" style="display: inline-block; background-color: #0d9488; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Reservation Online</a>
             </div>
           </div>
           
           <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0 0 10px;">Questions? Reply to this email or visit our <a href="${process.env.APP_URL}/center" style="color: #0d9488;">Help Center</a>.</p>
+            <p style="margin: 0 0 10px;">Questions? Reply to this email or visit our <a href="${getAppUrl()}/center" style="color: #0d9488;">Help Center</a>.</p>
             <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
           </div>
         </div>
@@ -447,7 +464,7 @@ export async function notifyAdminsOfPartnerInquiry(lead: any) {
             </div>
 
             <p>Please log in to the admin dashboard to review this inquiry.</p>
-            <a href="${process.env.APP_URL}/admin" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+            <a href="${getAppUrl()}/admin" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
@@ -503,7 +520,7 @@ export async function notifyAdminsOfLocationSubmission(location: any) {
             </div>
 
             <p>Please log in to the admin dashboard to review and approve this location.</p>
-            <a href="${process.env.APP_URL}/admin/approvals" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+            <a href="${getAppUrl()}/admin/approvals" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>

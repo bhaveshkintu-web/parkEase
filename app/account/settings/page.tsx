@@ -46,7 +46,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
-  Shield,
   CreditCard,
   Car,
   Loader2,
@@ -55,7 +54,6 @@ import {
   Check,
   AlertTriangle,
   Trash2,
-  Lock,
   Mail,
   Smartphone,
   Megaphone,
@@ -64,7 +62,6 @@ import {
   Globe,
   Moon,
   Sun,
-  LogOut,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -315,7 +312,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="notifications" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             <span className="hidden sm:inline">Notifications</span>
@@ -323,10 +320,6 @@ export default function SettingsPage() {
           <TabsTrigger value="defaults" className="flex items-center gap-2">
             <Car className="w-4 h-4" />
             <span className="hidden sm:inline">Defaults</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            <span className="hidden sm:inline">Security</span>
           </TabsTrigger>
           <TabsTrigger value="danger" className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
@@ -572,109 +565,6 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                Password
-              </CardTitle>
-              <CardDescription>
-                Update your password to keep your account secure
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Current password</p>
-                  <p className="text-sm text-muted-foreground">
-                    Last changed: {user?.preferences?.lastRevokedAt ? new Date(user.preferences.lastRevokedAt).toLocaleDateString() : "Never"}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setPasswordDialogOpen(true)}
-                >
-                  Change Password
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Two-Factor Authentication
-              </CardTitle>
-              <CardDescription>
-                Add an extra layer of security to your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
-                    Not Enabled
-                  </Badge>
-                  <p className="text-sm text-muted-foreground">
-                    Protect your account with 2FA
-                  </p>
-                </div>
-                <Button variant="outline" onClick={() => router.push("/account/security")}>
-                  Configure 2FA
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LogOut className="w-5 h-5" />
-                Active Sessions
-              </CardTitle>
-              <CardDescription>
-                Manage your active sessions and sign out of other devices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Other devices</p>
-                  <p className="text-sm text-muted-foreground">
-                    Sign out of all other active sessions except this one
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={async () => {
-                    try {
-                      const result = await revokeAllSessions();
-                      if (result.success) {
-                        toast({
-                          title: "Sessions revoked",
-                          description: "You have been signed out of all other devices.",
-                        });
-                      }
-                    } catch (err) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to revoke sessions",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  Sign Out All Devices
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

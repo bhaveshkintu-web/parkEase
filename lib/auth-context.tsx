@@ -283,10 +283,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     updateProfile: async (data: Partial<User>) => {
       try {
-        const response = await fetch("/api/auth/profile", {
-          method: "PATCH",
+        const response = await fetch("/api/user/profile", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify({ ...data, userId: user?.id }),
         });
 
         if (response.ok) {
@@ -323,7 +323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch("/api/auth/profile/avatar", {
+        const response = await fetch("/api/user/avatar", {
           method: "POST",
           body: formData,
         });
@@ -343,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     removeAvatar: async () => {
       try {
-        const response = await fetch("/api/auth/profile/avatar", {
+        const response = await fetch("/api/user/avatar", {
           method: "DELETE",
         });
 

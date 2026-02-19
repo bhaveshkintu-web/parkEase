@@ -15,6 +15,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
 
+/** Returns true for transient network errors that should be silently ignored (e.g. ERR_NETWORK_CHANGED). */
+function isNetworkError(error: Error): boolean {
+  return error.message === "Failed to fetch" || error.message.includes("NetworkError");
+}
+
 interface Notification {
   id: string;
   title: string;
@@ -31,11 +36,11 @@ export function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (signal?: AbortSignal) => {
     if (!isAuthenticated || !user?.id) return;
 
     try {
-      const response = await fetch("/api/notifications");
+      const response = await fetch("/api/notifications", { signal });
       const text = await response.text();
 
       if (response.ok) {
@@ -50,8 +55,9 @@ export function NotificationCenter() {
         console.warn(`Failed to fetch notifications (${response.status}):`, text.substring(0, 100));
       }
     } catch (error) {
-      // Only log as error if it's not a fetch abort or similar expected failure during navigation
-      if (error instanceof Error && error.name !== 'AbortError') {
+      // Silently ignore aborts (navigation/unmount) and transient network changes (ERR_NETWORK_CHANGED).
+      // The 60-second polling interval will retry automatically.
+      if (error instanceof Error && error.name !== 'AbortError' && !isNetworkError(error)) {
         console.error("Failed to fetch notifications:", error);
       }
     }
@@ -59,10 +65,14 @@ export function NotificationCenter() {
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      fetchNotifications();
+      const controller = new AbortController();
+      fetchNotifications(controller.signal);
       // Poll for new notifications every minute
-      const interval = setInterval(fetchNotifications, 60000);
-      return () => clearInterval(interval);
+      const interval = setInterval(() => fetchNotifications(controller.signal), 60000);
+      return () => {
+        controller.abort();
+        clearInterval(interval);
+      };
     }
   }, [isAuthenticated, user?.id]);
 
