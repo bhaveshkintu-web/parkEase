@@ -12,6 +12,10 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
+    // Cleanup expired bookings before fetching stats to ensure accuracy
+    const { cleanupExpiredBookings } = await import("@/lib/actions/booking-actions");
+    await cleanupExpiredBookings();
+
     // Get the owner profile to link to data
     const ownerProfile = await prisma.ownerProfile.findUnique({
       where: { userId },

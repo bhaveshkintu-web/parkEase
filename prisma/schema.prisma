@@ -621,6 +621,7 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   REJECTED
+  EXPIRED
 }
 
 enum ParkingStatus {
