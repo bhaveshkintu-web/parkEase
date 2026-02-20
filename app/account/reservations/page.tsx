@@ -17,7 +17,9 @@ import {
   Plus,
   QrCode,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type TabValue = "upcoming" | "past" | "cancelled" | "expired";
 
@@ -287,15 +289,38 @@ export default function ReservationsPage() {
                             <span>Confirmation: {booking.confirmationCode}</span>
                           </div>
                           <div className="flex gap-2">
-                            {activeTab === "upcoming" && (
-                              <>
-                                <Link href={`/account/reservations/${booking.id}/modify`}>
-                                  <Button variant="outline" size="sm">
-                                    Modify
-                                  </Button>
-                                </Link>
-                              </>
-                            )}
+                            {activeTab === "upcoming" && (() => {
+                              const checkInTime = new Date(booking.checkIn).getTime();
+                              const hoursUntilCheckIn = (checkInTime - now.getTime()) / (1000 * 60 * 60);
+                              const isModifiable = hoursUntilCheckIn >= 2;
+                              const modificationDeadlinePassed = hoursUntilCheckIn < 2;
+
+                              return (
+                                <div className="relative group">
+                                  <Link
+                                    href={isModifiable ? `/account/reservations/${booking.id}/modify` : "#"}
+                                    onClick={(e) => !isModifiable && e.preventDefault()}
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className={cn(
+                                        "bg-amber-500 hover:bg-amber-600 text-white border-none",
+                                        !isModifiable && "opacity-50 cursor-not-allowed grayscale"
+                                      )}
+                                      disabled={!isModifiable}
+                                    >
+                                      Modify
+                                    </Button>
+                                  </Link>
+                                  {modificationDeadlinePassed && (
+                                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
+                                      Modifications can only be performed at least 2 hours before check-in.
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <Link href={`/account/reservations/${booking.id}`}>
                               <Button size="sm">
                                 View Details

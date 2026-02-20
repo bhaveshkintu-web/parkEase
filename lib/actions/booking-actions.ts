@@ -530,32 +530,106 @@ export async function submitReview(bookingId: string, reviewData: {
  * Updates booking dates.
  * Production logic would include availability checks and price recalculation.
  */
-export async function updateBookingDates(bookingId: string, checkIn: Date, checkOut: Date) {
+export async function updateBookingDates(
+  bookingId: string,
+  checkIn: Date,
+  checkOut: Date,
+  pricingData?: {
+    totalPrice: number;
+    taxes: number;
+    fees: number;
+    isExtension: boolean;
+  }
+) {
   try {
     const userId = await getAuthUserId();
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { location: true },
+      include: {
+        location: {
+          include: {
+            owner: {
+              include: { wallet: true }
+            }
+          }
+        },
+        payment: true
+      },
     });
 
     if (!booking) return { success: false, error: "Booking not found" };
     if (booking.userId !== userId) return { success: false, error: "Unauthorized" };
 
-    // Update the booking dates
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update the booking dates and pricing if provided
+      const updateData: any = {
         checkIn,
         checkOut,
-        // In a real app, we would also update the totalPrice here
-      },
+      };
+
+      if (pricingData) {
+        updateData.totalPrice = pricingData.totalPrice;
+        updateData.taxes = pricingData.taxes;
+        updateData.fees = pricingData.fees;
+
+        // Recalculate owner earnings based on new subtotal
+        // We'll use the same 15% default or find rules if we wanted to be more precise
+        // For simplicity during modification, we'll keep the existing commission % logic
+        const subtotal = pricingData.totalPrice - pricingData.taxes - pricingData.fees;
+        const ownerEarnings = subtotal * 0.85; // Assuming 15% commission
+        updateData.ownerEarnings = ownerEarnings;
+
+        // 2. If it's an extension, create an additional payment record
+        if (pricingData.isExtension) {
+          const extraAmount = pricingData.totalPrice - booking.totalPrice;
+          if (extraAmount > 0) {
+            await tx.payment.create({
+              data: {
+                bookingId: booking.id,
+                amount: extraAmount,
+                currency: "USD",
+                provider: "STRIPE",
+                transactionId: `txn_mod_${Math.random().toString(36).substring(2, 10)}`,
+                status: "SUCCESS",
+              }
+            });
+
+            // 3. Update Owner Wallet if applicable
+            const ownerWallet = booking.location.owner.wallet;
+            const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
+
+            if (ownerWallet && extraEarnings > 0) {
+              await tx.wallet.update({
+                where: { id: ownerWallet.id },
+                data: { balance: { increment: extraEarnings } }
+              });
+
+              await tx.walletTransaction.create({
+                data: {
+                  walletId: ownerWallet.id,
+                  type: "CREDIT",
+                  amount: extraEarnings,
+                  description: `Extra earnings for modified booking ${booking.confirmationCode}`,
+                  status: "SUCCESS",
+                  reference: booking.id,
+                }
+              });
+            }
+          }
+        }
+      }
+
+      return await tx.booking.update({
+        where: { id: bookingId },
+        data: updateData,
+      });
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);
     revalidatePath("/account/reservations");
 
-    return { success: true, data: updatedBooking };
+    return { success: true, data: result };
   } catch (error) {
     console.error("Failed to update booking dates:", error);
     return { success: false, error: "Failed to update reservation dates" };

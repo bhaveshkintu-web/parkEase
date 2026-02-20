@@ -21,8 +21,8 @@ async function testBookingCreate() {
                 vehicleColor: "Blue",
                 vehiclePlate: "TEST123",
                 totalPrice: 10.0,
-                taxes: 1.0,
-                fees: 2.99,
+                taxes: 1.2,
+                fees: 5.99,
                 status: "CONFIRMED",
                 confirmationCode: confCode,
             }
@@ -51,7 +51,7 @@ async function testBookingCreate() {
           ${new Date()}, ${new Date(Date.now() + 86400000)},
           ${"Test"}, ${"User"}, ${"test@example.com"}, ${"1234567890"},
           ${"Toyota"}, ${"Camry"}, ${"Blue"}, ${"TEST123"},
-          ${10.0}, ${1.0}, ${2.99}, 
+          ${10.0}, ${1.2}, ${5.99}, 
           ${"CONFIRMED"}::"BookingStatus", 
           ${"PKE-TEST123"}, 
           NOW(), NOW()

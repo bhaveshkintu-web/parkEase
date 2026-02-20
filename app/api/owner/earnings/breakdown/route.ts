@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Filter condition
     const where: any = {
-      location: { 
+      location: {
         ownerId: ownerProfile.id,
         ...(locationId && locationId !== "all" ? { id: locationId } : {})
       },
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     const data = bookings.map(booking => {
       const commissionTx = commissionTxs.find(tx => tx.reference === booking.id);
       const commission = Math.abs(commissionTx?.amount || 0);
-      
+
       return {
         id: booking.id,
         date: booking.createdAt,

@@ -169,6 +169,8 @@ export default function ReservationDetailPage({
   const isCancellable = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn >= deadlineHours);
   const cancellationDeadlinePassed = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn < deadlineHours);
   const isStrictPolicy = policy?.type === "strict";
+  const isModifiable = isUpcoming && hoursUntilCheckIn >= 2;
+  const modificationDeadlinePassed = isUpcoming && hoursUntilCheckIn < 2;
 
   const handleCancelReservation = async () => {
     if (!isCancellable) return;
@@ -463,12 +465,30 @@ export default function ReservationDetailPage({
             </Button>
             {isUpcoming && (
               <>
-                <Link href={`/account/reservations/${id}/modify`}>
-                  <Button variant="outline" size="sm" className={!isCancellable && isUpcoming ? "opacity-50 cursor-not-allowed" : ""}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Modify
-                  </Button>
-                </Link>
+                <div className="relative group">
+                  <Link
+                    href={isModifiable ? `/account/reservations/${id}/modify` : "#"}
+                    onClick={(e) => !isModifiable && e.preventDefault()}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "bg-transparent",
+                        !isModifiable && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                      )}
+                      disabled={!isModifiable}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Modify
+                    </Button>
+                  </Link>
+                  {modificationDeadlinePassed && (
+                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
+                      Modifications can only be performed at least 2 hours before check-in.
+                    </div>
+                  )}
+                </div>
                 <div className="relative group">
                   <Button
                     variant="outline"

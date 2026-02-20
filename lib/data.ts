@@ -98,8 +98,8 @@ export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOu
   const days = calculateDays(checkIn, checkOut);
   const displayDays = Math.ceil(days); // For display in "X days" text if needed, but price is pro-rated
   const basePrice = location.pricePerDay * days;
-  const taxes = basePrice * 0.0925; // 9.25% tax
-  const fees = 2.99; // Service fee
+  const taxes = basePrice * 0.12; // 12% tax
+  const fees = 5.99; // Service fee
   const totalPrice = basePrice + taxes + fees;
 
 
