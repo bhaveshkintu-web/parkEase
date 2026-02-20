@@ -5,17 +5,19 @@ import nodemailer from "nodemailer";
  * Priority: APP_URL → NEXTAUTH_URL → VERCEL_URL (auto-set by Vercel in production)
  */
 function getAppUrl(): string {
+  let url = "";
   if (process.env.APP_URL && !process.env.APP_URL.includes("localhost")) {
-    return process.env.APP_URL;
+    url = process.env.APP_URL;
+  } else if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+    url = process.env.NEXTAUTH_URL;
+  } else if (process.env.VERCEL_URL) {
+    url = `https://${process.env.VERCEL_URL}`;
+  } else {
+    // Fallback to APP_URL (works for local dev)
+    url = process.env.APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
   }
-  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
-    return process.env.NEXTAUTH_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Fallback to APP_URL (works for local dev)
-  return process.env.APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+  // Strip trailing slash to prevent double-slash in constructed URLs
+  return url.replace(/\/+$/, "");
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
