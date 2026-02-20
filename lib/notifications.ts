@@ -566,6 +566,11 @@ export async function sendSupportEmail(data: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Better Gmail compatibility
+      ...(process.env.SMTP_HOST?.includes("gmail") ? { service: "gmail" } : {}),
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
     await transporter.sendMail({

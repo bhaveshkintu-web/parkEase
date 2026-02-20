@@ -32,20 +32,24 @@ export async function submitSupportTicket(formData: {
       },
     });
 
-    // Trigger the email
-    const result = await sendSupportEmail(formData);
-    
-    // Create In-App Notification for Admins
-    if (result.success) {
-      await NotificationService.notifyAdmins({
-        title: "New Support Ticket",
-        message: `New ticket from ${formData.name}: ${formData.subject}`,
-        type: NotificationType.SUPPORT_TICKET_CREATED,
-        metadata: { subject: formData.subject, email: formData.email }
-      });
-    }
+    // Trigger the email (Non-blocking: we don't return error if email fails because it's already in DB)
+    const emailResult = await sendSupportEmail(formData).catch(err => {
+      console.error("Email send trigger error:", err);
+      return { success: false, error: err.message };
+    });
 
-    return result;
+    // Create In-App Notification for Admins (We should do this even if email fails)
+    await NotificationService.notifyAdmins({
+      title: "New Support Ticket",
+      message: `New ticket from ${formData.name}: ${formData.subject}`,
+      type: NotificationType.SUPPORT_TICKET_CREATED,
+      metadata: { subject: formData.subject, email: formData.email }
+    }).catch(err => console.error("Failed to notify admins in-app:", err));
+
+    return {
+      success: true,
+      message: emailResult.success ? "Ticket submitted and email sent." : "Ticket submitted (Email notification pending)."
+    };
   } catch (error) {
     console.error("Error in submitSupportTicket action:", error);
     return { success: false, error: "An unexpected error occurred. Please try again later." };
@@ -107,7 +111,7 @@ export async function submitDispute(data: {
 }) {
   try {
     const userId = await getAuthUserId();
-    
+
     // Verify booking ownership
     const booking = await prisma.booking.findUnique({
       where: { id: data.bookingId },
@@ -225,7 +229,7 @@ export async function requestRefund(data: {
 export async function getBookingSupportStatus(bookingId: string) {
   try {
     const userId = await getAuthUserId();
-    
+
     const [disputes, refunds] = await Promise.all([
       prisma.dispute.findMany({
         where: { bookingId, userId, isDeleted: false },

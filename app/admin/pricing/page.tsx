@@ -226,7 +226,18 @@ export default function PricingRulesPage() {
                   <Label>Type</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(v) => setFormData({ ...formData, type: v as PricingRule["type"] })}
+                    onValueChange={(v) => {
+                      const newType = v as PricingRule["type"];
+                      setFormData((prev) => ({
+                        ...prev,
+                        type: newType,
+                        // Clear dates if not surge or holiday
+                        startDate: (newType === "surge" || newType === "holiday") ? prev.startDate : "",
+                        endDate: (newType === "surge" || newType === "holiday") ? prev.endDate : "",
+                        // Clear days if not weekend
+                        daysOfWeek: newType === "weekend" ? prev.daysOfWeek : [],
+                      }));
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -353,7 +364,7 @@ export default function PricingRulesPage() {
                 </span>
               </div>
 
-              {(rule.startDate || rule.endDate) && (
+              {(rule.type === "surge" || rule.type === "holiday") && (rule.startDate || rule.endDate) && (
                 <div className="text-sm text-muted-foreground mb-3">
                   {rule.startDate && rule.endDate && (
                     <>
@@ -363,7 +374,7 @@ export default function PricingRulesPage() {
                 </div>
               )}
 
-              {rule.daysOfWeek && rule.daysOfWeek.length > 0 && (
+              {rule.type === "weekend" && rule.daysOfWeek && rule.daysOfWeek.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-3">
                   {rule.daysOfWeek.map((day) => (
                     <Badge key={day} variant="outline" className="text-xs">
