@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import QRCodeGenerator from "react-qr-code";
-import { formatCurrency, formatDate } from "@/lib/data";
+import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { getBookingSupportStatus } from "@/lib/actions/support-actions";
 import { SupportDialogs } from "@/components/support/support-dialogs";
@@ -585,11 +585,19 @@ export default function ReservationDetailPage({
                         <p className="text-lg font-semibold text-foreground">
                           {formatDate(reservation.checkIn)}
                         </p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(reservation.checkIn)}
+                        </p>
                       </div>
                       <div className="space-y-1 p-4 bg-muted/50 rounded-lg">
                         <p className="text-sm text-muted-foreground">Check-out</p>
                         <p className="text-lg font-semibold text-foreground">
                           {formatDate(reservation.checkOut)}
+                        </p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(reservation.checkOut)}
                         </p>
                       </div>
                       <div className="space-y-1 p-4 bg-muted/50 rounded-lg">

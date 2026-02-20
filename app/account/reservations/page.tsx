@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUserBookings } from "@/lib/actions/booking-actions";
-import { formatCurrency, formatDate } from "@/lib/data";
+import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-type TabValue = "upcoming" | "past" | "cancelled";
+type TabValue = "upcoming" | "past" | "cancelled" | "expired";
 
 export default function ReservationsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -59,7 +59,9 @@ export default function ReservationsPage() {
             new Date(b.checkOut) < startOfToday
         );
       case "cancelled":
-        return bookings.filter((b) => b.status === "CANCELLED");
+        return bookings.filter((b) => b.status === "CANCELLED" || b.status === "REJECTED");
+      case "expired":
+        return bookings.filter((b) => b.status === "EXPIRED");
       default:
         return [];
     }
@@ -80,7 +82,8 @@ export default function ReservationsPage() {
       new Date(b.checkOut) < startOfToday
   ).length;
 
-  const cancelledCount = bookings.filter((b) => b.status === "CANCELLED").length;
+  const cancelledCount = bookings.filter((b) => b.status === "CANCELLED" || b.status === "REJECTED").length;
+  const expiredCount = bookings.filter((b) => b.status === "EXPIRED").length;
 
   const getStatusBadge = (status: string, checkOut: string) => {
     const isPast = new Date(checkOut) < startOfToday;
@@ -103,15 +106,22 @@ export default function ReservationsPage() {
           </Badge>
         );
       case "CANCELLED":
+      case "REJECTED":
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-            Cancelled
+            {status === "REJECTED" ? "Rejected" : "Cancelled"}
           </Badge>
         );
       case "COMPLETED":
         return (
           <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
             Completed
+          </Badge>
+        );
+      case "EXPIRED":
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
+            Expired
           </Badge>
         );
       default:
@@ -144,7 +154,7 @@ export default function ReservationsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${expiredCount > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
           <TabsTrigger value="upcoming" className="flex items-center gap-2">
             Upcoming
             {upcomingCount > 0 && (
@@ -169,6 +179,14 @@ export default function ReservationsPage() {
               </Badge>
             )}
           </TabsTrigger>
+          {expiredCount > 0 && (
+            <TabsTrigger value="expired" className="flex items-center gap-2">
+              Expired
+              <Badge variant="secondary" className="ml-1">
+                {expiredCount}
+              </Badge>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
@@ -236,11 +254,17 @@ export default function ReservationsPage() {
                             <p className="font-medium text-sm text-foreground">
                               {formatDate(new Date(booking.checkIn))}
                             </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              at {formatTime(new Date(booking.checkIn))}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase">Check-out</p>
                             <p className="font-medium text-sm text-foreground">
                               {formatDate(new Date(booking.checkOut))}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              at {formatTime(new Date(booking.checkOut))}
                             </p>
                           </div>
                           <div>

@@ -11,6 +11,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
   }
 
+  // Cleanup expired bookings before fetching stats to ensure accuracy
+  try {
+    const { cleanupExpiredBookings } = await import("@/lib/actions/booking-actions");
+    await cleanupExpiredBookings();
+  } catch (err) {
+    console.error("Watchman Dashboard Cleanup Error:", err);
+  }
+
   try {
     const watchman = await prisma.watchman.findUnique({
       where: { userId: session.user.id },

@@ -439,29 +439,45 @@ export async function updateLocationImages(id: string, images: string[]) {
 
 /**
  * Utility to fix existing incorrect availability data across all locations.
- * Clamps availableSpots to totalSpots if it currently exceeds it.
+ * Performs a deep recalculation based on currently active/reserved bookings.
  */
 export async function syncAllLocationsAvailability() {
   try {
     const locations = await prisma.parkingLocation.findMany({
-      select: { id: true, totalSpots: true, availableSpots: true }
+      select: { id: true, totalSpots: true }
     });
 
-    const fixPromises = locations
-      .filter(loc => loc.availableSpots > loc.totalSpots)
-      .map(loc =>
-        prisma.parkingLocation.update({
-          where: { id: loc.id },
-          data: { availableSpots: loc.totalSpots }
-        })
-      );
+    const now = new Date();
+    let fixedCount = 0;
 
-    if (fixPromises.length > 0) {
-      await Promise.all(fixPromises);
-      console.log(`✅ Sanity check complete: Fixed ${fixPromises.length} locations with incorrect availability.`);
+    for (const location of locations) {
+      // Recalculate actually occupied/reserved spots
+      // A spot is "occupied" if there is an overlapping booking that is CONFIRMED or PENDING
+      // and NOT yet completed/cancelled.
+      const occupiedCount = await prisma.booking.count({
+        where: {
+          locationId: location.id,
+          status: { in: ["CONFIRMED", "PENDING"] },
+          // We consider it occupied if it overlaps with "now" or is in the future but already reserved
+          // More accurately, we check how many are active right now
+          AND: [
+            { checkIn: { lte: now } },
+            { checkOut: { gte: now } }
+          ]
+        }
+      });
+
+      const actualAvailable = Math.max(0, location.totalSpots - occupiedCount);
+
+      await prisma.parkingLocation.update({
+        where: { id: location.id },
+        data: { availableSpots: actualAvailable }
+      });
+      fixedCount++;
     }
 
-    return { success: true, fixedCount: fixPromises.length };
+    console.log(`✅ Sanity check complete: Synchronized availability for ${fixedCount} locations.`);
+    return { success: true, fixedCount };
   } catch (error) {
     console.error("Failed to sync location availability:", error);
     return { success: false, error: "Failed to perform sanity check" };

@@ -204,6 +204,7 @@ export default function OwnerBookingsPage() {
       confirmed: safeReservations.filter((b) => b.status.toLowerCase() === "confirmed").length,
       cancelled: safeReservations.filter((b) => b.status.toLowerCase() === "cancelled").length,
       completed: safeReservations.filter((b) => b.status.toLowerCase() === "completed").length,
+      expired: safeReservations.filter((b) => b.status.toLowerCase() === "expired").length,
       todayCheckIns: safeReservations.filter(
         (b) => new Date(b.checkIn) >= today && new Date(b.checkIn) < tomorrow && b.status.toLowerCase() === "confirmed"
       ).length,
@@ -247,6 +248,12 @@ export default function OwnerBookingsPage() {
         icon: XCircle,
         label: "Rejected",
         className: "bg-rose-100 text-rose-700 border-rose-200",
+      },
+      expired: {
+        variant: "outline" as const,
+        icon: XCircle,
+        label: "Expired",
+        className: "bg-gray-100 text-gray-700 border-gray-200",
       },
     };
     const item = (config as any)[normalizedStatus] || config.pending;
@@ -534,6 +541,7 @@ export default function OwnerBookingsPage() {
                       <SelectItem value="all">All Statuses</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
@@ -602,6 +610,14 @@ export default function OwnerBookingsPage() {
                   >
                     <XCircle className="w-3 h-3 mr-1" />
                     Cancelled ({stats.cancelled})
+                  </Badge>
+                  <Badge
+                    variant={statusFilter === "completed" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setStatusFilter("completed")}
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Completed ({stats.completed})
                   </Badge>
                 </div>
               </CardContent>

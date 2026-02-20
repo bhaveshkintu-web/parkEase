@@ -88,7 +88,7 @@ export function useEmailVerificationRequired(): boolean {
  */
 export function usePlatformName(): string {
   const platformName = useSetting("platformName");
-  return platformName ?? "ParkEase";
+  return platformName ?? "ParkZipply";
 }
 
 /**
@@ -97,5 +97,5 @@ export function usePlatformName(): string {
  */
 export function useSupportEmail(): string {
   const supportEmail = useSetting("supportEmail");
-  return supportEmail ?? "support@parkease.com";
+  return supportEmail ?? "support@parkzipply.com";
 }
