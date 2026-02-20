@@ -7,29 +7,29 @@ import { usePlatformName } from "@/hooks/use-settings";
 const footerLinks = {
   Services: [
     { label: "Airport Parking", href: "/parking" },
-    { label: "Monthly Parking", href: "#" },
-    { label: "Event Parking", href: "#" },
-    { label: "Car Wash", href: "#" },
-    { label: "Auto Insurance", href: "#" },
+    // { label: "Monthly Parking", href: "#" },
+    // { label: "Event Parking", href: "#" },
+    // { label: "Car Wash", href: "#" },
+    // { label: "Auto Insurance", href: "#" },
   ],
   Company: [
-    { label: "About Us", href: "/about-us" },
-    { label: "Careers", href: "/careers" },
-    { label: "Press", href: "/press" },
-    { label: "Blog", href: "/blog" },
+    // { label: "About Us", href: "/about-us" },
+    // { label: "Careers", href: "/careers" },
+    // { label: "Press", href: "/press" },
+    // { label: "Blog", href: "/blog" },
     { label: "Contact", href: "/support" },
   ],
   Support: [
     { label: "Help Center", href: "/support" },
     { label: "FAQs", href: "/support#faqs" },
     { label: "Cancellation Policy", href: "/cancellation-policy" },
-    { label: "Report an Issue", href: "/report-issue" },
+    // { label: "Report an Issue", href: "/report-issue" },
   ],
-  Legal: [
-    { label: "Terms of Service", href: "/terms-of-service" },
-    { label: "Privacy Policy", href: "/privacy-policy" },
-    { label: "Cookie Policy", href: "/cookie-policy" },
-  ],
+  // Legal: [
+  //   { label: "Terms of Service", href: "/terms-of-service" },
+  //   { label: "Privacy Policy", href: "/privacy-policy" },
+  //   { label: "Cookie Policy", href: "/cookie-policy" },
+  // ],
 };
 
 const socialLinks = [

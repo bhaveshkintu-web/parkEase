@@ -192,14 +192,14 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <div className="hidden sm:flex items-center gap-2">
-              <Button
+              {/* <Button
                 size="sm"
                 variant="outline"
                 asChild
                 className="bg-transparent"
               >
                 <Link href="/demo">Demo</Link>
-              </Button>
+              </Button> */}
               <Button size="sm" asChild>
                 <Link href="/auth/login">Sign In</Link>
               </Button>
@@ -298,7 +298,7 @@ export function Navbar() {
                     </>
                   ) : (
                     <>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         className="w-full gap-2 bg-transparent"
                         asChild
@@ -306,7 +306,7 @@ export function Navbar() {
                         <Link href="/demo" onClick={() => setIsOpen(false)}>
                           Try Demo
                         </Link>
-                      </Button>
+                      </Button> */}
                       {/* <Button
                         variant="outline"
                         className="w-full gap-2 bg-transparent"

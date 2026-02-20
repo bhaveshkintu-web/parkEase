@@ -18,7 +18,7 @@ export default function HomePage() {
         <PopularAirports />
         <HowItWorks />
         <Testimonials />
-        <AppDownload />
+        {/* <AppDownload /> */}
       </main>
       <Footer />
     </div>
