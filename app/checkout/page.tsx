@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { validateLuhn, formatCardNumber, detectCardBrand, validateExpiry } from "@/lib/card-utils";
 import { getVehicles } from "@/lib/actions/vehicle-actions";
+import { PromoSelector } from "@/components/checkout/promo-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1133,35 +1134,38 @@ function CheckoutContent() {
                     </div>
                   </div>
 
-                  {/* Promo Code */}
+                  {/* Promo Code Selector */}
                   <div className="border-t border-border pt-4">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Promo code"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        disabled={promoApplied}
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={handleApplyPromo}
-                        disabled={promoApplied || !promoCode || isValidatingPromo}
-                      >
-                        {isValidatingPromo ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : promoApplied ? (
-                          "Applied"
-                        ) : (
-                          "Apply"
-                        )}
-                      </Button>
-                    </div>
-                    {promoApplied && appliedPromotion && (
-                      <p className="mt-2 flex items-center gap-1 text-sm text-primary">
-                        <Tag className="h-3 w-3" />
-                        {appliedPromotion.code} - {appliedPromotion.type === "percentage" ? `${appliedPromotion.value}%` : formatCurrency(appliedPromotion.value)} off applied!
-                      </p>
-                    )}
+                    <PromoSelector
+                      bookingAmount={quote?.totalPrice || 0}
+                      appliedPromo={appliedPromotion}
+                      onApply={(promo) => {
+                        // If it's a full promo object from the selector
+                        if (promo.id) {
+                          setAppliedPromotion(promo);
+                          setPromoApplied(true);
+                          setClientSecret(null); // Force regenerate payment intent
+                          toast({
+                            title: "Promo Applied",
+                            description: `Code ${promo.code} has been applied!`,
+                          });
+                        } else {
+                          // If it's just a manual code string
+                          setPromoCode(promo.code);
+                          handleApplyPromo();
+                        }
+                      }}
+                      onRemove={() => {
+                        setAppliedPromotion(null);
+                        setPromoApplied(false);
+                        setPromoCode("");
+                        setClientSecret(null);
+                        toast({
+                          title: "Promo Removed",
+                          description: "The promotion has been removed.",
+                        });
+                      }}
+                    />
                   </div>
 
                   {/* Price Breakdown */}

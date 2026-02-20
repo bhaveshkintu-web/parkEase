@@ -727,3 +727,71 @@ export async function rejectBooking(bookingId: string, reason: string) {
     return { success: false, error: error.message || "Failed to reject reservation" };
   }
 }
+
+/**
+ * Automatically cleans up expired bookings that never checked in (NO-SHOWS).
+ * Reverts the available spot count and updates statuses.
+ * Applies a 2-hour grace period after the scheduled check-out time.
+ */
+export async function cleanupExpiredBookings() {
+  try {
+    const now = new Date();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+    // Find sessions that are RESERVED/PENDING but their checkout time was > 2 hours ago
+    const expiredSessions = await prisma.parkingSession.findMany({
+      where: {
+        status: { in: ["RESERVED", "PENDING", "reserved", "pending"] },
+        booking: {
+          checkOut: { lt: twoHoursAgo },
+          status: { notIn: ["CANCELLED", "COMPLETED", "REJECTED"] }
+        }
+      },
+      include: {
+        booking: true,
+        location: {
+          select: { id: true, availableSpots: true, totalSpots: true }
+        }
+      }
+    });
+
+    if (expiredSessions.length === 0) {
+      return { success: true, processed: 0 };
+    }
+
+    const results = await prisma.$transaction(async (tx) => {
+      let count = 0;
+      for (const session of expiredSessions) {
+        // 1. Update Session status
+        await tx.parkingSession.update({
+          where: { id: session.id },
+          data: { status: "NO_SHOW" }
+        });
+
+        // 2. Update Booking status
+        await tx.booking.update({
+          where: { id: session.bookingId },
+          data: { status: "EXPIRED" as any } // Mark as EXPIRED instead of COMPLETED
+        });
+
+        // 3. Release the spot
+        if (session.location && session.location.availableSpots < session.location.totalSpots) {
+          await tx.parkingLocation.update({
+            where: { id: session.locationId },
+            data: { availableSpots: { increment: 1 } }
+          });
+        }
+        count++;
+      }
+      return count;
+    });
+
+    revalidatePath("/owner/bookings");
+    revalidatePath("/owner/dashboard");
+
+    return { success: true, processed: results };
+  } catch (error) {
+    console.error("CLEANUP_EXPIRED_BOOKINGS_ERROR:", error);
+    return { success: false, error: "Failed to cleanup expired bookings" };
+  }
+}
