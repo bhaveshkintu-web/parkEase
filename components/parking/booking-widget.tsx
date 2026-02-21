@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -9,18 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { useBooking } from "@/lib/booking-context";
 import type { ParkingLocation } from "@/lib/types";
 import { formatCurrency, formatDate, formatTime, calculateQuote, getAvailabilityStatus } from "@/lib/data";
-import { 
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Calendar as CalendarIcon, 
-  CheckCircle, 
-  Shield, 
-  Clock, 
+import {
+  Calendar as CalendarIcon,
+  CheckCircle,
+  Shield,
+  Clock,
   AlertCircle,
   Loader2,
 } from "lucide-react";
@@ -36,8 +37,18 @@ export function BookingWidget({ location }: BookingWidgetProps) {
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [taxRate, setTaxRate] = useState(12);
+  const [serviceFee, setServiceFee] = useState(5.99);
 
-  const quote = calculateQuote(location, checkIn, checkOut);
+  // Fetch fresh pricing settings on mount
+  useEffect(() => {
+    getGeneralSettings().then((s) => {
+      setTaxRate(s.taxRate ?? 12);
+      setServiceFee(s.serviceFee ?? 5.99);
+    }).catch(console.error);
+  }, []);
+
+  const quote = calculateQuote(location, checkIn, checkOut, taxRate, serviceFee);
   const availability = getAvailabilityStatus(location);
 
   const handleReserve = async () => {
@@ -71,7 +82,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
       {availability.status !== "available" && (
         <div className={cn(
           "mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
-          availability.status === "soldout" 
+          availability.status === "soldout"
             ? "bg-destructive/10 text-destructive"
             : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
         )}>
@@ -206,7 +217,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                       }
                     }
                   }}
-                  disabled={(date) => date < new Date(new Date(checkIn).setHours(0,0,0,0))}
+                  disabled={(date) => date < new Date(new Date(checkIn).setHours(0, 0, 0, 0))}
                   initialFocus
                 />
                 <div className="border-t border-border pt-3">
@@ -237,11 +248,11 @@ export function BookingWidget({ location }: BookingWidgetProps) {
                         const displayMinute = minute.toString().padStart(2, '0');
                         const ampm = hour < 12 ? 'AM' : 'PM';
                         return (
-                          <SelectItem 
-                            key={timeString} 
+                          <SelectItem
+                            key={timeString}
                             value={timeString}
                             disabled={
-                              checkIn.toDateString() === checkOut.toDateString() && 
+                              checkIn.toDateString() === checkOut.toDateString() &&
                               (hour * 60 + minute) < (checkIn.getHours() * 60 + checkIn.getMinutes() + minBookingDuration)
                             }
                           >
@@ -260,9 +271,9 @@ export function BookingWidget({ location }: BookingWidgetProps) {
       </div>
 
       {/* Reserve Button */}
-      <Button 
-        onClick={handleReserve} 
-        className="mb-4 w-full" 
+      <Button
+        onClick={handleReserve}
+        className="mb-4 w-full"
         size="lg"
         disabled={availability.status === "soldout" || isLoading || isDurationTooShort}
       >

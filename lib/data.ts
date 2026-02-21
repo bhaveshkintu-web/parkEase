@@ -94,14 +94,19 @@ export function formatDuration(checkIn: Date, checkOut: Date): string {
   return `${days} day${days !== 1 ? 's' : ''}, ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
 }
 
-export function calculateQuote(location: ParkingLocation, checkIn: Date, checkOut: Date) {
+export function calculateQuote(
+  location: ParkingLocation,
+  checkIn: Date,
+  checkOut: Date,
+  taxRate: number = 12,
+  serviceFee: number = 5.99
+) {
   const days = calculateDays(checkIn, checkOut);
-  const displayDays = Math.ceil(days); // For display in "X days" text if needed, but price is pro-rated
+  const displayDays = Math.ceil(days);
   const basePrice = location.pricePerDay * days;
-  const taxes = basePrice * 0.0925; // 9.25% tax
-  const fees = 2.99; // Service fee
+  const taxes = basePrice * (taxRate / 100);
+  const fees = serviceFee;
   const totalPrice = basePrice + taxes + fees;
-
 
   const originalPrice = location.originalPrice || location.pricePerDay;
   const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);

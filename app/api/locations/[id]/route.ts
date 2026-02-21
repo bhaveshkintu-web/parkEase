@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculatePricing } from "@/lib/utils/booking-utils";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 
 export async function GET(
   req: NextRequest,
@@ -33,7 +34,7 @@ export async function GET(
     }
 
     const reviewCount = location.reviews.length;
-    const rating = reviewCount > 0 
+    const rating = reviewCount > 0
       ? Number((location.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
       : 0;
 
@@ -61,7 +62,8 @@ export async function GET(
         isAvailable: location.totalSpots - overlappingBookings > 0
       };
 
-      pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
+      const settings = await getGeneralSettings();
+      pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
     }
 
     return NextResponse.json({

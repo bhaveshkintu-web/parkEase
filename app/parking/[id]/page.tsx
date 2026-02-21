@@ -13,6 +13,7 @@ import { RedeemStepsCard, SpecialInstructionsCard } from "@/components/parking/r
 import { BookingProvider, useBooking } from "@/lib/booking-context";
 import { getAvailabilityStatus, formatCurrency, calculateQuote } from "@/lib/data";
 import { getParkingLocationById, getNearbyParkingLocations } from "@/lib/actions/parking-actions";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 import { toggleFavorite, checkIsFavorite } from "@/lib/actions/favorites-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,14 +67,26 @@ function LocationDetailsContent({ id }: { id: string }) {
   const [isSaving, setIsSaving] = React.useState(false);
 
   const { checkIn, checkOut, setLocation } = useBooking();
+  const [pricingTaxRate, setPricingTaxRate] = React.useState(12);
+  const [pricingServiceFee, setPricingServiceFee] = React.useState(5.99);
 
   React.useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const locResponse = await getParkingLocationById(id, {
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
-      });
+
+      // Fetch location AND pricing settings together — ensures pricing is ready before quote renders
+      const [locResponse, settings] = await Promise.all([
+        getParkingLocationById(id, {
+          checkIn: checkIn.toISOString(),
+          checkOut: checkOut.toISOString(),
+        }),
+        getGeneralSettings(),
+      ]);
+
+      // Apply pricing settings
+      setPricingTaxRate(settings.taxRate ?? 12);
+      setPricingServiceFee(settings.serviceFee ?? 5.99);
+
       if (locResponse.success && locResponse.data) {
         setLocationData(locResponse.data);
 
@@ -190,7 +203,7 @@ function LocationDetailsContent({ id }: { id: string }) {
   }
 
   const availability = getAvailabilityStatus(location as any);
-  const quote = calculateQuote(location as any, checkIn, checkOut);
+  const quote = calculateQuote(location as any, checkIn, checkOut, pricingTaxRate, pricingServiceFee);
 
   // For related locations, we now use the fetched nearbyLocations state
 

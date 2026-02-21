@@ -84,7 +84,7 @@ const loadBookingState = (): BookingState => {
 // Save booking state to session storage
 const saveBookingState = (state: BookingState) => {
   if (typeof window === "undefined") return;
-  
+
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
@@ -103,11 +103,11 @@ const getInitialState = (defaultCheckIn?: Date, defaultCheckOut?: Date): Booking
   parkingType: "airport",
 });
 
-export function BookingProvider({ 
+export function BookingProvider({
   children,
   defaultCheckIn,
-  defaultCheckOut 
-}: { 
+  defaultCheckOut
+}: {
   children: ReactNode;
   defaultCheckIn?: Date;
   defaultCheckOut?: Date;
@@ -209,7 +209,7 @@ export function BookingProvider({
       parkingType: "airport" as const,
     };
     setState(newState);
-    
+
     // Also clear from session storage
     if (typeof window !== "undefined") {
       try {

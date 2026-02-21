@@ -243,8 +243,8 @@ export async function PATCH(
                                 vehicleColor: existingRequest.vehicleColor || "Unknown",
                                 vehiclePlate: existingRequest.vehiclePlate,
                                 totalPrice: Number(existingRequest.estimatedAmount) || 0,
-                                taxes: (Number(existingRequest.estimatedAmount) || 0) * 0.1,
-                                fees: 2.99,
+                                taxes: (Number(existingRequest.estimatedAmount) || 0) * 0.12,
+                                fees: 5.99,
                                 status: "CONFIRMED",
                                 confirmationCode: confCode!,
                             }

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculatePricing } from "@/lib/utils/booking-utils";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 import { ownerLocationSchema, type OwnerLocationInput } from "@/lib/validations";
 
 /**
@@ -49,6 +50,8 @@ export async function getParkingLocations(searchParams?: {
     const checkIn = ci ? new Date(ci) : new Date();
     const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
+    const settings = await getGeneralSettings();
+
     const locations = await prisma.parkingLocation.findMany({
       where: {
         status: "ACTIVE",
@@ -84,7 +87,7 @@ export async function getParkingLocations(searchParams?: {
           ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
           : 0;
 
-        const pricing = calculatePricing(loc.pricePerDay, loc.pricingRules, checkIn, checkOut);
+        const pricing = calculatePricing(loc.pricePerDay, loc.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
 
         return {
           id: loc.id,
@@ -167,7 +170,8 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
       isAvailable: location.totalSpots - overlappingBookings > 0
     };
 
-    const pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut);
+    const settings = await getGeneralSettings();
+    const pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
 
     return {
       success: true,

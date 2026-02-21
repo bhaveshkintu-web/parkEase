@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Filter condition
     const where: any = {
-      location: { 
+      location: {
         ownerId: ownerProfile.id,
         ...(locationId && locationId !== "all" ? { id: locationId } : {})
       },
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         location: true,
-        payment: true
+        payments: true
       },
       orderBy: { createdAt: "desc" }
     });
@@ -63,19 +63,22 @@ export async function GET(req: NextRequest) {
     const data = bookings.map(booking => {
       const commissionTx = commissionTxs.find(tx => tx.reference === booking.id);
       const commission = Math.abs(commissionTx?.amount || 0);
-      
+
       return {
         id: booking.id,
-        date: booking.createdAt,
-        confirmationCode: booking.confirmationCode,
-        location: booking.location.name,
-        gross: booking.totalPrice,
+        location: (booking as any).location?.name || "Unknown",
+        guestName: `${(booking as any).guestFirstName} ${(booking as any).guestLastName}`,
+        checkIn: booking.checkIn.toISOString(),
+        checkOut: booking.checkOut.toISOString(),
+        // Aggregate gross from all payments
+        gross: (booking as any).payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || booking.totalPrice,
         taxes: booking.taxes,
         fees: booking.fees,
         commission: commission,
-        net: booking.totalPrice - commission,
+        net: (booking as any).totalPrice - commission,
         status: booking.status,
-        paymentStatus: booking.payment?.status || "PENDING"
+        // SUCCESS if any payment is successful
+        paymentStatus: (booking as any).payments?.some((p: any) => p.status === "SUCCESS") ? "SUCCESS" : "PENDING"
       };
     });
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
 import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
+import { getGeneralSettings } from "./settings-actions";
 import { notifyOwnerOfNewBooking, sendReservationReceipt } from "@/lib/notifications";
 
 /**
@@ -64,7 +65,7 @@ export async function getBookingDetails(bookingId: string) {
             // cancellationPolicy: true,
           },
         },
-        payment: true,
+        payments: true,
         parkingSession: true,
         refunds: true,
       },
@@ -92,7 +93,7 @@ export async function getBookingDetails(bookingId: string) {
               // cancellationPolicy: true,
             },
           },
-          payment: true,
+          payments: true,
           parkingSession: true,
           refunds: true,
         },
@@ -209,6 +210,8 @@ export async function createBooking(data: any) {
         where: { isActive: true },
       });
 
+      const settings = await getGeneralSettings();
+
       // e. Calculate Pricing (Server-side source of truth)
       const pricing = calculatePricing(
         location.pricePerDay,
@@ -216,7 +219,9 @@ export async function createBooking(data: any) {
         checkInDate,
         checkOutDate,
         promotion,
-        commissionRule
+        commissionRule,
+        settings.taxRate,
+        settings.serviceFee
       );
 
       const confirmationCode = generateConfirmationCode();
@@ -530,32 +535,150 @@ export async function submitReview(bookingId: string, reviewData: {
  * Updates booking dates.
  * Production logic would include availability checks and price recalculation.
  */
-export async function updateBookingDates(bookingId: string, checkIn: Date, checkOut: Date) {
+export async function updateBookingDates(
+  bookingId: string,
+  checkIn: Date,
+  checkOut: Date,
+  pricingData?: {
+    totalPrice: number;
+    taxes: number;
+    fees: number;
+    isExtension: boolean;
+    isReduction?: boolean;
+    paymentMethodId?: string;
+    transactionId?: string;
+  }
+) {
   try {
     const userId = await getAuthUserId();
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { location: true },
+      include: {
+        location: {
+          include: {
+            owner: {
+              include: { wallet: true }
+            }
+          }
+        },
+        payments: true
+      },
     });
 
     if (!booking) return { success: false, error: "Booking not found" };
     if (booking.userId !== userId) return { success: false, error: "Unauthorized" };
 
-    // Update the booking dates
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update the booking dates and pricing if provided
+      const updateData: any = {
         checkIn,
         checkOut,
-        // In a real app, we would also update the totalPrice here
-      },
+      };
+
+      if (pricingData) {
+        updateData.totalPrice = pricingData.totalPrice;
+        updateData.taxes = pricingData.taxes;
+        updateData.fees = pricingData.fees;
+
+        // Calculate differences
+        const priceDifference = pricingData.totalPrice - booking.totalPrice;
+
+        // Recalculate owner earnings based on new subtotal
+        const subtotal = pricingData.totalPrice - pricingData.taxes - pricingData.fees;
+        const ownerEarnings = subtotal * 0.85; // Assuming 15% commission
+        updateData.ownerEarnings = ownerEarnings;
+
+        // 2. CASE A: It's an extension (Price Increased)
+        if (pricingData.isExtension && priceDifference > 0) {
+          await tx.payment.create({
+            data: {
+              bookingId: booking.id,
+              amount: priceDifference,
+              currency: "USD",
+              provider: "STRIPE",
+              transactionId: pricingData.transactionId || (pricingData.paymentMethodId
+                ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
+                : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
+              status: "SUCCESS",
+              paymentMethodId: pricingData.paymentMethodId || null,
+            }
+          });
+
+          // Update Owner Wallet for extra earnings
+          // @ts-ignore - Prisma type inclusion issue in IDE
+          const ownerWallet = booking.location?.owner?.wallet;
+          const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
+
+          if (ownerWallet && extraEarnings > 0) {
+            await tx.wallet.update({
+              where: { id: ownerWallet.id },
+              data: { balance: { increment: extraEarnings } }
+            });
+
+            await tx.walletTransaction.create({
+              data: {
+                walletId: ownerWallet.id,
+                type: "CREDIT",
+                amount: extraEarnings,
+                description: `Extra earnings for modified booking ${booking.confirmationCode}`,
+                status: "SUCCESS",
+                reference: booking.id,
+              }
+            });
+          }
+        }
+        // 2. CASE B: It's a reduction (Price Decreased)
+        else if (priceDifference < 0) {
+          const refundAmount = Math.abs(priceDifference);
+
+          // Create Refund Request for administrative processing
+          await tx.refundRequest.create({
+            data: {
+              bookingId: booking.id,
+              amount: refundAmount,
+              reason: "Reservation duration reduced by customer",
+              description: `Modification from ${new Date(booking.checkIn).toLocaleDateString()} - ${new Date(booking.checkOut).toLocaleDateString()} to ${checkIn.toLocaleDateString()} - ${checkOut.toLocaleDateString()}. Original: ${booking.totalPrice}, New: ${pricingData.totalPrice}`,
+              status: "PENDING",
+              approvedAmount: refundAmount,
+            }
+          });
+
+          // Deduct from Owner Wallet
+          // @ts-ignore
+          const ownerWallet = booking.location?.owner?.wallet;
+          const earningsDeduction = Number(booking.ownerEarnings || 0) - ownerEarnings;
+
+          if (ownerWallet && earningsDeduction > 0) {
+            await tx.wallet.update({
+              where: { id: ownerWallet.id },
+              data: { balance: { decrement: earningsDeduction } }
+            });
+
+            await tx.walletTransaction.create({
+              data: {
+                walletId: ownerWallet.id,
+                type: "REFUND",
+                amount: earningsDeduction,
+                description: `Earnings deduction due to reduction/modification of booking ${booking.confirmationCode}`,
+                status: "SUCCESS",
+                reference: booking.id,
+              }
+            });
+          }
+        }
+      }
+
+      return await tx.booking.update({
+        where: { id: bookingId },
+        data: updateData,
+      });
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);
     revalidatePath("/account/reservations");
 
-    return { success: true, data: updatedBooking };
+    return { success: true, data: result };
   } catch (error) {
     console.error("Failed to update booking dates:", error);
     return { success: false, error: "Failed to update reservation dates" };

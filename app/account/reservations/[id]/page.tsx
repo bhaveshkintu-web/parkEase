@@ -6,6 +6,7 @@ import QRCodeGenerator from "react-qr-code";
 import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { getBookingSupportStatus } from "@/lib/actions/support-actions";
+import { getModificationGap } from "@/lib/actions/settings-actions";
 import { SupportDialogs } from "@/components/support/support-dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -70,6 +71,7 @@ export default function ReservationDetailPage({
   const id = resolvedParams.id;
   const [reservation, setReservation] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [modificationGap, setModificationGap] = React.useState(2);
   const { toast } = useToast();
 
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
@@ -97,10 +99,13 @@ export default function ReservationDetailPage({
   React.useEffect(() => {
     async function loadBooking() {
       setIsLoading(true);
-      const [bookingResponse, supportResponse] = await Promise.all([
+      const [bookingResponse, supportResponse, gap] = await Promise.all([
         getBookingDetails(id),
-        getBookingSupportStatus(id)
+        getBookingSupportStatus(id),
+        getModificationGap()
       ]);
+
+      if (gap) setModificationGap(gap);
 
       if (bookingResponse.success && bookingResponse.data) {
         setReservation(bookingResponse.data);
@@ -160,7 +165,8 @@ export default function ReservationDetailPage({
 
   // Calculate time until check-in
   const timeUntilCheckIn = checkInDate.getTime() - now.getTime();
-  const hoursUntilCheckIn = Math.floor(timeUntilCheckIn / (1000 * 60 * 60));
+  const minutesUntilCheckIn = Math.floor(timeUntilCheckIn / (1000 * 60));
+  const hoursUntilCheckIn = Math.floor(minutesUntilCheckIn / 60);
   const daysUntilCheckIn = Math.floor(hoursUntilCheckIn / 24);
 
   // Cancellation policy logic
@@ -169,6 +175,8 @@ export default function ReservationDetailPage({
   const isCancellable = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn >= deadlineHours);
   const cancellationDeadlinePassed = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn < deadlineHours);
   const isStrictPolicy = policy?.type === "strict";
+  const isModifiable = isUpcoming && minutesUntilCheckIn >= modificationGap;
+  const modificationDeadlinePassed = isUpcoming && minutesUntilCheckIn < modificationGap;
 
   const handleCancelReservation = async () => {
     if (!isCancellable) return;
@@ -384,6 +392,12 @@ export default function ReservationDetailPage({
   const statusConfig = getStatusConfig();
   const StatusIcon = statusConfig.icon;
 
+  // Payment Calculation Logic
+  const successfulPaymentsTotal = reservation.payments?.filter((p: any) => p.status === "SUCCESS").reduce((sum: number, p: any) => sum + p.amount, 0) || reservation.totalPrice;
+  const approvedRefundsTotal = reservation.refunds?.filter((r: any) => r.status === "APPROVED").reduce((sum: number, r: any) => sum + (r.approvedAmount || 0), 0) || 0;
+  const pendingRefundsTotal = reservation.refunds?.filter((r: any) => r.status === "PENDING").reduce((sum: number, r: any) => sum + (r.amount || 0), 0) || 0;
+  const netPaidTotal = successfulPaymentsTotal - approvedRefundsTotal;
+
   return (
     <div className="h-screen flex flex-col max-w-5xl mx-auto">
       {/* Fixed Header Section */}
@@ -463,12 +477,30 @@ export default function ReservationDetailPage({
             </Button>
             {isUpcoming && (
               <>
-                <Link href={`/account/reservations/${id}/modify`}>
-                  <Button variant="outline" size="sm" className={!isCancellable && isUpcoming ? "opacity-50 cursor-not-allowed" : ""}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Modify
-                  </Button>
-                </Link>
+                <div className="relative group">
+                  <Link
+                    href={isModifiable ? `/account/reservations/${id}/modify` : "#"}
+                    onClick={(e) => !isModifiable && e.preventDefault()}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "bg-transparent",
+                        !isModifiable && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                      )}
+                      disabled={!isModifiable}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Modify
+                    </Button>
+                  </Link>
+                  {modificationDeadlinePassed && (
+                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
+                      Modifications can only be performed at least {modificationGap} minutes before check-in.
+                    </div>
+                  )}
+                </div>
                 <div className="relative group">
                   <Button
                     variant="outline"
@@ -799,27 +831,36 @@ export default function ReservationDetailPage({
                       <span className="text-foreground">{formatCurrency(reservation.fees)}</span>
                     </div>
                     <Separator />
-                    <div className="flex justify-between font-semibold text-lg">
-                      <span className="text-foreground">Total paid</span>
-                      <span className="text-foreground">{formatCurrency(reservation.totalPrice)}</span>
-                    </div>
-                    {isCancelled && (
-                      <>
-                        <div className="flex justify-between text-sm text-red-600">
-                          <span>Refund amount</span>
-                          <span className="font-semibold">
-                            {formatCurrency(
-                              reservation.refunds?.reduce((sum: number, refund: any) => sum + (refund.approvedAmount || 0), 0) || 0
-                            )}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          See Support & Refunds section below for refund details
-                        </p>
-                      </>
+
+                    {approvedRefundsTotal > 0 && (
+                      <div className="flex justify-between text-sm text-emerald-600 font-medium">
+                        <span className="flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3" />
+                          Refund (Approved)
+                        </span>
+                        <span>-{formatCurrency(approvedRefundsTotal)}</span>
+                      </div>
                     )}
-                    {!isCancelled && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+
+                    {pendingRefundsTotal > 0 && (
+                      <div className="flex justify-between text-sm text-amber-600 font-medium italic">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Refund Ticket Raised
+                        </span>
+                        <span>{formatCurrency(pendingRefundsTotal)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-bold text-xl pt-1">
+                      <span className="text-foreground">Total paid</span>
+                      <span className="text-primary">
+                        {formatCurrency(netPaidTotal)}
+                      </span>
+                    </div>
+
+                    {!isCancelled && netPaidTotal > 0 && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                         <CheckCircle2 className="w-3 h-3 text-green-600" />
                         Payment confirmed
                       </p>
