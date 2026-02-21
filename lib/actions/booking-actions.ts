@@ -544,6 +544,7 @@ export async function updateBookingDates(
     taxes: number;
     fees: number;
     isExtension: boolean;
+    isReduction?: boolean;
     paymentMethodId?: string;
     transactionId?: string;
   }
@@ -580,53 +581,90 @@ export async function updateBookingDates(
         updateData.taxes = pricingData.taxes;
         updateData.fees = pricingData.fees;
 
+        // Calculate differences
+        const priceDifference = pricingData.totalPrice - booking.totalPrice;
+
         // Recalculate owner earnings based on new subtotal
-        // We'll use the same 15% default or find rules if we wanted to be more precise
-        // For simplicity during modification, we'll keep the existing commission % logic
         const subtotal = pricingData.totalPrice - pricingData.taxes - pricingData.fees;
         const ownerEarnings = subtotal * 0.85; // Assuming 15% commission
         updateData.ownerEarnings = ownerEarnings;
 
-        // 2. If it's an extension, create an additional payment record
-        if (pricingData.isExtension) {
-          const extraAmount = pricingData.totalPrice - booking.totalPrice;
-          if (extraAmount > 0) {
-            await tx.payment.create({
-              data: {
-                bookingId: booking.id,
-                amount: extraAmount,
-                currency: "USD",
-                provider: "STRIPE",
-                transactionId: pricingData.transactionId || (pricingData.paymentMethodId
-                  ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
-                  : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
-                status: "SUCCESS",
-                paymentMethodId: pricingData.paymentMethodId || null,
-              }
+        // 2. CASE A: It's an extension (Price Increased)
+        if (pricingData.isExtension && priceDifference > 0) {
+          await tx.payment.create({
+            data: {
+              bookingId: booking.id,
+              amount: priceDifference,
+              currency: "USD",
+              provider: "STRIPE",
+              transactionId: pricingData.transactionId || (pricingData.paymentMethodId
+                ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
+                : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
+              status: "SUCCESS",
+              paymentMethodId: pricingData.paymentMethodId || null,
+            }
+          });
+
+          // Update Owner Wallet for extra earnings
+          // @ts-ignore - Prisma type inclusion issue in IDE
+          const ownerWallet = booking.location?.owner?.wallet;
+          const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
+
+          if (ownerWallet && extraEarnings > 0) {
+            await tx.wallet.update({
+              where: { id: ownerWallet.id },
+              data: { balance: { increment: extraEarnings } }
             });
 
-            // 3. Update Owner Wallet if applicable
-            // @ts-ignore - Prisma type inclusion issue in IDE
-            const ownerWallet = booking.location?.owner?.wallet;
-            const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
+            await tx.walletTransaction.create({
+              data: {
+                walletId: ownerWallet.id,
+                type: "CREDIT",
+                amount: extraEarnings,
+                description: `Extra earnings for modified booking ${booking.confirmationCode}`,
+                status: "SUCCESS",
+                reference: booking.id,
+              }
+            });
+          }
+        }
+        // 2. CASE B: It's a reduction (Price Decreased)
+        else if (priceDifference < 0) {
+          const refundAmount = Math.abs(priceDifference);
 
-            if (ownerWallet && extraEarnings > 0) {
-              await tx.wallet.update({
-                where: { id: ownerWallet.id },
-                data: { balance: { increment: extraEarnings } }
-              });
-
-              await tx.walletTransaction.create({
-                data: {
-                  walletId: ownerWallet.id,
-                  type: "CREDIT",
-                  amount: extraEarnings,
-                  description: `Extra earnings for modified booking ${booking.confirmationCode}`,
-                  status: "SUCCESS",
-                  reference: booking.id,
-                }
-              });
+          // Create Refund Request for administrative processing
+          await tx.refundRequest.create({
+            data: {
+              bookingId: booking.id,
+              amount: refundAmount,
+              reason: "Reservation duration reduced by customer",
+              description: `Modification from ${new Date(booking.checkIn).toLocaleDateString()} - ${new Date(booking.checkOut).toLocaleDateString()} to ${checkIn.toLocaleDateString()} - ${checkOut.toLocaleDateString()}. Original: ${booking.totalPrice}, New: ${pricingData.totalPrice}`,
+              status: "PENDING",
+              approvedAmount: refundAmount,
             }
+          });
+
+          // Deduct from Owner Wallet
+          // @ts-ignore
+          const ownerWallet = booking.location?.owner?.wallet;
+          const earningsDeduction = Number(booking.ownerEarnings || 0) - ownerEarnings;
+
+          if (ownerWallet && earningsDeduction > 0) {
+            await tx.wallet.update({
+              where: { id: ownerWallet.id },
+              data: { balance: { decrement: earningsDeduction } }
+            });
+
+            await tx.walletTransaction.create({
+              data: {
+                walletId: ownerWallet.id,
+                type: "REFUND",
+                amount: earningsDeduction,
+                description: `Earnings deduction due to reduction/modification of booking ${booking.confirmationCode}`,
+                status: "SUCCESS",
+                reference: booking.id,
+              }
+            });
           }
         }
       }

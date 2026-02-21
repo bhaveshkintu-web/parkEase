@@ -392,6 +392,12 @@ export default function ReservationDetailPage({
   const statusConfig = getStatusConfig();
   const StatusIcon = statusConfig.icon;
 
+  // Payment Calculation Logic
+  const successfulPaymentsTotal = reservation.payments?.filter((p: any) => p.status === "SUCCESS").reduce((sum: number, p: any) => sum + p.amount, 0) || reservation.totalPrice;
+  const approvedRefundsTotal = reservation.refunds?.filter((r: any) => r.status === "APPROVED").reduce((sum: number, r: any) => sum + (r.approvedAmount || 0), 0) || 0;
+  const pendingRefundsTotal = reservation.refunds?.filter((r: any) => r.status === "PENDING").reduce((sum: number, r: any) => sum + (r.amount || 0), 0) || 0;
+  const netPaidTotal = successfulPaymentsTotal - approvedRefundsTotal;
+
   return (
     <div className="h-screen flex flex-col max-w-5xl mx-auto">
       {/* Fixed Header Section */}
@@ -825,31 +831,36 @@ export default function ReservationDetailPage({
                       <span className="text-foreground">{formatCurrency(reservation.fees)}</span>
                     </div>
                     <Separator />
-                    <div className="flex justify-between font-semibold text-lg">
+
+                    {approvedRefundsTotal > 0 && (
+                      <div className="flex justify-between text-sm text-emerald-600 font-medium">
+                        <span className="flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3" />
+                          Refund (Approved)
+                        </span>
+                        <span>-{formatCurrency(approvedRefundsTotal)}</span>
+                      </div>
+                    )}
+
+                    {pendingRefundsTotal > 0 && (
+                      <div className="flex justify-between text-sm text-amber-600 font-medium italic">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Refund Ticket Raised
+                        </span>
+                        <span>{formatCurrency(pendingRefundsTotal)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between font-bold text-xl pt-1">
                       <span className="text-foreground">Total paid</span>
-                      <span className="text-foreground">
-                        {formatCurrency(
-                          reservation.payments?.filter((p: any) => p.status === "SUCCESS").reduce((sum: number, p: any) => sum + p.amount, 0) || reservation.totalPrice
-                        )}
+                      <span className="text-primary">
+                        {formatCurrency(netPaidTotal)}
                       </span>
                     </div>
-                    {isCancelled && (
-                      <>
-                        <div className="flex justify-between text-sm text-red-600">
-                          <span>Refund amount</span>
-                          <span className="font-semibold">
-                            {formatCurrency(
-                              reservation.refunds?.reduce((sum: number, refund: any) => sum + (refund.approvedAmount || 0), 0) || 0
-                            )}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          See Support & Refunds section below for refund details
-                        </p>
-                      </>
-                    )}
-                    {!isCancelled && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+
+                    {!isCancelled && netPaidTotal > 0 && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                         <CheckCircle2 className="w-3 h-3 text-green-600" />
                         Payment confirmed
                       </p>

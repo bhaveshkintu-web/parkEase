@@ -233,8 +233,10 @@ export default function ModifyReservationPage({
     }
   }, [formData.checkIn, formData.checkOut, reservation]);
 
-  const priceDifference = quote ? Math.max(0, quote.totalPrice - originalPrice) : 0;
-  const needsPayment = priceDifference > 0;
+  const priceDifference = quote ? quote.totalPrice - originalPrice : 0;
+  const needsPayment = priceDifference > 0.01;
+  const isReduction = priceDifference < -0.01;
+  const refundEligibleAmount = isReduction ? Math.abs(priceDifference) : 0;
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -298,7 +300,8 @@ export default function ModifyReservationPage({
             totalPrice: quote.totalPrice,
             taxes: quote.taxes,
             fees: quote.fees,
-            isExtension: needsPayment
+            isExtension: needsPayment,
+            isReduction: isReduction
           }
         );
         if (!dateResponse.success) throw new Error(dateResponse.error);
@@ -533,7 +536,19 @@ export default function ModifyReservationPage({
                 Price Summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-4">
+              {isReduction && (
+                <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 flex gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <CreditCard className="w-4 h-4 text-emerald-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-emerald-900 leading-tight">Refund Eligible</p>
+                    <p className="text-[10px] text-emerald-700/80 leading-relaxed font-medium">
+                      You've reduced your stay! You are eligible for a refund of <span className="font-bold text-emerald-600">{formatCurrency(refundEligibleAmount)}</span>.
+                      This will be processed as a refund request.
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Original Price:</span>
                 <span>{formatCurrency(originalPrice)}</span>
