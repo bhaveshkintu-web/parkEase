@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { BookingStatus } from "@prisma/client";
 import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
+import { getGeneralSettings } from "./settings-actions";
 import { notifyOwnerOfNewBooking, sendReservationReceipt } from "@/lib/notifications";
 
 /**
@@ -209,6 +210,8 @@ export async function createBooking(data: any) {
         where: { isActive: true },
       });
 
+      const settings = await getGeneralSettings();
+
       // e. Calculate Pricing (Server-side source of truth)
       const pricing = calculatePricing(
         location.pricePerDay,
@@ -216,7 +219,9 @@ export async function createBooking(data: any) {
         checkInDate,
         checkOutDate,
         promotion,
-        commissionRule
+        commissionRule,
+        settings.taxRate,
+        settings.serviceFee
       );
 
       const confirmationCode = generateConfirmationCode();

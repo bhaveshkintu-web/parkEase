@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculatePricing } from "@/lib/utils/booking-utils";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +17,8 @@ export async function GET(req: NextRequest) {
 
     const checkIn = new Date(checkInStr);
     const checkOut = new Date(checkOutStr);
+
+    const settings = await getGeneralSettings();
 
     // 1. Fetch search matching active locations
     const locations = await prisma.parkingLocation.findMany({
@@ -50,11 +53,11 @@ export async function GET(req: NextRequest) {
       .filter((loc) => loc.totalSpots - loc._count.bookings > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
-        const rating = reviewCount > 0 
+        const rating = reviewCount > 0
           ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
           : 0;
 
-        const pricing = calculatePricing(loc.pricePerDay, loc.pricingRules, checkIn, checkOut);
+        const pricing = calculatePricing(loc.pricePerDay, loc.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
 
         return {
           id: loc.id,

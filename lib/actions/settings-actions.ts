@@ -14,6 +14,8 @@ export interface PlatformSettingsData {
   requireEmailVerification: boolean;
   minBookingDuration: number;
   modificationGapMinutes: number;
+  taxRate: number;
+  serviceFee: number;
 }
 
 export interface NotificationSettingsData {
@@ -46,6 +48,8 @@ const DEFAULT_SETTINGS: SettingValue[] = [
   { key: "platform.requireEmailVerification", value: "true", type: "boolean", category: "general", description: "Require email verification for bookings" },
   { key: "booking.minDuration", value: "120", type: "number", category: "general", description: "Minimum booking duration (minutes)" },
   { key: "booking.modificationGap", value: "120", type: "number", category: "general", description: "Minutes before check-in that a reservation can be modified" },
+  { key: "booking.taxRate", value: "12", type: "number", category: "general", description: "Default tax rate percentage" },
+  { key: "booking.serviceFee", value: "5.99", type: "number", category: "general", description: "Default service fee amount" },
 
   // Notification Settings
   { key: "notifications.emailEnabled", value: "true", type: "boolean", category: "notifications", description: "Enable email notifications" },
@@ -213,6 +217,8 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       requireEmailVerification: settings.requireEmailVerification ?? true,
       minBookingDuration: settings.minDuration ?? 120,
       modificationGapMinutes: (settings.modificationGap as number) ?? 120,
+      taxRate: (settings.taxRate as number) ?? 12,
+      serviceFee: (settings.serviceFee as number) ?? 5.99,
     };
   } catch (error) {
     console.error("GET_GENERAL_SETTINGS_ERROR:", error);
@@ -226,6 +232,8 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       requireEmailVerification: true,
       minBookingDuration: 120,
       modificationGapMinutes: 120,
+      taxRate: 12,
+      serviceFee: 5.99,
     };
   }
 }
@@ -332,6 +340,8 @@ export async function updateGeneralSettings(
       requireEmailVerification: "platform.requireEmailVerification",
       minBookingDuration: "booking.minDuration",
       modificationGapMinutes: "booking.modificationGap",
+      taxRate: "booking.taxRate",
+      serviceFee: "booking.serviceFee",
     };
 
     for (const [field, value] of Object.entries(data)) {
@@ -431,4 +441,14 @@ export async function isSmsNotificationsEnabled(): Promise<boolean> {
 export async function getModificationGap(): Promise<number> {
   const gap = await getSetting("booking.modificationGap");
   return typeof gap === "number" ? gap : 120;
+}
+
+export async function getPlatformTaxRate(): Promise<number> {
+  const rate = await getSetting("booking.taxRate");
+  return typeof rate === "number" ? rate : 12;
+}
+
+export async function getPlatformServiceFee(): Promise<number> {
+  const fee = await getSetting("booking.serviceFee");
+  return typeof fee === "number" ? fee : 5.99;
 }

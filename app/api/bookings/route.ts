@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { calculatePricing, generateConfirmationCode } from "@/lib/utils/booking-utils";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,6 +74,8 @@ export async function POST(req: NextRequest) {
         throw new Error("Sold Out: No spots available for selected dates");
       }
 
+      const settings = await getGeneralSettings();
+
       // 2. Calculate final pricing with Promotion and Commission
       const pricing = calculatePricing(
         location.pricePerDay,
@@ -80,7 +83,9 @@ export async function POST(req: NextRequest) {
         checkIn,
         checkOut,
         promotion,
-        commissionRule
+        commissionRule,
+        settings.taxRate,
+        settings.serviceFee
       );
 
       // 3. Create Booking

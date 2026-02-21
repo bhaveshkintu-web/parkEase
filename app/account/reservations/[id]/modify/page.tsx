@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getBookingDetails, updateBookingVehicle, updateBookingDates } from "@/lib/actions/booking-actions";
-import { getModificationGap } from "@/lib/actions/settings-actions";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,7 +92,9 @@ export default function ModifyReservationPage({
   const [showPayment, setShowPayment] = React.useState(false);
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [isModifiable, setIsModifiable] = React.useState(true);
-  const [modificationGap, setModificationGap] = React.useState(2);
+  const [modificationGap, setModificationGap] = React.useState(120);
+  const [taxRate, setTaxRate] = React.useState(12);
+  const [serviceFee, setServiceFee] = React.useState(5.99);
   const [isPaymentSubmitting, setIsPaymentSubmitting] = React.useState(false);
   const [agreedToTerms, setAgreedToTerms] = React.useState(false);
 
@@ -139,12 +141,16 @@ export default function ModifyReservationPage({
   React.useEffect(() => {
     async function loadBooking() {
       setIsLoading(true);
-      const [response, gap] = await Promise.all([
+      const [response, settings] = await Promise.all([
         getBookingDetails(id),
-        getModificationGap()
+        getGeneralSettings()
       ]);
 
-      if (gap) setModificationGap(gap);
+      if (settings) {
+        setModificationGap(settings.modificationGapMinutes);
+        setTaxRate(settings.taxRate);
+        setServiceFee(settings.serviceFee);
+      }
 
       if (response.success && response.data) {
         setReservation(response.data);
@@ -162,7 +168,7 @@ export default function ModifyReservationPage({
         const checkInTime = new Date(response.data.checkIn).getTime();
         const now = new Date().getTime();
         const minutesUntilCheckIn = (checkInTime - now) / (1000 * 60);
-        if (minutesUntilCheckIn < gap) {
+        if (minutesUntilCheckIn < settings.modificationGapMinutes) {
           setIsModifiable(false);
         }
       } else {
@@ -215,7 +221,7 @@ export default function ModifyReservationPage({
       if (isNaN(newCheckIn.getTime()) || isNaN(newCheckOut.getTime())) return;
       if (newCheckOut <= newCheckIn) return;
 
-      const newQuote = calculateQuote(reservation.location, newCheckIn, newCheckOut);
+      const newQuote = calculateQuote(reservation.location, newCheckIn, newCheckOut, taxRate, serviceFee);
       setQuote(newQuote);
 
       // Reset payment state if price changes
