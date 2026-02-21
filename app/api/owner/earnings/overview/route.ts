@@ -39,16 +39,26 @@ export async function GET(req: NextRequest) {
       where: {
         location: { ownerId: ownerProfile.id },
         status: { in: ["CONFIRMED", "COMPLETED"] },
-        payment: { status: { in: ["SUCCESS", "COMPLETED"] } },
+        // SUCCESS if any payment is successful
+        payments: {
+          some: { status: { in: ["SUCCESS", "COMPLETED"] } }
+        },
         ...(startDate || endDate ? { createdAt: dateFilter.createdAt } : {})
       },
       select: {
         totalPrice: true,
-        id: true
+        id: true,
+        payments: {
+          where: { status: { in: ["SUCCESS", "COMPLETED"] } },
+          select: { amount: true }
+        }
       }
     });
 
-    const totalEarnings = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
+    const totalEarnings = bookings.reduce((sum, b) => {
+      const bookingTotal = b.payments.reduce((pSum, p) => pSum + p.amount, 0);
+      return sum + bookingTotal;
+    }, 0);
 
     // 2. Commission & Net Earnings
     // We aggregate COMMISSION transactions from the wallet for the period

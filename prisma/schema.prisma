@@ -172,13 +172,13 @@ model Booking {
   user             User?           @relation(fields: [userId], references: [id])
   disputes         Dispute[]
   parkingSession   ParkingSession?
-  payment          Payment?
+  payments         Payment[]
   refunds          RefundRequest[]
 }
 
 model Payment {
   id              String         @id @default(cuid())
-  bookingId       String         @unique
+  bookingId       String
   amount          Float
   currency        String         @default("USD")
   provider        String

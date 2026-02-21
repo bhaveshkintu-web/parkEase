@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const userId = session.user.id;
     const ownerProfile = await prisma.ownerProfile.findUnique({
       where: { userId },
-      include: { 
+      include: {
         locations: true,
         wallet: true
       }
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     // Filter condition for bookings
     const bookingWhere: any = {
       status: { in: ["CONFIRMED", "COMPLETED"] },
-      payment: { status: { in: ["SUCCESS", "COMPLETED"] } }
+      payments: { some: { status: { in: ["SUCCESS", "COMPLETED"] } } }
     };
 
     if (startDate || endDate) {
@@ -47,12 +47,19 @@ export async function GET(req: NextRequest) {
         },
         select: {
           id: true,
-          totalPrice: true
+          totalPrice: true,
+          payments: {
+            where: { status: { in: ["SUCCESS", "COMPLETED"] } },
+            select: { amount: true }
+          }
         }
       });
 
-      const grossRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
-      
+      const grossRevenue = bookings.reduce((sum, b) => {
+        const bookingTotal = (b as any).payments.reduce((pSum: number, p: any) => pSum + p.amount, 0);
+        return sum + bookingTotal;
+      }, 0);
+
       // Get commission for these specific bookings from wallet transactions
       const commissionTxs = walletId ? await prisma.walletTransaction.aggregate({
         where: {

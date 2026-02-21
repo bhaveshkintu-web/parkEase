@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUserBookings } from "@/lib/actions/booking-actions";
+import { getModificationGap } from "@/lib/actions/settings-actions";
 import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,15 +27,21 @@ type TabValue = "upcoming" | "past" | "cancelled" | "expired";
 export default function ReservationsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modificationGap, setModificationGap] = useState(2);
   const [activeTab, setActiveTab] = useState<TabValue>("upcoming");
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const response = await getUserBookings();
+      const [response, gap] = await Promise.all([
+        getUserBookings(),
+        getModificationGap()
+      ]);
+
       if (response.success && response.data) {
         setBookings(response.data);
       }
+      if (gap) setModificationGap(gap);
       setIsLoading(false);
     }
     fetchData();
@@ -291,9 +298,9 @@ export default function ReservationsPage() {
                           <div className="flex gap-2">
                             {activeTab === "upcoming" && (() => {
                               const checkInTime = new Date(booking.checkIn).getTime();
-                              const hoursUntilCheckIn = (checkInTime - now.getTime()) / (1000 * 60 * 60);
-                              const isModifiable = hoursUntilCheckIn >= 2;
-                              const modificationDeadlinePassed = hoursUntilCheckIn < 2;
+                              const minutesUntilCheckIn = (checkInTime - now.getTime()) / (1000 * 60);
+                              const isModifiable = minutesUntilCheckIn >= modificationGap;
+                              const modificationDeadlinePassed = minutesUntilCheckIn < modificationGap;
 
                               return (
                                 <div className="relative group">
@@ -315,7 +322,7 @@ export default function ReservationsPage() {
                                   </Link>
                                   {modificationDeadlinePassed && (
                                     <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
-                                      Modifications can only be performed at least 2 hours before check-in.
+                                      Modifications can only be performed at least {modificationGap} minutes before check-in.
                                     </div>
                                   )}
                                 </div>

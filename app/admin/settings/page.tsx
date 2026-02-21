@@ -129,6 +129,7 @@ export default function AdminSettingsPage() {
     allowRegistrations: true,
     requireEmailVerification: true,
     minBookingDuration: 120,
+    modificationGapMinutes: 120,
   });
 
   // Notification Settings State
@@ -710,6 +711,42 @@ export default function AdminSettingsPage() {
                       await updateGeneralSettings({ minBookingDuration: generalSettings.minBookingDuration }, adminId);
                       setIsSaving(false);
                       toast({ title: "Setting updated", description: "Minimum booking duration has been saved." });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="modificationGapMinutes">Modification Time Gap</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Minutes before check-in that a reservation can be modified.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="modificationGapMinutes"
+                    type="number"
+                    className="w-24 text-right"
+                    value={generalSettings.modificationGapMinutes}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        modificationGapMinutes: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      await updateGeneralSettings({ modificationGapMinutes: generalSettings.modificationGapMinutes }, adminId);
+                      setIsSaving(false);
+                      toast({ title: "Setting updated", description: "Modification time gap has been saved." });
                     }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

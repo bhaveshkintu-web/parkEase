@@ -6,6 +6,7 @@ import QRCodeGenerator from "react-qr-code";
 import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { getBookingDetails, cancelBooking, submitReview, sendEmailReceipt } from "@/lib/actions/booking-actions";
 import { getBookingSupportStatus } from "@/lib/actions/support-actions";
+import { getModificationGap } from "@/lib/actions/settings-actions";
 import { SupportDialogs } from "@/components/support/support-dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -70,6 +71,7 @@ export default function ReservationDetailPage({
   const id = resolvedParams.id;
   const [reservation, setReservation] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [modificationGap, setModificationGap] = React.useState(2);
   const { toast } = useToast();
 
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
@@ -97,10 +99,13 @@ export default function ReservationDetailPage({
   React.useEffect(() => {
     async function loadBooking() {
       setIsLoading(true);
-      const [bookingResponse, supportResponse] = await Promise.all([
+      const [bookingResponse, supportResponse, gap] = await Promise.all([
         getBookingDetails(id),
-        getBookingSupportStatus(id)
+        getBookingSupportStatus(id),
+        getModificationGap()
       ]);
+
+      if (gap) setModificationGap(gap);
 
       if (bookingResponse.success && bookingResponse.data) {
         setReservation(bookingResponse.data);
@@ -160,7 +165,8 @@ export default function ReservationDetailPage({
 
   // Calculate time until check-in
   const timeUntilCheckIn = checkInDate.getTime() - now.getTime();
-  const hoursUntilCheckIn = Math.floor(timeUntilCheckIn / (1000 * 60 * 60));
+  const minutesUntilCheckIn = Math.floor(timeUntilCheckIn / (1000 * 60));
+  const hoursUntilCheckIn = Math.floor(minutesUntilCheckIn / 60);
   const daysUntilCheckIn = Math.floor(hoursUntilCheckIn / 24);
 
   // Cancellation policy logic
@@ -169,8 +175,8 @@ export default function ReservationDetailPage({
   const isCancellable = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn >= deadlineHours);
   const cancellationDeadlinePassed = isUpcoming && (policy?.type !== "strict") && (hoursUntilCheckIn < deadlineHours);
   const isStrictPolicy = policy?.type === "strict";
-  const isModifiable = isUpcoming && hoursUntilCheckIn >= 2;
-  const modificationDeadlinePassed = isUpcoming && hoursUntilCheckIn < 2;
+  const isModifiable = isUpcoming && minutesUntilCheckIn >= modificationGap;
+  const modificationDeadlinePassed = isUpcoming && minutesUntilCheckIn < modificationGap;
 
   const handleCancelReservation = async () => {
     if (!isCancellable) return;
@@ -485,7 +491,7 @@ export default function ReservationDetailPage({
                   </Link>
                   {modificationDeadlinePassed && (
                     <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
-                      Modifications can only be performed at least 2 hours before check-in.
+                      Modifications can only be performed at least {modificationGap} minutes before check-in.
                     </div>
                   )}
                 </div>
@@ -821,7 +827,11 @@ export default function ReservationDetailPage({
                     <Separator />
                     <div className="flex justify-between font-semibold text-lg">
                       <span className="text-foreground">Total paid</span>
-                      <span className="text-foreground">{formatCurrency(reservation.totalPrice)}</span>
+                      <span className="text-foreground">
+                        {formatCurrency(
+                          reservation.payments?.filter((p: any) => p.status === "SUCCESS").reduce((sum: number, p: any) => sum + p.amount, 0) || reservation.totalPrice
+                        )}
+                      </span>
                     </div>
                     {isCancelled && (
                       <>

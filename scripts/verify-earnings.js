@@ -12,7 +12,7 @@ async function verify() {
         include: {
           bookings: {
             where: { status: 'COMPLETED' },
-            include: { payment: true }
+            include: { payments: true }
           }
         }
       }
@@ -39,9 +39,10 @@ async function verify() {
 
   for (const loc of owner.locations) {
     for (const booking of loc.bookings) {
-      if (booking.payment?.status === 'SUCCESS' || booking.payment?.status === 'COMPLETED') {
-        totalGross += booking.totalPrice;
-        
+      const successfulPayments = booking.payments?.filter(p => p.status === 'SUCCESS' || p.status === 'COMPLETED') || [];
+      if (successfulPayments.length > 0) {
+        totalGross += successfulPayments.reduce((sum, p) => sum + p.amount, 0);
+
         // Check for commission transactions
         const commTx = await prisma.walletTransaction.findFirst({
           where: {

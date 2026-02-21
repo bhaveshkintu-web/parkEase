@@ -64,7 +64,7 @@ export async function getBookingDetails(bookingId: string) {
             // cancellationPolicy: true,
           },
         },
-        payment: true,
+        payments: true,
         parkingSession: true,
         refunds: true,
       },
@@ -92,7 +92,7 @@ export async function getBookingDetails(bookingId: string) {
               // cancellationPolicy: true,
             },
           },
-          payment: true,
+          payments: true,
           parkingSession: true,
           refunds: true,
         },
@@ -539,6 +539,8 @@ export async function updateBookingDates(
     taxes: number;
     fees: number;
     isExtension: boolean;
+    paymentMethodId?: string;
+    transactionId?: string;
   }
 ) {
   try {
@@ -554,7 +556,7 @@ export async function updateBookingDates(
             }
           }
         },
-        payment: true
+        payments: true
       },
     });
 
@@ -590,13 +592,17 @@ export async function updateBookingDates(
                 amount: extraAmount,
                 currency: "USD",
                 provider: "STRIPE",
-                transactionId: `txn_mod_${Math.random().toString(36).substring(2, 10)}`,
+                transactionId: pricingData.transactionId || (pricingData.paymentMethodId
+                  ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
+                  : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
                 status: "SUCCESS",
+                paymentMethodId: pricingData.paymentMethodId || null,
               }
             });
 
             // 3. Update Owner Wallet if applicable
-            const ownerWallet = booking.location.owner.wallet;
+            // @ts-ignore - Prisma type inclusion issue in IDE
+            const ownerWallet = booking.location?.owner?.wallet;
             const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
 
             if (ownerWallet && extraEarnings > 0) {
