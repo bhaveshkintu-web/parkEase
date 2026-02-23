@@ -1,5 +1,5 @@
 -- ============================================
--- ParkEase Role Testing - Quick SQL Scripts
+-- ParkZipply Role Testing - Quick SQL Scripts
 -- ============================================
 
 -- 1. VIEW ALL USERS AND THEIR ROLES

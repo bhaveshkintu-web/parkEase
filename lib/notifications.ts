@@ -71,7 +71,7 @@ export async function notifyAdminsOfBookingRequest(requestId: string) {
 
     for (const admin of admins) {
       await transporter.sendMail({
-        from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+        from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
         to: admin.email,
         subject: `New Booking Request: ${request.customerName}`,
         html: `
@@ -91,7 +91,7 @@ export async function notifyAdminsOfBookingRequest(requestId: string) {
             <a href="${getAppUrl()}/admin/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
           </div>
         `,
       });
@@ -146,7 +146,7 @@ export async function notifyOwnerOfBookingRequest(requestId: string) {
     });
 
     await transporter.sendMail({
-      from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
       to: owner.email,
       subject: `New Booking Request for ${request.location.name}`,
       html: `
@@ -166,7 +166,7 @@ export async function notifyOwnerOfBookingRequest(requestId: string) {
           <a href="${getAppUrl()}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
           
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
         </div>
       `,
     });
@@ -247,7 +247,7 @@ export async function notifyOwnerOfNewBooking(bookingId: string) {
     };
 
     await transporter.sendMail({
-      from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
       to: owner.email,
       subject: `New Booking at ${booking.location.name}`,
       html: `
@@ -272,7 +272,7 @@ export async function notifyOwnerOfNewBooking(bookingId: string) {
           <a href="${getAppUrl()}/owner/bookings" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
           
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
         </div>
       `,
     });
@@ -339,19 +339,19 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
     };
 
     await transporter.sendMail({
-      from: `"ParkEase" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
       to: targetEmail,
       subject: `Reservation Receipt: ${booking.confirmationCode}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #0d9488; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">ParkEase</h1>
+            <h1 style="margin: 0; font-size: 24px;">ParkZipply</h1>
             <p style="margin: 5px 0 0; opacity: 0.9;">Reservation Receipt</p>
           </div>
           
           <div style="padding: 30px;">
             <h2 style="margin-top: 0; color: #0d9488;">Hello ${booking.guestFirstName},</h2>
-            <p>Thank you for choosing ParkEase. Here are your reservation details for <strong>${booking.location.name}</strong>.</p>
+            <p>Thank you for choosing ParkZipply. Here are your reservation details for <strong>${booking.location.name}</strong>.</p>
             
             <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <div style="text-align: center; margin-bottom: 20px;">
@@ -410,7 +410,7 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
           
           <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
             <p style="margin: 0 0 10px;">Questions? Reply to this email or visit our <a href="${getAppUrl()}/center" style="color: #0d9488;">Help Center</a>.</p>
-            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
           </div>
         </div>
       `,
@@ -448,7 +448,7 @@ export async function notifyAdminsOfPartnerInquiry(lead: any) {
 
     for (const admin of admins) {
       await transporter.sendMail({
-        from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+        from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
         to: admin.email,
         subject: `New Partner Inquiry: ${lead.businessName}`,
         html: `
@@ -469,7 +469,7 @@ export async function notifyAdminsOfPartnerInquiry(lead: any) {
             <a href="${getAppUrl()}/admin" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
           </div>
         `,
       });
@@ -506,7 +506,7 @@ export async function notifyAdminsOfLocationSubmission(location: any) {
 
     for (const admin of admins) {
       await transporter.sendMail({
-        from: `"ParkEase Notifications" <${process.env.SMTP_USER}>`,
+        from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
         to: admin.email,
         subject: `Location Approval Request Received: ${location.name}`,
         html: `
@@ -525,7 +525,7 @@ export async function notifyAdminsOfLocationSubmission(location: any) {
             <a href="${getAppUrl()}/admin/approvals" style="display: inline-block; background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+            <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
           </div>
         `,
       });
@@ -574,14 +574,14 @@ export async function sendSupportEmail(data: {
     });
 
     await transporter.sendMail({
-      from: `"ParkEase Support" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Support" <${process.env.SMTP_USER}>`,
       to: process.env.SMTP_USER, // Sending to ourselves/support address
       replyTo: data.email,
       subject: `Support Ticket: ${data.subject}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #0d9488; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">ParkEase</h1>
+            <h1 style="margin: 0; font-size: 24px;">ParkZipply</h1>
             <p style="margin: 5px 0 0; opacity: 0.9;">New Support Message</p>
           </div>
           
@@ -605,7 +605,7 @@ export async function sendSupportEmail(data: {
           </div>
           
           <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkEase Support System. All rights reserved.</p>
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkZipply Support System. All rights reserved.</p>
           </div>
         </div>
       `,

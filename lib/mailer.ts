@@ -250,7 +250,7 @@ export async function sendWelcomeEmail(email: string, name: string, password: st
     });
 
     const info = await transporter.sendMail({
-      from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Team" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Welcome to ParkZipply - Your Account Credentials",
       html: `
@@ -273,7 +273,7 @@ export async function sendWelcomeEmail(email: string, name: string, password: st
         </p>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
       </div>
     `,
     });
@@ -302,7 +302,7 @@ export async function sendMagicLink(email: string, magicLink: string) {
     });
 
     await transporter.sendMail({
-      from: `"ParkEase Team" <${process.env.SMTP_USER}>`,
+      from: `"ParkZipply Team" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Sign in to ParkZipply",
       html: `
@@ -317,7 +317,7 @@ export async function sendMagicLink(email: string, magicLink: string) {
         <p>If you did not request this link, you can safely ignore this email.</p>
         
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkEase. All rights reserved.</p>
+        <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
       </div>
     `,
     });

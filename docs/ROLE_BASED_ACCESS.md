@@ -1,7 +1,7 @@
 # Role-Based Access Control - Complete Guide
 
 ## Overview
-ParkEase supports 5 user roles with distinct interfaces and permissions, matching Way.com functionality:
+ParkZipply supports 5 user roles with distinct interfaces and permissions, matching Way.com functionality:
 
 1. **CUSTOMER** - Book parking, manage reservations
 2. **OWNER** - Manage parking locations, view earnings

@@ -5,11 +5,11 @@ import Stripe from "stripe";
 const secretKey = process.env.STRIPE_SECRET_KEY;
 const isMockMode = !secretKey || secretKey.includes("YOUR_SECRET_KEY");
 
-export const stripe = !isMockMode 
+export const stripe = !isMockMode
   ? new Stripe(secretKey!, {
-      apiVersion: "2026-01-28.clover" as any,
-      typescript: true,
-    })
+    apiVersion: "2026-01-28.clover" as any,
+    typescript: true,
+  })
   : null;
 
 /**
