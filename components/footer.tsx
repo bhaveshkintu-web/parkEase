@@ -13,11 +13,11 @@ const footerLinks = {
     // { label: "Auto Insurance", href: "#" },
   ],
   Company: [
-    // { label: "About Us", href: "/about-us" },
-    // { label: "Careers", href: "/careers" },
-    // { label: "Press", href: "/press" },
-    // { label: "Blog", href: "/blog" },
-    { label: "Contact", href: "/support" },
+    { label: "About Us", href: "/about" },
+    { label: "Careers", href: "/careers" },
+    { label: "Press", href: "/press" },
+    { label: "Blog", href: "/blog" },
+    { label: "Contact", href: "/contact" },
   ],
   Support: [
     { label: "Help Center", href: "/support" },
@@ -41,7 +41,7 @@ const socialLinks = [
 
 export function Footer() {
   const platformName = usePlatformName();
-  
+
   return (
     <footer className="border-t border-border bg-card">
       <div className="container px-4 py-12 md:py-16">
