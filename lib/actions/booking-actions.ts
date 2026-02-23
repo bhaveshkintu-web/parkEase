@@ -65,7 +65,9 @@ export async function getBookingDetails(bookingId: string) {
             // cancellationPolicy: true,
           },
         },
+
         payments: true,
+
         parkingSession: true,
         refunds: true,
       },
@@ -93,7 +95,9 @@ export async function getBookingDetails(bookingId: string) {
               // cancellationPolicy: true,
             },
           },
+
           payments: true,
+
           parkingSession: true,
           refunds: true,
         },

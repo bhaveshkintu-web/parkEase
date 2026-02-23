@@ -1224,8 +1224,8 @@ export default function ReservationDetailPage({
             }
           }}
           defaultType={supportType}
-          customerEmail={reservation.user?.email || ""}
-          customerName={`${reservation.user?.firstName || ""} ${reservation.user?.lastName || ""}`.trim()}
+          customerEmail={reservation.user?.email || reservation.guestEmail || ""}
+          customerName={reservation.user ? `${reservation.user.firstName || ""} ${reservation.user.lastName || ""}`.trim() : `${reservation.guestFirstName || ""} ${reservation.guestLastName || ""}`.trim() || "Customer"}
         />
       </div>
 

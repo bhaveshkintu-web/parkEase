@@ -769,3 +769,11 @@ enum NotificationType {
   REFUND_DEDUCTION
   NEW_BOOKING
 }
+
+model UserSession {
+  phone     String   @id @db.VarChar(20)
+  state     String   @default("idle") @db.VarChar(50)
+  data      Json?    @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
