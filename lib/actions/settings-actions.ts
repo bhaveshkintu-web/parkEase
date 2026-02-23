@@ -39,8 +39,8 @@ interface SettingValue {
 // ===== Default Settings =====
 const DEFAULT_SETTINGS: SettingValue[] = [
   // General Settings
-  { key: "platform.name", value: "ParkEase", type: "string", category: "general", description: "Platform display name" },
-  { key: "platform.supportEmail", value: "support@parkease.com", type: "string", category: "general", description: "Support contact email" },
+  { key: "platform.name", value: "ParkZipply", type: "string", category: "general", description: "Platform display name" },
+  { key: "platform.supportEmail", value: "support@parkZipply.com", type: "string", category: "general", description: "Support contact email" },
   { key: "platform.termsUrl", value: "/terms", type: "string", category: "general", description: "Terms of Service URL" },
   { key: "platform.privacyUrl", value: "/privacy", type: "string", category: "general", description: "Privacy Policy URL" },
   { key: "platform.maintenanceMode", value: "false", type: "boolean", category: "general", description: "Enable maintenance mode" },
@@ -208,8 +208,8 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
     const settings = await getSettingsByCategory("general");
 
     return {
-      platformName: settings.name || "ParkEase",
-      supportEmail: settings.supportEmail || "support@parkease.com",
+      platformName: settings.name || "ParkZipply",
+      supportEmail: settings.supportEmail || "support@parkzipply.com",
       termsOfServiceUrl: settings.termsUrl || "/terms",
       privacyPolicyUrl: settings.privacyUrl || "/privacy",
       maintenanceMode: settings.maintenanceMode ?? false,
@@ -223,8 +223,8 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
   } catch (error) {
     console.error("GET_GENERAL_SETTINGS_ERROR:", error);
     return {
-      platformName: "ParkEase",
-      supportEmail: "support@parkease.com",
+      platformName: "ParkZipply",
+      supportEmail: "support@parkzipply.com",
       termsOfServiceUrl: "/terms",
       privacyPolicyUrl: "/privacy",
       maintenanceMode: false,

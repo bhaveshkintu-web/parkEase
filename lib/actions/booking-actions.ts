@@ -301,6 +301,8 @@ export async function createBooking(data: any) {
       });
 
       return booking;
+    }, {
+      timeout: 15000
     });
 
     revalidatePath("/account/reservations");
