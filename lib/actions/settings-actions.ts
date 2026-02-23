@@ -13,6 +13,9 @@ export interface PlatformSettingsData {
   allowRegistrations: boolean;
   requireEmailVerification: boolean;
   minBookingDuration: number;
+  modificationGapMinutes: number;
+  taxRate: number;
+  serviceFee: number;
 }
 
 export interface NotificationSettingsData {
@@ -44,7 +47,10 @@ const DEFAULT_SETTINGS: SettingValue[] = [
   { key: "platform.allowRegistrations", value: "true", type: "boolean", category: "general", description: "Allow new user registrations" },
   { key: "platform.requireEmailVerification", value: "true", type: "boolean", category: "general", description: "Require email verification for bookings" },
   { key: "booking.minDuration", value: "120", type: "number", category: "general", description: "Minimum booking duration (minutes)" },
-  
+  { key: "booking.modificationGap", value: "120", type: "number", category: "general", description: "Minutes before check-in that a reservation can be modified" },
+  { key: "booking.taxRate", value: "12", type: "number", category: "general", description: "Default tax rate percentage" },
+  { key: "booking.serviceFee", value: "5.99", type: "number", category: "general", description: "Default service fee amount" },
+
   // Notification Settings
   { key: "notifications.emailEnabled", value: "true", type: "boolean", category: "notifications", description: "Enable email notifications" },
   { key: "notifications.bookingConfirmations", value: "true", type: "boolean", category: "notifications", description: "Send booking confirmation emails" },
@@ -115,12 +121,12 @@ function stringifyValue(value: any, type: string): string {
 export async function seedDefaultSettings(): Promise<{ success: boolean; seeded: number }> {
   try {
     let seededCount = 0;
-    
+
     for (const setting of DEFAULT_SETTINGS) {
       const existing = await prisma.platformSettings.findUnique({
         where: { key: setting.key },
       });
-      
+
       if (!existing) {
         await prisma.platformSettings.create({
           data: setting,
@@ -128,7 +134,7 @@ export async function seedDefaultSettings(): Promise<{ success: boolean; seeded:
         seededCount++;
       }
     }
-    
+
     invalidateCache();
     return { success: true, seeded: seededCount };
   } catch (error) {
@@ -145,11 +151,11 @@ export async function getSetting(key: string): Promise<any> {
     if (cached !== undefined) {
       return cached;
     }
-    
+
     const setting = await prisma.platformSettings.findUnique({
       where: { key },
     });
-    
+
     if (!setting) {
       // Return default if exists
       const defaultSetting = DEFAULT_SETTINGS.find((s) => s.key === key);
@@ -158,7 +164,7 @@ export async function getSetting(key: string): Promise<any> {
       }
       return null;
     }
-    
+
     const parsedValue = parseValue(setting.value, setting.type);
     setCachedValue(key, parsedValue, setting.type);
     return parsedValue;
@@ -174,21 +180,21 @@ export async function getSettingsByCategory(category: string): Promise<Record<st
     const settings = await prisma.platformSettings.findMany({
       where: { category },
     });
-    
+
     const result: Record<string, any> = {};
-    
+
     // First, add defaults for this category
     for (const defaultSetting of DEFAULT_SETTINGS.filter((s) => s.category === category)) {
       const shortKey = defaultSetting.key.split(".").pop() || defaultSetting.key;
       result[shortKey] = parseValue(defaultSetting.value, defaultSetting.type);
     }
-    
+
     // Override with actual values
     for (const setting of settings) {
       const shortKey = setting.key.split(".").pop() || setting.key;
       result[shortKey] = parseValue(setting.value, setting.type);
     }
-    
+
     return result;
   } catch (error) {
     console.error(`GET_SETTINGS_BY_CATEGORY_ERROR [${category}]:`, error);
@@ -200,7 +206,7 @@ export async function getSettingsByCategory(category: string): Promise<Record<st
 export async function getGeneralSettings(): Promise<PlatformSettingsData> {
   try {
     const settings = await getSettingsByCategory("general");
-    
+
     return {
       platformName: settings.name || "ParkEase",
       supportEmail: settings.supportEmail || "support@parkease.com",
@@ -210,6 +216,9 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       allowRegistrations: settings.allowRegistrations ?? true,
       requireEmailVerification: settings.requireEmailVerification ?? true,
       minBookingDuration: settings.minDuration ?? 120,
+      modificationGapMinutes: (settings.modificationGap as number) ?? 120,
+      taxRate: (settings.taxRate as number) ?? 12,
+      serviceFee: (settings.serviceFee as number) ?? 5.99,
     };
   } catch (error) {
     console.error("GET_GENERAL_SETTINGS_ERROR:", error);
@@ -222,6 +231,9 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       allowRegistrations: true,
       requireEmailVerification: true,
       minBookingDuration: 120,
+      modificationGapMinutes: 120,
+      taxRate: 12,
+      serviceFee: 5.99,
     };
   }
 }
@@ -230,7 +242,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
 export async function getNotificationSettings(): Promise<NotificationSettingsData> {
   try {
     const settings = await getSettingsByCategory("notifications");
-    
+
     return {
       emailEnabled: settings.emailEnabled ?? true,
       bookingConfirmations: settings.bookingConfirmations ?? true,
@@ -264,14 +276,14 @@ export async function updateSetting(
     const existing = await prisma.platformSettings.findUnique({
       where: { key },
     });
-    
+
     const defaultSetting = DEFAULT_SETTINGS.find((s) => s.key === key);
     const type = existing?.type || defaultSetting?.type || "string";
     const category = existing?.category || defaultSetting?.category || "general";
     const description = existing?.description || defaultSetting?.description;
-    
+
     const stringValue = stringifyValue(value, type);
-    
+
     // Audit log
     await prisma.settingsAuditLog.create({
       data: {
@@ -281,9 +293,9 @@ export async function updateSetting(
         previousValue: existing ? { value: existing.value } : null,
         newValue: { value: stringValue },
         changedBy: adminId,
-      },
+      } as any,
     });
-    
+
     // Upsert the setting
     await prisma.platformSettings.upsert({
       where: { key },
@@ -301,10 +313,10 @@ export async function updateSetting(
         updatedBy: adminId,
       },
     });
-    
+
     invalidateCache();
     revalidatePath("/admin/settings");
-    
+
     return { success: true };
   } catch (error) {
     console.error(`UPDATE_SETTING_ERROR [${key}]:`, error);
@@ -327,15 +339,18 @@ export async function updateGeneralSettings(
       allowRegistrations: "platform.allowRegistrations",
       requireEmailVerification: "platform.requireEmailVerification",
       minBookingDuration: "booking.minDuration",
+      modificationGapMinutes: "booking.modificationGap",
+      taxRate: "booking.taxRate",
+      serviceFee: "booking.serviceFee",
     };
-    
+
     for (const [field, value] of Object.entries(data)) {
       const key = keyMap[field as keyof PlatformSettingsData];
       if (key && value !== undefined) {
         await updateSetting(key, value, adminId);
       }
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("UPDATE_GENERAL_SETTINGS_ERROR:", error);
@@ -357,14 +372,14 @@ export async function updateNotificationSettings(
       checkInReminders: "notifications.checkInReminders",
       checkOutAlerts: "notifications.checkOutAlerts",
     };
-    
+
     for (const [field, value] of Object.entries(data)) {
       const key = keyMap[field as keyof NotificationSettingsData];
       if (key && value !== undefined) {
         await updateSetting(key, value, adminId);
       }
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("UPDATE_NOTIFICATION_SETTINGS_ERROR:", error);
@@ -383,7 +398,7 @@ export async function getSettingsAuditLog(
       orderBy: { changedAt: "desc" },
       take: limit,
     });
-    
+
     // Enrich with admin names
     const adminIds = [...new Set(logs.map((l) => l.changedBy))];
     const admins = await prisma.user.findMany({
@@ -391,7 +406,7 @@ export async function getSettingsAuditLog(
       select: { id: true, firstName: true, lastName: true },
     });
     const adminMap = new Map(admins.map((a) => [a.id, `${a.firstName} ${a.lastName}`]));
-    
+
     return logs.map((log) => ({
       ...log,
       changedByName: adminMap.get(log.changedBy) || "Unknown",
@@ -421,4 +436,19 @@ export async function isEmailNotificationsEnabled(): Promise<boolean> {
 
 export async function isSmsNotificationsEnabled(): Promise<boolean> {
   return await getSetting("notifications.smsEnabled") !== false;
+}
+
+export async function getModificationGap(): Promise<number> {
+  const gap = await getSetting("booking.modificationGap");
+  return typeof gap === "number" ? gap : 120;
+}
+
+export async function getPlatformTaxRate(): Promise<number> {
+  const rate = await getSetting("booking.taxRate");
+  return typeof rate === "number" ? rate : 12;
+}
+
+export async function getPlatformServiceFee(): Promise<number> {
+  const fee = await getSetting("booking.serviceFee");
+  return typeof fee === "number" ? fee : 5.99;
 }

@@ -40,7 +40,7 @@ export function StripePaymentForm({
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
   const [brand, setBrand] = useState<string>("unknown");
-  
+
   // Track completeness of each field
   const [validation, setValidation] = useState({
     number: false,
@@ -142,12 +142,12 @@ export function StripePaymentForm({
             error && "border-destructive/50 focus-within:border-destructive/50 focus-within:shadow-[0_0_0_4px_rgba(239,68,68,0.1)]"
           )}>
             <div className="flex-1">
-              <CardNumberElement 
+              <CardNumberElement
                 id="card-number"
                 options={{
                   ...elementOptions,
                   placeholder: "4242 4242 4242 4242",
-                }} 
+                }}
                 onChange={(e) => {
                   setValidation(prev => ({ ...prev, number: e.complete }));
                   if (e.brand) setBrand(e.brand);
@@ -178,7 +178,7 @@ export function StripePaymentForm({
               "rounded-xl border-2 border-border bg-background px-4 py-3.5 transition-all duration-200",
               "focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(16,185,129,0.1)]"
             )}>
-              <CardExpiryElement 
+              <CardExpiryElement
                 id="card-expiry"
                 options={{
                   ...elementOptions,
@@ -198,7 +198,7 @@ export function StripePaymentForm({
               "rounded-xl border-2 border-border bg-background px-4 py-3.5 transition-all duration-200",
               "focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(16,185,129,0.1)]"
             )}>
-              <CardCvcElement 
+              <CardCvcElement
                 id="card-cvc"
                 options={{
                   ...elementOptions,
@@ -281,7 +281,7 @@ export function StripePaymentForm({
           </div>
         </div>
       </div>
-      
+
       {/* Test Mode Tip */}
       {!isFormComplete && (
         <p className="text-[10px] text-center text-muted-foreground/60 italic">

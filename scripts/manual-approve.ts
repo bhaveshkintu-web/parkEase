@@ -46,8 +46,8 @@ async function main() {
                     vehicleColor: existingRequest.vehicleColor || "Unknown",
                     vehiclePlate: existingRequest.vehiclePlate,
                     totalPrice: existingRequest.estimatedAmount,
-                    taxes: existingRequest.estimatedAmount * 0.1,
-                    fees: 2.99,
+                    taxes: existingRequest.estimatedAmount * 0.12,
+                    fees: 5.99,
                     status: "CONFIRMED",
                     confirmationCode: confCode,
                 }

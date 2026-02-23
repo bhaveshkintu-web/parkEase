@@ -129,6 +129,9 @@ export default function AdminSettingsPage() {
     allowRegistrations: true,
     requireEmailVerification: true,
     minBookingDuration: 120,
+    modificationGapMinutes: 120,
+    taxRate: 12,
+    serviceFee: 5.99,
   });
 
   // Notification Settings State
@@ -710,6 +713,129 @@ export default function AdminSettingsPage() {
                       await updateGeneralSettings({ minBookingDuration: generalSettings.minBookingDuration }, adminId);
                       setIsSaving(false);
                       toast({ title: "Setting updated", description: "Minimum booking duration has been saved." });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="modificationGapMinutes">Modification Time Gap</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Minutes before check-in that a reservation can be modified.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="modificationGapMinutes"
+                    type="number"
+                    className="w-24 text-right"
+                    value={generalSettings.modificationGapMinutes}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        modificationGapMinutes: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      await updateGeneralSettings({ modificationGapMinutes: generalSettings.modificationGapMinutes }, adminId);
+                      setIsSaving(false);
+                      toast({ title: "Setting updated", description: "Modification time gap has been saved." });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Tax Rate */}
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="taxRate">Platform Tax Rate (%)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Tax percentage applied to all new bookings.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    className="w-24 text-right"
+                    value={generalSettings.taxRate}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        taxRate: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      const result = await updateGeneralSettings({ taxRate: generalSettings.taxRate }, adminId);
+                      setIsSaving(false);
+                      if (result.success) {
+                        toast({ title: "Saved", description: `Tax rate updated to ${generalSettings.taxRate}%` });
+                      } else {
+                        toast({ title: "Error", description: "Failed to save tax rate.", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Service Fee */}
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="serviceFee">Default Service Fee ($)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Fixed service fee applied to all new bookings.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="serviceFee"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-24 text-right"
+                    value={generalSettings.serviceFee}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        serviceFee: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      const result = await updateGeneralSettings({ serviceFee: generalSettings.serviceFee }, adminId);
+                      setIsSaving(false);
+                      if (result.success) {
+                        toast({ title: "Saved", description: `Service fee updated to $${generalSettings.serviceFee}` });
+                      } else {
+                        toast({ title: "Error", description: "Failed to save service fee.", variant: "destructive" });
+                      }
                     }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getUserBookings } from "@/lib/actions/booking-actions";
+import { getModificationGap } from "@/lib/actions/settings-actions";
 import { formatCurrency, formatDate, formatTime } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,22 +18,30 @@ import {
   Plus,
   QrCode,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type TabValue = "upcoming" | "past" | "cancelled" | "expired";
 
 export default function ReservationsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modificationGap, setModificationGap] = useState(2);
   const [activeTab, setActiveTab] = useState<TabValue>("upcoming");
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const response = await getUserBookings();
+      const [response, gap] = await Promise.all([
+        getUserBookings(),
+        getModificationGap()
+      ]);
+
       if (response.success && response.data) {
         setBookings(response.data);
       }
+      if (gap) setModificationGap(gap);
       setIsLoading(false);
     }
     fetchData();
@@ -287,15 +296,38 @@ export default function ReservationsPage() {
                             <span>Confirmation: {booking.confirmationCode}</span>
                           </div>
                           <div className="flex gap-2">
-                            {activeTab === "upcoming" && (
-                              <>
-                                <Link href={`/account/reservations/${booking.id}/modify`}>
-                                  <Button variant="outline" size="sm">
-                                    Modify
-                                  </Button>
-                                </Link>
-                              </>
-                            )}
+                            {activeTab === "upcoming" && (() => {
+                              const checkInTime = new Date(booking.checkIn).getTime();
+                              const minutesUntilCheckIn = (checkInTime - now.getTime()) / (1000 * 60);
+                              const isModifiable = minutesUntilCheckIn >= modificationGap;
+                              const modificationDeadlinePassed = minutesUntilCheckIn < modificationGap;
+
+                              return (
+                                <div className="relative group">
+                                  <Link
+                                    href={isModifiable ? `/account/reservations/${booking.id}/modify` : "#"}
+                                    onClick={(e) => !isModifiable && e.preventDefault()}
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className={cn(
+                                        "bg-amber-500 hover:bg-amber-600 text-white border-none",
+                                        !isModifiable && "opacity-50 cursor-not-allowed grayscale"
+                                      )}
+                                      disabled={!isModifiable}
+                                    >
+                                      Modify
+                                    </Button>
+                                  </Link>
+                                  {modificationDeadlinePassed && (
+                                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block w-64 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50 text-center">
+                                      Modifications can only be performed at least {modificationGap} minutes before check-in.
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <Link href={`/account/reservations/${booking.id}`}>
                               <Button size="sm">
                                 View Details

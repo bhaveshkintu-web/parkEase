@@ -115,7 +115,7 @@ function generateMockReservations(userId: string): Reservation[] {
       },
       totalPrice: 59.95,
       taxes: 5.4,
-      fees: 2.99,
+      fees: 5.99,
       status: "confirmed",
       confirmationCode: "PKE-ABC123",
       qrCode: "PKE-ABC123",
@@ -148,7 +148,7 @@ function generateMockReservations(userId: string): Reservation[] {
       },
       totalPrice: 41.97,
       taxes: 3.78,
-      fees: 2.99,
+      fees: 5.99,
       status: "confirmed",
       confirmationCode: "PKE-DEF456",
       qrCode: "PKE-DEF456",
@@ -447,7 +447,7 @@ function generateMockCommissionRules(): CommissionRule[] {
     { id: "comm_1", name: "Standard Commission", type: "percentage", value: 10, appliesTo: "all", isActive: true },
     { id: "comm_2", name: "Airport Premium", type: "percentage", value: 15, appliesTo: "airport", minBookingValue: 50, isActive: true },
     { id: "comm_3", name: "Monthly Discount", type: "percentage", value: 8, appliesTo: "monthly", isActive: true },
-    { id: "comm_4", name: "Minimum Fee", type: "fixed", value: 2.99, appliesTo: "all", isActive: true },
+    { id: "comm_4", name: "Minimum Fee", type: "fixed", value: 5.99, appliesTo: "all", isActive: true },
   ];
 }
 

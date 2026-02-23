@@ -173,13 +173,13 @@ model Booking {
   user             User?           @relation(fields: [userId], references: [id])
   disputes         Dispute[]
   parkingSession   ParkingSession?
-  payment          Payment?
+  payments         Payment[]
   refunds          RefundRequest[]
 }
 
 model Payment {
   id              String         @id @default(cuid())
-  bookingId       String         @unique
+  bookingId       String
   amount          Float
   currency        String         @default("USD")
   provider        String
@@ -769,3 +769,11 @@ enum NotificationType {
   REFUND_DEDUCTION
   NEW_BOOKING
 }
+
+model UserSession {
+  phone     String   @id @db.VarChar(20)
+  state     String   @default("idle") @db.VarChar(50)
+  data      Json?    @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt
+}
+

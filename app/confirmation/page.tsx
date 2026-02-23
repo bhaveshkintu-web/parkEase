@@ -43,6 +43,17 @@ function ConfirmationContent() {
   const [booking, setBooking] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [pricingTaxRate, setPricingTaxRate] = useState(12);
+  const [pricingServiceFee, setPricingServiceFee] = useState(5.99);
+
+  useEffect(() => {
+    import("@/lib/actions/settings-actions").then(({ getGeneralSettings }) => {
+      getGeneralSettings().then((s) => {
+        setPricingTaxRate(s.taxRate ?? 12);
+        setPricingServiceFee(s.serviceFee ?? 5.99);
+      }).catch(console.error);
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchBooking() {
@@ -227,7 +238,7 @@ Visit our website at parkzipply.com for help.
     licensePlate: booking.vehiclePlate
   } : null;
 
-  const quote = calculateQuote(bookingLocation, checkIn, checkOut);
+  const quote = calculateQuote(bookingLocation, checkIn, checkOut, pricingTaxRate, pricingServiceFee);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

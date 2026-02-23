@@ -35,7 +35,9 @@ export function calculatePricing(
   checkIn: Date,
   checkOut: Date,
   promotion?: { type: string; value: number } | null,
-  commissionRule?: { type: string; value: number } | null
+  commissionRule?: { type: string; value: number } | null,
+  taxRate: number = 12,
+  serviceFee: number = 5.99
 ) {
   const durationInHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
   const durationInDays = durationInHours / 24;
@@ -67,8 +69,8 @@ export function calculatePricing(
   }
 
   const subtotal = Math.max(0, subtotalBeforeDiscount - discount);
-  const taxes = subtotal * 0.12; // 12% Tax
-  const fees = 5.99; // Standard Service Fee
+  const taxes = subtotal * (taxRate / 100);
+  const fees = serviceFee;
   const total = subtotal + taxes + fees;
 
   // 3. Calculate Commission (based on subtotal)

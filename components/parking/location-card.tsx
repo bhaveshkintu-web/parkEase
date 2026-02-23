@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ParkingLocation } from "@/lib/types";
 import { formatCurrency, getAvailabilityStatus, calculateQuote } from "@/lib/data";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,7 +28,17 @@ interface LocationCardProps {
 }
 
 export function LocationCard({ location, checkIn, checkOut, days }: LocationCardProps) {
-  const quote = calculateQuote(location, checkIn, checkOut);
+  const [taxRate, setTaxRate] = useState(12);
+  const [serviceFee, setServiceFee] = useState(5.99);
+
+  useEffect(() => {
+    getGeneralSettings().then((s) => {
+      setTaxRate(s.taxRate);
+      setServiceFee(s.serviceFee);
+    }).catch(console.error);
+  }, []);
+
+  const quote = calculateQuote(location, checkIn, checkOut, taxRate, serviceFee);
   const availability = getAvailabilityStatus(location);
 
   return (

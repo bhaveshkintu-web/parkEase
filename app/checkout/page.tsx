@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { validateLuhn, formatCardNumber, detectCardBrand, validateExpiry } from "@/lib/card-utils";
 import { getVehicles } from "@/lib/actions/vehicle-actions";
+import { getGeneralSettings } from "@/lib/actions/settings-actions";
 import { PromoSelector } from "@/components/checkout/promo-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +122,17 @@ function CheckoutContent() {
 
   const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
   const [isLoading, setIsLoading] = useState(!contextLocation);
+
+  // Always fetch FRESH pricing settings on mount — context value may be stale from app init
+  const [pricingTaxRate, setPricingTaxRate] = useState(12);
+  const [pricingServiceFee, setPricingServiceFee] = useState(5.99);
+  useEffect(() => {
+    getGeneralSettings().then((s) => {
+      setPricingTaxRate(s.taxRate ?? 12);
+      setPricingServiceFee(s.serviceFee ?? 5.99);
+    }).catch(console.error);
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Saved Cards
@@ -300,7 +312,7 @@ function CheckoutContent() {
     }
   }, [isAuthenticated, user]);
 
-  const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut) : null;
+  const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut, pricingTaxRate, pricingServiceFee) : null;
 
   // Calculate final price with dynamic promotion
   const calculateFinalPrice = () => {
