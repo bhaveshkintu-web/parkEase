@@ -784,16 +784,18 @@ export default function ModifyReservationPage({
                           checked={agreedToTerms}
                           onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                         />
-                        <Label htmlFor="terms-demo" className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-                          I agree to the{" "}
-                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                            Terms
-                          </Link>{" "}
-                          and{" "}
-                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                            Policy
-                          </Link>
-                          . I understand that my reservation is subject to availability.
+                        <Label htmlFor="terms-demo" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                          <span>
+                            I agree to the{" "}
+                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                              Terms
+                            </Link>{" "}
+                            and{" "}
+                            <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                              Policy
+                            </Link>
+                            . I understand that my reservation is subject to availability.
+                          </span>
                         </Label>
                       </div>
 
@@ -850,16 +852,18 @@ export default function ModifyReservationPage({
                       checked={agreedToTerms}
                       onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                     />
-                    <Label htmlFor="terms-saved" className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-                      I agree to the{" "}
-                      <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                        Terms
-                      </Link>{" "}
-                      and{" "}
-                      <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                        Policy
-                      </Link>
-                      . I understand that my reservation is subject to availability.
+                    <Label htmlFor="terms-saved" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                      <span>
+                        I agree to the{" "}
+                        <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                          Terms
+                        </Link>{" "}
+                        and{" "}
+                        <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                          Policy
+                        </Link>
+                        . I understand that my reservation is subject to availability.
+                      </span>
                     </Label>
                   </div>
 

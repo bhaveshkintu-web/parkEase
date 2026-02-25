@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
@@ -180,7 +183,7 @@ function ParkingResultsContent() {
 
       {/* Search Bar */}
       <div className="border-b border-border bg-card">
-        <div className="container px-4 py-4">
+        <div className="container px-4 py-3 md:py-4">
           <SearchWidget variant="inline" />
         </div>
       </div>
@@ -208,6 +211,10 @@ function ParkingResultsContent() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[300px] p-0">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Filter Sidebar</SheetTitle>
+                    <SheetDescription>Filter and search parking locations.</SheetDescription>
+                  </SheetHeader>
                   <div className="p-4">
                     <FilterSidebar
                       filters={filters}

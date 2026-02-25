@@ -29,9 +29,10 @@ import { cn } from "@/lib/utils";
 
 interface BookingWidgetProps {
   location: ParkingLocation;
+  className?: string;
 }
 
-export function BookingWidget({ location }: BookingWidgetProps) {
+export function BookingWidget({ location, className }: BookingWidgetProps) {
   const router = useRouter();
   const { checkIn, checkOut, setCheckIn, setCheckOut, setLocation, minBookingDuration } = useBooking();
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -77,7 +78,7 @@ export function BookingWidget({ location }: BookingWidgetProps) {
   const isDurationTooShort = checkOut.getTime() - checkIn.getTime() < minBookingDuration * 60000;
 
   return (
-    <div className="sticky top-24 rounded-xl border border-border bg-card p-6 shadow-lg">
+    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-lg", className)}>
       {/* Availability Status */}
       {availability.status !== "available" && (
         <div className={cn(

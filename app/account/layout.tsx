@@ -45,9 +45,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex">
+      <div className="flex flex-col lg:flex-row">
         <AccountSidebar />
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

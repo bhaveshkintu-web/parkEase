@@ -46,9 +46,9 @@ export function AccountSidebar() {
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : "U";
 
   return (
-    <aside className="w-64 bg-card border-r border-border min-h-[calc(100vh-64px)] flex flex-col">
+    <aside className="w-full lg:w-64 bg-card border-b lg:border-b-0 lg:border-r border-border flex flex-col">
       {/* User info */}
-      <div className="p-6 border-b border-border">
+      <div className="p-4 sm:p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <Avatar className="w-12 h-12">
             <AvatarImage src={user?.avatar || "/placeholder.svg"} />
@@ -66,8 +66,8 @@ export function AccountSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <div className="space-y-1">
+      <nav className="flex-1 p-2 sm:p-4 overflow-x-auto lg:overflow-visible">
+        <div className="flex lg:flex-col gap-1">
           {userNavItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/account" && pathname.startsWith(item.href));
             return (
@@ -75,7 +75,7 @@ export function AccountSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap lg:whitespace-normal",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -104,11 +104,11 @@ export function AccountSidebar() {
 
         {isAdmin && (
           <>
-            <div className="mt-6 pt-6 border-t border-border">
-              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="mt-2 lg:mt-6 pt-2 lg:pt-6 border-l lg:border-l-0 lg:border-t border-border px-2 lg:px-0 flex flex-col items-center lg:items-start justify-center">
+              <p className="px-1 mb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Admin
               </p>
-              <div className="space-y-1">
+              <div className="flex lg:flex-col gap-1">
                 {adminNavItems.map((item) => {
                   const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
                   return (
@@ -134,10 +134,10 @@ export function AccountSidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-border">
+      <div className="p-2 sm:p-4 border-t lg:border-t border-border mt-auto">
         <Button
           variant="ghost"
-          className="w-full justify-start text-muted-foreground hover:text-destructive"
+          className="w-full justify-start text-muted-foreground hover:text-destructive whitespace-nowrap lg:whitespace-normal"
           onClick={logout}
         >
           <LogOut className="w-5 h-5 mr-3" />

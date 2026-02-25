@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,11 +54,11 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Car className="h-5 w-5 text-primary-foreground" />
+          <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-primary">
+              <Car className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground" suppressHydrationWarning>{platformName}</span>
+            <span className="text-lg sm:text-xl font-bold text-foreground" suppressHydrationWarning>{platformName}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -214,6 +214,10 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetDescription>Access site navigation links.</SheetDescription>
+              </SheetHeader>
               <nav className="flex flex-col gap-4 pt-8">
                 {navLinks.map((link) => (
                   <Link

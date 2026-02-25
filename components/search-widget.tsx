@@ -68,7 +68,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
   useEffect(() => {
     // Clean up empty query search check - just search if not currently debouncing
     // If query is empty, we want default results immediately (no debounce needed ideally, but consistent behavior is fine)
-    
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     setIsLoading(true);
@@ -103,14 +103,14 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
     // BUT prompt requirements: "locationId" in params. 
     // If user didn't select from dropdown, we don't have ID easily unless we pick first match.
     // I will adhere to: pass known params. 
-    
+
     // Construct URL params
     const params = new URLSearchParams();
     if (localQuery) params.append("q", localQuery);
     params.append("type", parkingType);
     params.append("checkIn", checkIn.toISOString());
     params.append("checkOut", checkOut.toISOString());
-    
+
     router.push(`/parking?${params.toString()}`);
   }, [localQuery, parkingType, checkIn, checkOut, router, setSearchQuery]);
 
@@ -120,7 +120,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
     setSearchQuery(displayName);
     setShowSuggestions(false);
     setActiveIndex(-1);
-    
+
     // Navigate immediately or just fill? 
     // UX rules: "Selecting location -> full name fills input" (done above)
     // "Search button -> navigates..."
@@ -138,25 +138,25 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
   };
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
+
   const onSelect = (result: SearchResult) => {
-      const displayName = `${result.name}, ${result.city}, ${result.country}`;
-      setLocalQuery(displayName);
-      setSearchQuery(displayName);
-      setSelectedId(result.id);
-      setShowSuggestions(false);
+    const displayName = `${result.name}, ${result.city}, ${result.country}`;
+    setLocalQuery(displayName);
+    setSearchQuery(displayName);
+    setSelectedId(result.id);
+    setShowSuggestions(false);
   }
 
   const onSearchClick = () => {
-      const params = new URLSearchParams();
-      if (selectedId) params.append("locationId", selectedId);
-      else if (localQuery) params.append("q", localQuery);
-      
-      params.append("type", parkingType);
-      params.append("checkIn", checkIn.toISOString());
-      params.append("checkOut", checkOut.toISOString());
-      
-      router.push(`/parking?${params.toString()}`);
+    const params = new URLSearchParams();
+    if (selectedId) params.append("locationId", selectedId);
+    else if (localQuery) params.append("q", localQuery);
+
+    params.append("type", parkingType);
+    params.append("checkIn", checkIn.toISOString());
+    params.append("checkOut", checkOut.toISOString());
+
+    router.push(`/parking?${params.toString()}`);
   }
 
   // Keyboard navigation
@@ -202,7 +202,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        inputRef.current && 
+        inputRef.current &&
         !inputRef.current.parentElement?.contains(event.target as Node) &&
         listRef.current &&
         !listRef.current.contains(event.target as Node)
@@ -263,175 +263,175 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
           {/* RESULTS DROPDOWN */}
           {showSuggestions && (
-             <div ref={listRef} className="absolute left-0 right-0 top-full z-50 mt-1 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-                 {results.length > 0 ? (
-                   <>
-                     <div className="max-h-[400px] overflow-auto">
-                        {results.map((item, idx) => (
-                          <button
-                            key={item.id}
-                            data-index={idx}
-                            onClick={() => onSelect(item)}
-                            onMouseEnter={() => setActiveIndex(idx)}
-                            className={cn(
-                              "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-0",
-                              activeIndex === idx ? "bg-primary/10" : "hover:bg-muted"
-                            )}
-                          >
-                            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10")}>
-                               {item.airportCode ? <Plane className="h-5 w-5 text-primary" /> : <Building className="h-5 w-5 text-primary" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-foreground truncate">
-                                 {item.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                 {item.city}, {item.country} {item.airportCode && `(${item.airportCode})`}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                               <span className="block font-bold text-primary">${item.pricePerDay}</span>
-                               <span className="text-[10px] text-muted-foreground">/day</span>
-                            </div>
-                          </button>
-                        ))}
-                     </div>
-                     <div className="border-t border-border bg-muted/20 p-2">
-                       <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         className="w-full text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10"
-                         onClick={onSearchClick}
-                       >
-                         View all results {localQuery && `for "${localQuery}"`}
-                       </Button>
-                     </div>
-                   </>
-                 ) : (
-                  !isLoading && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                       {localQuery ? "No locations found" : "Start typing to search..."}
-                    </div>
-                  )
-                )}
-             </div>
+            <div ref={listRef} className="absolute left-0 right-0 top-full z-50 mt-1 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+              {results.length > 0 ? (
+                <>
+                  <div className="max-h-[400px] overflow-auto">
+                    {results.map((item, idx) => (
+                      <button
+                        key={item.id}
+                        data-index={idx}
+                        onClick={() => onSelect(item)}
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-0",
+                          activeIndex === idx ? "bg-primary/10" : "hover:bg-muted"
+                        )}
+                      >
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10")}>
+                          {item.airportCode ? <Plane className="h-5 w-5 text-primary" /> : <Building className="h-5 w-5 text-primary" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground truncate">
+                            {item.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.city}, {item.country} {item.airportCode && `(${item.airportCode})`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="block font-bold text-primary">${item.pricePerDay}</span>
+                          <span className="text-[10px] text-muted-foreground">/day</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-border bg-muted/20 p-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10"
+                      onClick={onSearchClick}
+                    >
+                      View all results {localQuery && `for "${localQuery}"`}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                !isLoading && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {localQuery ? "No locations found" : "Start typing to search..."}
+                  </div>
+                )
+              )}
+            </div>
           )}
         </div>
 
         {/* Date Pickers */}
         <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent", isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]")}>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col items-start">
-                <span className="text-[10px] text-muted-foreground">Drop-off</span>
-                <span className="text-sm" suppressHydrationWarning>{formatDate(checkIn)} {formatTime(checkIn)}</span>
+            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left", isHero ? "h-11 md:h-12 min-w-[140px] md:min-w-[160px]" : "h-9 md:h-10 min-w-[120px] md:min-w-[140px]")}>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase font-bold">Drop-off</span>
+                <span className="text-sm truncate" suppressHydrationWarning>{formatDate(checkIn)} {formatTime(checkIn)}</span>
               </div>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-              <Calendar mode="single" selected={checkIn} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkIn.getHours(), checkIn.getMinutes(), 0, 0); setCheckIn(n); if(n.getTime() + minBookingDuration * 60000 > checkOut.getTime()) { const nc = new Date(n.getTime() + minBookingDuration * 60000); setCheckOut(nc); } setCheckInOpen(false); }}} disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-              <div className="border-t border-border pt-3">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Drop-off Time</label>
-                <Select
-                  value={`${checkIn.getHours().toString().padStart(2, '0')}:${checkIn.getMinutes().toString().padStart(2, '0')}`}
-                  onValueChange={(value) => {
-                    const [hours, minutes] = value.split(':').map(Number);
-                    const newCheckIn = new Date(checkIn);
-                    newCheckIn.setHours(hours, minutes, 0, 0);
-                    setCheckIn(newCheckIn);
-                    if (newCheckIn.getTime() + minBookingDuration * 60000 > checkOut.getTime()) {
-                      const newCheckOut = new Date(newCheckIn.getTime() + minBookingDuration * 60000);
-                      setCheckOut(newCheckOut);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {Array.from({ length: 48 }).map((_, i) => {
-                      const hour = Math.floor(i / 2);
-                      const minute = (i % 2) * 30;
-                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                      const displayHour = hour % 12 || 12;
-                      const displayMinute = minute.toString().padStart(2, '0');
-                      const ampm = hour < 12 ? 'AM' : 'PM';
-                      return (
-                        <SelectItem key={timeString} value={timeString}>
-                          {displayHour}:{displayMinute} {ampm}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full" size="sm" onClick={() => setCheckInOpen(false)}>Done</Button>
+            <Calendar mode="single" selected={checkIn} onSelect={(d) => { if (d) { const n = new Date(d); n.setHours(checkIn.getHours(), checkIn.getMinutes(), 0, 0); setCheckIn(n); if (n.getTime() + minBookingDuration * 60000 > checkOut.getTime()) { const nc = new Date(n.getTime() + minBookingDuration * 60000); setCheckOut(nc); } setCheckInOpen(false); } }} disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))} initialFocus />
+            <div className="border-t border-border pt-3">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Drop-off Time</label>
+              <Select
+                value={`${checkIn.getHours().toString().padStart(2, '0')}:${checkIn.getMinutes().toString().padStart(2, '0')}`}
+                onValueChange={(value) => {
+                  const [hours, minutes] = value.split(':').map(Number);
+                  const newCheckIn = new Date(checkIn);
+                  newCheckIn.setHours(hours, minutes, 0, 0);
+                  setCheckIn(newCheckIn);
+                  if (newCheckIn.getTime() + minBookingDuration * 60000 > checkOut.getTime()) {
+                    const newCheckOut = new Date(newCheckIn.getTime() + minBookingDuration * 60000);
+                    setCheckOut(newCheckOut);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {Array.from({ length: 48 }).map((_, i) => {
+                    const hour = Math.floor(i / 2);
+                    const minute = (i % 2) * 30;
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const displayHour = hour % 12 || 12;
+                    const displayMinute = minute.toString().padStart(2, '0');
+                    const ampm = hour < 12 ? 'AM' : 'PM';
+                    return (
+                      <SelectItem key={timeString} value={timeString}>
+                        {displayHour}:{displayMinute} {ampm}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" size="sm" onClick={() => setCheckInOpen(false)}>Done</Button>
           </PopoverContent>
         </Popover>
 
         <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
           <PopoverTrigger asChild>
-             <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent", isHero ? "h-12 min-w-[160px]" : "h-10 min-w-[140px]")}>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col items-start">
-                <span className="text-[10px] text-muted-foreground">Pick-up</span>
-                <span className="text-sm" suppressHydrationWarning>{formatDate(checkOut)} {formatTime(checkOut)}</span>
+            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left", isHero ? "h-11 md:h-12 min-w-[140px] md:min-w-[160px]" : "h-9 md:h-10 min-w-[120px] md:min-w-[140px]")}>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase font-bold">Pick-up</span>
+                <span className="text-sm truncate" suppressHydrationWarning>{formatDate(checkOut)} {formatTime(checkOut)}</span>
               </div>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4" align="start">
-               <Calendar mode="single" selected={checkOut} onSelect={(d) => { if(d) { const n = new Date(d); n.setHours(checkOut.getHours(), checkOut.getMinutes(), 0, 0); if(checkIn.getTime() + minBookingDuration * 60000 > n.getTime()) { const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000); setCheckOut(bumped); } else { setCheckOut(n); } } }} disabled={(d) => d < new Date(new Date(checkIn).setHours(0,0,0,0))} initialFocus />
-              <div className="border-t border-border pt-3">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Pick-up Time</label>
-                <Select
-                  value={`${checkOut.getHours().toString().padStart(2, '0')}:${checkOut.getMinutes().toString().padStart(2, '0')}`}
-                  onValueChange={(value) => {
-                    const [hours, minutes] = value.split(':').map(Number);
-                    const newCheckOut = new Date(checkOut);
-                    newCheckOut.setHours(hours, minutes, 0, 0);
-                    if (checkIn.getTime() + minBookingDuration * 60000 > newCheckOut.getTime()) {
-                      const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000);
-                      setCheckOut(bumped);
-                    } else {
-                      setCheckOut(newCheckOut);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {Array.from({ length: 48 }).map((_, i) => {
-                      const hour = Math.floor(i / 2);
-                      const minute = (i % 2) * 30;
-                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                      const displayHour = hour % 12 || 12;
-                      const displayMinute = minute.toString().padStart(2, '0');
-                      const ampm = hour < 12 ? 'AM' : 'PM';
-                      return (
-                        <SelectItem 
-                          key={timeString} 
-                          value={timeString}
-                          disabled={
-                            checkIn.toDateString() === checkOut.toDateString() && 
-                            (hour * 60 + minute) < (checkIn.getHours() * 60 + checkIn.getMinutes() + minBookingDuration)
-                          }
-                        >
-                          {displayHour}:{displayMinute} {ampm}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full" size="sm" onClick={() => setCheckOutOpen(false)}>Done</Button>
+            <Calendar mode="single" selected={checkOut} onSelect={(d) => { if (d) { const n = new Date(d); n.setHours(checkOut.getHours(), checkOut.getMinutes(), 0, 0); if (checkIn.getTime() + minBookingDuration * 60000 > n.getTime()) { const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000); setCheckOut(bumped); } else { setCheckOut(n); } } }} disabled={(d) => d < new Date(new Date(checkIn).setHours(0, 0, 0, 0))} initialFocus />
+            <div className="border-t border-border pt-3">
+              <label className="text-[10px] font-bold uppercase text-muted-foreground mb-1 block">Pick-up Time</label>
+              <Select
+                value={`${checkOut.getHours().toString().padStart(2, '0')}:${checkOut.getMinutes().toString().padStart(2, '0')}`}
+                onValueChange={(value) => {
+                  const [hours, minutes] = value.split(':').map(Number);
+                  const newCheckOut = new Date(checkOut);
+                  newCheckOut.setHours(hours, minutes, 0, 0);
+                  if (checkIn.getTime() + minBookingDuration * 60000 > newCheckOut.getTime()) {
+                    const bumped = new Date(checkIn.getTime() + minBookingDuration * 60000);
+                    setCheckOut(bumped);
+                  } else {
+                    setCheckOut(newCheckOut);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {Array.from({ length: 48 }).map((_, i) => {
+                    const hour = Math.floor(i / 2);
+                    const minute = (i % 2) * 30;
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const displayHour = hour % 12 || 12;
+                    const displayMinute = minute.toString().padStart(2, '0');
+                    const ampm = hour < 12 ? 'AM' : 'PM';
+                    return (
+                      <SelectItem
+                        key={timeString}
+                        value={timeString}
+                        disabled={
+                          checkIn.toDateString() === checkOut.toDateString() &&
+                          (hour * 60 + minute) < (checkIn.getHours() * 60 + checkIn.getMinutes() + minBookingDuration)
+                        }
+                      >
+                        {displayHour}:{displayMinute} {ampm}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" size="sm" onClick={() => setCheckOutOpen(false)}>Done</Button>
           </PopoverContent>
         </Popover>
 
-        <Button onClick={onSearchClick} className={cn("gap-2", isHero ? "h-12 px-6" : "h-10 px-4")}>
-           <Search className="h-4 w-4" />
-           <span>Find Parking</span>
+        <Button onClick={onSearchClick} className={cn("gap-2", isHero ? "h-11 md:h-12 px-4 md:px-6" : "h-9 md:h-10 px-3 md:px-4")}>
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="truncate">Find Parking</span>
         </Button>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { LayoutDashboard, MapPin, MessageSquare, Users, Wallet, Settings, BarChart3, Tag, Percent, FileText, AlertTriangle, QrCode, Car, Clock, Shield, Menu, ChevronRight, LogOut, Type as type, LucideIcon, Building2, Banknote } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformName } from "@/hooks/use-settings";
@@ -205,7 +205,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
@@ -220,7 +220,7 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 py-4">
+      <ScrollArea className="flex-1 min-h-0 py-4">
         <div className="px-3 space-y-6">
           {navigation.map((section) => (
             <div key={section.title}>
@@ -320,8 +320,14 @@ export function AdminSidebar({ role }: AdminSidebarProps) {
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72">
-            <SidebarContent />
+          <SheetContent side="left" className="p-0 w-72 flex flex-col h-full">
+            <SheetHeader className="sr-only p-0 h-0 overflow-hidden">
+              <SheetTitle>Admin Navigation</SheetTitle>
+              <SheetDescription>Access administrative navigation links.</SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 min-h-0">
+              <SidebarContent />
+            </div>
           </SheetContent>
         </Sheet>
       </div>
