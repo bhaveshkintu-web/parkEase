@@ -123,4 +123,13 @@
     @apply bg-background text-foreground;
     font-family: Arial, Helvetica, sans-serif;
   }
+  h1 {
+    @apply text-3xl font-bold tracking-tight md:text-5xl lg:text-6xl;
+  }
+  h2 {
+    @apply text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl;
+  }
+  .container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
 }

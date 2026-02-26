@@ -995,123 +995,178 @@ export default function OwnerBookingsPage() {
 
         {/* Booking Details Dialog */}
         <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Booking Details</DialogTitle>
-              <DialogDescription>
-                Confirmation Code: #{selectedBooking?.confirmationCode}
-              </DialogDescription>
+          <DialogContent className="max-w-2xl overflow-hidden p-0 rounded-2xl border-none shadow-2xl">
+            <DialogHeader className="p-6 bg-primary/[0.02] border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-xl font-black">Booking Details</DialogTitle>
+                  <DialogDescription className="text-xs font-medium text-muted-foreground mt-1">
+                    Manage and review reservation information
+                  </DialogDescription>
+                </div>
+                <div className="flex flex-col items-end">
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Status</p>
+                  {selectedBooking && getStatusBadge(selectedBooking.status)}
+                </div>
+              </div>
             </DialogHeader>
 
             {selectedBooking && (
-              <div className="space-y-6">
-                {/* Status */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  {getStatusBadge(selectedBooking.status)}
-                </div>
-
-                {/* Customer Info */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Customer Information
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Name</p>
-                      <p className="font-medium">
-                        {selectedBooking.guestInfo.firstName} {selectedBooking.guestInfo.lastName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Email</p>
-                      <p className="font-medium truncate">{selectedBooking.guestInfo.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Phone</p>
-                      <p className="font-medium">{selectedBooking.guestInfo.phone}</p>
-                    </div>
+              <div className="overflow-y-auto max-h-[70vh] p-6 space-y-6 custom-scrollbar">
+                {/* Header with Confirmation */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/50">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mb-1.5">Confirmation Code</p>
+                    <p className="text-2xl font-black text-foreground tracking-tight leading-none">#{selectedBooking.confirmationCode}</p>
                   </div>
                 </div>
 
-                {/* Vehicle Info */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Car className="w-4 h-4" />
-                    Vehicle Information
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Vehicle</p>
-                      <p className="font-medium">
-                        {selectedBooking.vehicleInfo.make} {selectedBooking.vehicleInfo.model}
-                      </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column: Customer & Vehicle */}
+                  <div className="space-y-8">
+                    {/* Customer Info */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <User className="w-3.5 h-3.5" />
+                        Customer Information
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-12 h-12 border-2 border-background shadow-sm">
+                            <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
+                              {selectedBooking.guestInfo.firstName[0]}{selectedBooking.guestInfo.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-black text-foreground text-lg leading-tight">
+                              {selectedBooking.guestInfo.firstName} {selectedBooking.guestInfo.lastName}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mt-1">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="truncate">{selectedBooking.guestInfo.email}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-foreground bg-muted/40 p-2.5 rounded-lg w-fit">
+                          <Phone className="w-3.5 h-3.5 text-primary" />
+                          <span>{selectedBooking.guestInfo.phone}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Color</p>
-                      <p className="font-medium">{selectedBooking.vehicleInfo.color}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">License Plate</p>
-                      <p className="font-medium">{selectedBooking.vehicleInfo.licensePlate}</p>
+
+                    {/* Vehicle Info */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Car className="w-3.5 h-3.5" />
+                        Vehicle Information
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">Make/Model</p>
+                          <p className="font-bold text-sm truncate">{selectedBooking.vehicleInfo.make} {selectedBooking.vehicleInfo.model}</p>
+                        </div>
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-right">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">Color</p>
+                          <p className="font-bold text-sm">{selectedBooking.vehicleInfo.color}</p>
+                        </div>
+                        <div className="col-span-2 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-xl p-3.5 flex flex-col items-center justify-center">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">License Plate Number</p>
+                          <p className="text-2xl font-black text-primary tracking-tighter leading-none">{selectedBooking.vehicleInfo.licensePlate}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Parking Details */}
-                <div className="space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Parking Details
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Location</p>
-                      <p className="font-medium">{selectedBooking.location?.name}</p>
+                  {/* Right Column: Parking & Payment */}
+                  <div className="space-y-8">
+                    {/* Parking Details */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5" />
+                        Parking Details
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
+                          <p className="text-[9px] text-emerald-600/70 uppercase font-black mb-1">Verified Location</p>
+                          <p className="font-black text-foreground">{selectedBooking.location?.name}</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                                <Calendar className="w-4 h-4 text-orange-500" />
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-muted-foreground uppercase font-black">Check-in</p>
+                                <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkIn))}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <Calendar className="w-4 h-4 text-blue-500" />
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-muted-foreground uppercase font-black">Check-out</p>
+                                <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkOut))}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Check-in</p>
-                      <p className="font-medium">{formatDate(new Date(selectedBooking.checkIn))}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Check-out</p>
-                      <p className="font-medium">{formatDate(new Date(selectedBooking.checkOut))}</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Payment */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Payment Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>
-                        {formatCurrency(
-                          selectedBooking.totalPrice - selectedBooking.taxes - selectedBooking.fees
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Taxes</span>
-                      <span>{formatCurrency(selectedBooking.taxes)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fees</span>
-                      <span>{formatCurrency(selectedBooking.fees)}</span>
-                    </div>
-                    <div className="flex justify-between font-medium pt-2 border-t">
-                      <span>Total</span>
-                      <span>{formatCurrency(selectedBooking.totalPrice)}</span>
+                    {/* Payment Summary */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        Payment Summary
+                      </h4>
+                      <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xl space-y-3 relative overflow-hidden">
+                        {/* Decorative background element */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl -mr-10 -mt-10 rounded-full" />
+
+                        <div className="relative z-10 space-y-2.5">
+                          <div className="flex justify-between text-xs text-slate-400 font-medium">
+                            <span className="flex items-center gap-1.5"><Star className="w-3 h-3" /> Subtotal</span>
+                            <span>{formatCurrency(selectedBooking.totalPrice - selectedBooking.taxes - selectedBooking.fees)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-slate-400 font-medium">
+                            <span>Taxes</span>
+                            <span>{formatCurrency(selectedBooking.taxes)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-slate-400 font-medium pb-2 border-b border-slate-800">
+                            <span>Platform Fees</span>
+                            <span>{formatCurrency(selectedBooking.fees)}</span>
+                          </div>
+                          <div className="flex justify-between items-end pt-1">
+                            <div>
+                              <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Total Payout</p>
+                              <p className="text-2xl font-black text-white leading-none">{formatCurrency(selectedBooking.totalPrice)}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2 rounded-full font-black border border-emerald-500/20">
+                              <CheckCircle2 className="w-3 h-3" />
+                              SECURE
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedBooking(null)}>
+            <DialogFooter className="p-4 bg-muted/30 border-t flex sm:justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedBooking(null)}
+                className="rounded-xl px-8 font-bold border-2 hover:bg-background"
+              >
                 Close
               </Button>
             </DialogFooter>

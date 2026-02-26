@@ -232,8 +232,8 @@ function RegisterContent() {
                         <div
                           key={i}
                           className={`h-1 flex-1 rounded-full ${i < strength
-                              ? strengthColors[strength - 1]
-                              : "bg-muted"
+                            ? strengthColors[strength - 1]
+                            : "bg-muted"
                             }`}
                         />
                       ))}
@@ -275,22 +275,24 @@ function RegisterContent() {
                     setAgreedToTerms(checked === true)
                   }
                 />
-                <label
+                <Label
                   htmlFor="terms"
-                  className="text-sm text-muted-foreground leading-tight"
+                  className="flex-1 block text-sm text-muted-foreground leading-tight cursor-pointer"
                 >
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-primary hover:underline">
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    href="/privacy"
-                    className="text-primary hover:underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                </label>
+                  <span>
+                    I agree to the{" "}
+                    <Link href="/terms" className="text-primary hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-primary hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </Label>
               </div>
             </CardContent>
 

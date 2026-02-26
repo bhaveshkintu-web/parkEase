@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getBookingDetails, updateBookingVehicle, updateBookingDates } from "@/lib/actions/booking-actions";
+import { validatePromoCode } from "@/lib/actions/promotion-actions";
 import { getGeneralSettings } from "@/lib/actions/settings-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -102,6 +103,9 @@ export default function ModifyReservationPage({
   const [paymentMethods, setPaymentMethods] = React.useState<any[]>([]);
   const [selectedMethodId, setSelectedMethodId] = React.useState<string>("new_card");
   const [isLoadingMethods, setIsLoadingMethods] = React.useState(false);
+
+  // Promotion State
+  const [promotion, setPromotion] = React.useState<any>(null);
 
   // Mock Payment State for Demo Mode
   const [mockCardName, setMockCardName] = React.useState("");
@@ -210,6 +214,25 @@ export default function ModifyReservationPage({
     loadPaymentMethods();
   }, []);
 
+  // Load promotion if it exists on the reservation
+  React.useEffect(() => {
+    if (reservation?.promoCode && originalPrice > 0) {
+      async function loadPromotion() {
+        try {
+          // Validate existing promo code to get its details (percentage, value etc)
+          // We pass true for skipValidation because it was already applied to this booking
+          const result = await validatePromoCode(reservation.promoCode, originalPrice, undefined, true);
+          if (result.valid && result.promotion) {
+            setPromotion(result.promotion);
+          }
+        } catch (error) {
+          console.error("Error loading original promotion:", error);
+        }
+      }
+      loadPromotion();
+    }
+  }, [reservation?.promoCode, originalPrice]);
+
   // Recalculate quote when dates change
   React.useEffect(() => {
     if (!reservation || !formData.checkIn || !formData.checkOut) return;
@@ -221,7 +244,8 @@ export default function ModifyReservationPage({
       if (isNaN(newCheckIn.getTime()) || isNaN(newCheckOut.getTime())) return;
       if (newCheckOut <= newCheckIn) return;
 
-      const newQuote = calculateQuote(reservation.location, newCheckIn, newCheckOut, taxRate, serviceFee);
+      // Pass promotion to calculateQuote if available
+      const newQuote = calculateQuote(reservation.location, newCheckIn, newCheckOut, taxRate, serviceFee, promotion);
       setQuote(newQuote);
 
       // Reset payment state if price changes
@@ -231,7 +255,7 @@ export default function ModifyReservationPage({
     } catch (error) {
       console.error("Quote calculation error:", error);
     }
-  }, [formData.checkIn, formData.checkOut, reservation]);
+  }, [formData.checkIn, formData.checkOut, reservation, promotion]);
 
   const priceDifference = quote ? quote.totalPrice - originalPrice : 0;
   const needsPayment = priceDifference > 0.01;
@@ -301,7 +325,9 @@ export default function ModifyReservationPage({
             taxes: quote.taxes,
             fees: quote.fees,
             isExtension: needsPayment,
-            isReduction: isReduction
+            isReduction: isReduction,
+            promoCode: reservation?.promoCode || null,
+            promoDiscount: quote.discount || 0,
           }
         );
         if (!dateResponse.success) throw new Error(dateResponse.error);
@@ -350,6 +376,8 @@ export default function ModifyReservationPage({
           taxes: quote.taxes,
           fees: quote.fees,
           isExtension: needsPayment,
+          promoCode: reservation?.promoCode || null,
+          promoDiscount: quote.discount || 0,
           paymentMethodId: isMockPayment ? undefined : selectedMethodId,
           transactionId: isMockPayment ? `pi_mock_${Math.random().toString(36).substring(7)}` : undefined,
         }
@@ -553,6 +581,16 @@ export default function ModifyReservationPage({
                 <span className="text-muted-foreground">Original Price:</span>
                 <span>{formatCurrency(originalPrice)}</span>
               </div>
+
+              {quote.discount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600 flex items-center gap-1">
+                    Discount ({reservation.promoCode}):
+                  </span>
+                  <span className="text-green-600">-{formatCurrency(quote.discount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">New Total:</span>
                 <span className="font-semibold">{formatCurrency(quote.totalPrice)}</span>
@@ -746,16 +784,18 @@ export default function ModifyReservationPage({
                           checked={agreedToTerms}
                           onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                         />
-                        <Label htmlFor="terms-demo" className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-                          I agree to the{" "}
-                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                            Terms
-                          </Link>{" "}
-                          and{" "}
-                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                            Policy
-                          </Link>
-                          . I understand that my reservation is subject to availability.
+                        <Label htmlFor="terms-demo" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                          <span>
+                            I agree to the{" "}
+                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                              Terms
+                            </Link>{" "}
+                            and{" "}
+                            <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                              Policy
+                            </Link>
+                            . I understand that my reservation is subject to availability.
+                          </span>
                         </Label>
                       </div>
 
@@ -812,16 +852,18 @@ export default function ModifyReservationPage({
                       checked={agreedToTerms}
                       onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                     />
-                    <Label htmlFor="terms-saved" className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-                      I agree to the{" "}
-                      <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                        Terms
-                      </Link>{" "}
-                      and{" "}
-                      <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                        Policy
-                      </Link>
-                      . I understand that my reservation is subject to availability.
+                    <Label htmlFor="terms-saved" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                      <span>
+                        I agree to the{" "}
+                        <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                          Terms
+                        </Link>{" "}
+                        and{" "}
+                        <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                          Policy
+                        </Link>
+                        . I understand that my reservation is subject to availability.
+                      </span>
                     </Label>
                   </div>
 

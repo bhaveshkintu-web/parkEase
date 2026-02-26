@@ -1022,16 +1022,18 @@ function CheckoutContent() {
                             checked={agreedToTerms}
                             onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
                           />
-                          <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                            I agree to the{" "}
-                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                              Terms of Service
-                            </Link>{" "}
-                            and{" "}
-                            <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                              Cancellation Policy
-                            </Link>
-                            . I understand that my reservation is subject to availability.
+                          <Label htmlFor="terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                            <span>
+                              I agree to the{" "}
+                              <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                                Terms of Service
+                              </Link>{" "}
+                              and{" "}
+                              <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
+                                Cancellation Policy
+                              </Link>
+                              . I understand that my reservation is subject to availability.
+                            </span>
                           </Label>
                         </div>
                       )}

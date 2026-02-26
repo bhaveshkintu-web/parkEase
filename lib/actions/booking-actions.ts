@@ -45,7 +45,7 @@ export async function getBookingDetails(bookingId: string) {
       return { success: false, error: "Invalid reservation ID" };
     }
 
-    let booking = await prisma.booking.findUnique({
+    let booking = await (prisma.booking as any).findUnique({
       where: { id: bookingId },
       include: {
         location: {
@@ -75,7 +75,7 @@ export async function getBookingDetails(bookingId: string) {
 
     if (!booking) {
       console.log(`[getBookingDetails] Not found by ID, trying confirmation code: ${bookingId}`);
-      booking = await prisma.booking.findUnique({
+      booking = await (prisma.booking as any).findUnique({
         where: { confirmationCode: bookingId },
         include: {
           location: {
@@ -231,7 +231,7 @@ export async function createBooking(data: any) {
       const confirmationCode = generateConfirmationCode();
 
       // f. Create Booking
-      const booking = await tx.booking.create({
+      const booking = await (tx.booking as any).create({
         data: {
           userId,
           locationId,
@@ -250,6 +250,8 @@ export async function createBooking(data: any) {
           fees: pricing.fees,
           ownerEarnings: pricing.ownerEarnings,
           status: BookingStatus.PENDING,
+          promoCode: (promotion as any) ? (promotion as any).code : null,
+          promoDiscount: (pricing as any).discount,
           confirmationCode,
         },
       });
@@ -551,6 +553,8 @@ export async function updateBookingDates(
     fees: number;
     isExtension: boolean;
     isReduction?: boolean;
+    promoCode?: string | null;
+    promoDiscount?: number;
     paymentMethodId?: string;
     transactionId?: string;
   }
@@ -558,7 +562,8 @@ export async function updateBookingDates(
   try {
     const userId = await getAuthUserId();
 
-    const booking = await prisma.booking.findUnique({
+    // Explicitly fetching new fields to ensure they are present even if types are stale
+    let booking = await (prisma.booking as any).findUnique({
       where: { id: bookingId },
       include: {
         location: {
@@ -586,6 +591,13 @@ export async function updateBookingDates(
         updateData.totalPrice = pricingData.totalPrice;
         updateData.taxes = pricingData.taxes;
         updateData.fees = pricingData.fees;
+
+        if (pricingData.promoCode !== undefined) {
+          updateData.promoCode = pricingData.promoCode;
+        }
+        if (pricingData.promoDiscount !== undefined) {
+          updateData.promoDiscount = pricingData.promoDiscount;
+        }
 
         // Calculate differences
         const priceDifference = pricingData.totalPrice - booking.totalPrice;
@@ -675,10 +687,12 @@ export async function updateBookingDates(
         }
       }
 
-      return await tx.booking.update({
+      return await (tx.booking as any).update({
         where: { id: bookingId },
         data: updateData,
       });
+    }, {
+      timeout: 15000
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);

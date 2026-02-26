@@ -103,7 +103,8 @@ export async function getApplicablePromotions(
 export async function validatePromoCode(
   code: string,
   bookingAmount: number,
-  userId?: string
+  userId?: string,
+  skipValidation: boolean = false
 ): Promise<PromoValidationResult> {
   try {
     const promo = await prisma.promotion.findUnique({
@@ -114,28 +115,30 @@ export async function validatePromoCode(
       return { valid: false, error: "Invalid promo code" };
     }
 
-    if (!promo.isActive) {
-      return { valid: false, error: "This promo code is no longer active" };
-    }
+    if (!skipValidation) {
+      if (!promo.isActive) {
+        return { valid: false, error: "This promo code is no longer active" };
+      }
 
-    const now = new Date();
-    if (now < new Date(promo.validFrom)) {
-      return { valid: false, error: "This promo code is not yet valid" };
-    }
+      const now = new Date();
+      if (now < new Date(promo.validFrom)) {
+        return { valid: false, error: "This promo code is not yet valid" };
+      }
 
-    if (now > new Date(promo.validUntil)) {
-      return { valid: false, error: "This promo code has expired" };
-    }
+      if (now > new Date(promo.validUntil)) {
+        return { valid: false, error: "This promo code has expired" };
+      }
 
-    if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
-      return { valid: false, error: "This promo code has reached its usage limit" };
-    }
+      if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
+        return { valid: false, error: "This promo code has reached its usage limit" };
+      }
 
-    if (promo.minBookingValue && bookingAmount < promo.minBookingValue) {
-      return {
-        valid: false,
-        error: `Minimum booking value of $${promo.minBookingValue.toFixed(2)} required`,
-      };
+      if (promo.minBookingValue && bookingAmount < promo.minBookingValue) {
+        return {
+          valid: false,
+          error: `Minimum booking value of $${promo.minBookingValue.toFixed(2)} required`,
+        };
+      }
     }
 
     // Calculate discount amount
