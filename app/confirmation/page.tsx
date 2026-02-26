@@ -295,10 +295,10 @@ Visit our website at parkzipply.com for help.
                       </Button>
                     </div>
                     <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleAddToWallet}>
+                      {/* <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handleAddToWallet}>
                         <Smartphone className="h-4 w-4" />
                         Add to Wallet
-                      </Button>
+                      </Button> */}
                       <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={handlePrint}>
                         <Printer className="h-4 w-4" />
                         Print

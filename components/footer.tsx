@@ -13,11 +13,11 @@ const footerLinks = {
     // { label: "Auto Insurance", href: "#" },
   ],
   Company: [
-    // { label: "About Us", href: "/about-us" },
-    // { label: "Careers", href: "/careers" },
-    // { label: "Press", href: "/press" },
-    // { label: "Blog", href: "/blog" },
-    { label: "Contact", href: "/support" },
+    { label: "About Us", href: "/about" },
+    { label: "Careers", href: "/careers" },
+    { label: "Press", href: "/press" },
+    { label: "Blog", href: "/blog" },
+    { label: "Contact", href: "/contact" },
   ],
   Support: [
     { label: "Help Center", href: "/support" },
@@ -41,12 +41,12 @@ const socialLinks = [
 
 export function Footer() {
   const platformName = usePlatformName();
-  
+
   return (
     <footer className="border-t border-border bg-card">
-      <div className="container px-4 py-12 md:py-16">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
-          <div className="lg:col-span-2">
+      <div className="container py-12 md:py-16">
+        <div className="grid gap-x-8 gap-y-10 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="col-span-2 sm:col-span-3 lg:col-span-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Car className="h-5 w-5 text-primary-foreground" />

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { 
-  X, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  User, 
-  MapPin, 
-  Calendar, 
+import {
+  X,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  User,
+  MapPin,
+  Calendar,
   CreditCard,
   History,
   MessageSquare,
@@ -19,12 +19,12 @@ import {
   Undo2,
   MoreVertical
 } from "lucide-react";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
   SheetTitle,
-  SheetDescription 
+  SheetDescription
 } from "@/components/ui/sheet";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,8 +121,8 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
       const response = await fetch(`/api/admin/disputes/${disputeId}/refund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          amount: parseFloat(refundAmount), 
+        body: JSON.stringify({
+          amount: parseFloat(refundAmount),
           reason: refundReason,
           description: "Triggered from dispute resolution"
         }),
@@ -163,6 +163,10 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="sm:max-w-2xl p-0 flex flex-col h-full gap-0">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Dispute Details</SheetTitle>
+          <SheetDescription>Manage and resolve booking disputes.</SheetDescription>
+        </SheetHeader>
         <SheetHeader className="p-6 border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -183,20 +187,20 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
             <Tabs defaultValue="overview" className="h-full flex flex-col">
               <div className="px-6 border-b shrink-0">
                 <TabsList className="w-full justify-start h-12 bg-transparent border-b-0 space-x-6">
-                  <TabsTrigger 
-                    value="overview" 
+                  <TabsTrigger
+                    value="overview"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 h-12"
                   >
                     Overview
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="timeline" 
+                  <TabsTrigger
+                    value="timeline"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 h-12"
                   >
                     Timeline
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="refund" 
+                  <TabsTrigger
+                    value="refund"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 h-12"
                   >
                     Refund
@@ -211,8 +215,8 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Status</Label>
-                        <Select 
-                          value={dispute.status} 
+                        <Select
+                          value={dispute.status}
                           onValueChange={(val) => handleUpdateDispute({ status: val })}
                           disabled={isUpdating}
                         >
@@ -228,8 +232,8 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
                       </div>
                       <div className="space-y-2">
                         <Label>Priority</Label>
-                        <Select 
-                          value={dispute.priority} 
+                        <Select
+                          value={dispute.priority}
                           onValueChange={(val) => handleUpdateDispute({ priority: val })}
                           disabled={isUpdating}
                         >
@@ -302,25 +306,25 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
                           <span className="text-[10px] text-muted-foreground italic">Always persistent</span>
                         )}
                       </div>
-                      
+
                       {dispute.internalNotes && (
-                         <div className="bg-amber-50/50 p-3 rounded-md border border-amber-100/50 text-sm text-amber-900/80 mb-2">
-                            {dispute.internalNotes}
-                         </div>
+                        <div className="bg-amber-50/50 p-3 rounded-md border border-amber-100/50 text-sm text-amber-900/80 mb-2">
+                          {dispute.internalNotes}
+                        </div>
                       )}
 
-                      <Textarea 
+                      <Textarea
                         placeholder={dispute.internalNotes ? "Update internal notes..." : "Add a private note or resolution summary..."}
                         className="min-h-[100px] bg-card"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                       />
-                      <Button 
-                        onClick={() => handleUpdateDispute({ 
-                          internalNotes: notes, 
+                      <Button
+                        onClick={() => handleUpdateDispute({
+                          internalNotes: notes,
                           notes: "Added/Updated internal note",
                           resolutionNotes: dispute.status === "RESOLVED" ? notes : undefined
-                        })} 
+                        })}
                         disabled={isUpdating || !notes.trim()}
                         className="w-full bg-[#5fc4b0] hover:bg-[#4eb3a0] text-white"
                       >
@@ -344,9 +348,8 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
                           {idx !== dispute.auditLogs.length - 1 && (
                             <div className="absolute left-[7px] top-[24px] bottom-0 w-[2px] bg-muted" />
                           )}
-                          <div className={`absolute left-0 top-[6px] w-4 h-4 rounded-full border-2 bg-background ${
-                            idx === 0 ? "border-primary" : "border-muted"
-                          }`} />
+                          <div className={`absolute left-0 top-[6px] w-4 h-4 rounded-full border-2 bg-background ${idx === 0 ? "border-primary" : "border-muted"
+                            }`} />
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold capitalize">
@@ -425,16 +428,16 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
 
                           <div className="space-y-2">
                             <div className="flex justify-between">
-                                <Label htmlFor="refund-amount">Refund Amount</Label>
-                                {parseFloat(refundAmount) > dispute.booking.totalPrice && (
-                                    <span className="text-[10px] text-red-600 font-bold animate-pulse">Exceeds Total!</span>
-                                )}
+                              <Label htmlFor="refund-amount">Refund Amount</Label>
+                              {parseFloat(refundAmount) > dispute.booking.totalPrice && (
+                                <span className="text-[10px] text-red-600 font-bold animate-pulse">Exceeds Total!</span>
+                              )}
                             </div>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                              <Input 
+                              <Input
                                 id="refund-amount"
-                                type="number" 
+                                type="number"
                                 className={`pl-7 ${parseFloat(refundAmount) > dispute.booking.totalPrice ? "border-red-500 bg-red-50" : ""}`}
                                 step="0.01"
                                 max={dispute.booking.totalPrice}
@@ -463,15 +466,15 @@ export function DisputeDetails({ disputeId, isOpen, onClose }: DisputeDetailsPro
                             </Select>
                           </div>
 
-                          <Button 
+                          <Button
                             className="w-full bg-red-600 hover:bg-red-700 text-white mt-4"
                             onClick={handleTriggerRefund}
                             disabled={isUpdating || parseFloat(refundAmount) > dispute.booking.totalPrice || parseFloat(refundAmount) <= 0}
                           >
                             {isUpdating ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             ) : (
-                                <Undo2 className="w-4 h-4 mr-2" />
+                              <Undo2 className="w-4 h-4 mr-2" />
                             )}
                             Issue Refund
                           </Button>

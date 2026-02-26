@@ -578,10 +578,10 @@ export default function ReservationDetailPage({
                           Show this QR code or confirmation number at the parking facility entrance
                         </p>
                         <div className="flex gap-2 mt-4 justify-center md:justify-start">
-                          <Button variant="outline" size="sm" className="bg-transparent">
+                          {/* <Button variant="outline" size="sm" className="bg-transparent">
                             <Download className="w-4 h-4 mr-2" />
                             Add to Wallet
-                          </Button>
+                          </Button> */}
                           <Button
                             variant="outline"
                             size="sm"

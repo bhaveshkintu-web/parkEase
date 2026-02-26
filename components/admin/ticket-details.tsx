@@ -2,26 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { format, differenceInHours } from "date-fns";
-import { 
-  X, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  User, 
+import {
+  X,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  User,
   Mail,
-  Calendar, 
+  Calendar,
   MessageSquare,
   Send,
   Loader2,
   Trash2,
   MoreVertical
 } from "lucide-react";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
   SheetTitle,
-  SheetDescription 
+  SheetDescription
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,11 +61,11 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
 
       if (response.ok) {
         if (updates.status) {
-            toast.success(`Ticket marked as ${updates.status.replace("_", " ")}`);
-            setStatus(updates.status);
+          toast.success(`Ticket marked as ${updates.status.replace("_", " ")}`);
+          setStatus(updates.status);
         }
         if (updates.internalNotes !== undefined) {
-            toast.success("Internal note saved");
+          toast.success("Internal note saved");
         }
         onUpdate();
       } else {
@@ -98,7 +98,7 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
             <div className="space-y-1">
               <SheetTitle>Ticket #{ticket.id.slice(-6).toUpperCase()}</SheetTitle>
               <SheetDescription>
-                Submitted by {ticket.name}
+                Detailed view of support ticket submitted by {ticket.name}.
               </SheetDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -114,8 +114,8 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
           <div className="p-6 space-y-6">
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Button 
-                variant={status === "OPEN" ? "default" : "outline"} 
+              <Button
+                variant={status === "OPEN" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleUpdate({ status: "OPEN" })}
                 disabled={isUpdating}
@@ -123,8 +123,8 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
               >
                 Open
               </Button>
-              <Button 
-                variant={status === "IN_PROGRESS" ? "default" : "outline"} 
+              <Button
+                variant={status === "IN_PROGRESS" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleUpdate({ status: "IN_PROGRESS" })}
                 disabled={isUpdating}
@@ -132,8 +132,8 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
               >
                 In Progress
               </Button>
-              <Button 
-                variant={status === "RESOLVED" ? "default" : "outline"} 
+              <Button
+                variant={status === "RESOLVED" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleUpdate({ status: "RESOLVED" })}
                 disabled={isUpdating}
@@ -188,14 +188,14 @@ export function TicketDetails({ ticket, isOpen, onClose, onUpdate }: TicketDetai
                 <MessageSquare className="w-4 h-4 text-primary" />
                 Internal Notes
               </h4>
-              <Textarea 
-                placeholder="Add a private note for other admins..." 
+              <Textarea
+                placeholder="Add a private note for other admins..."
                 className="min-h-[120px] bg-amber-50/20 border-amber-100"
                 value={internalNote}
                 onChange={(e) => setInternalNote(e.target.value)}
               />
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 onClick={() => handleUpdate({ internalNotes: internalNote })}
                 disabled={isUpdating}
               >

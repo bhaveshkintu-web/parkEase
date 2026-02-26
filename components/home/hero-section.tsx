@@ -18,19 +18,19 @@ export function HeroSection() {
         <div className="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
       </div>
 
-      <div className="container relative px-4 py-16 md:py-24 lg:py-32">
+      <div className="container relative px-4 py-12 md:py-24 lg:py-32">
         <div className="w-full flex flex-col items-center text-center">
-          <div className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+          <div className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs md:text-sm font-medium text-primary">
             <span>Trusted by 2M+ travelers</span>
           </div>
 
-          <h1 className="mb-4 text-balance text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
+          <h1 className="mb-4 text-balance text-3xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
             Book and Park.{" "}
             <span className="text-primary">It's that easy.</span>
           </h1>
 
-          <p className="mx-auto mb-8 max-w-2xl text-pretty text-lg text-muted-foreground md:text-xl">
-            Find the lowest parking prices at airports, stadiums, and city centers. 
+          <p className="mx-auto mb-8 max-w-2xl text-pretty text-base md:text-lg text-muted-foreground lg:text-xl">
+            Find the lowest parking prices at airports, stadiums, and city centers.
             Reserve your spot in seconds and save up to 60%.
           </p>
 

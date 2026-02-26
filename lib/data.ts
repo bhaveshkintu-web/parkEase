@@ -99,17 +99,32 @@ export function calculateQuote(
   checkIn: Date,
   checkOut: Date,
   taxRate: number = 12,
-  serviceFee: number = 5.99
+  serviceFee: number = 5.99,
+  promotion?: { type: string, value: number, maxDiscount?: number | null } | null
 ) {
   const days = calculateDays(checkIn, checkOut);
-  const displayDays = Math.ceil(days);
   const basePrice = location.pricePerDay * days;
-  const taxes = basePrice * (taxRate / 100);
+
+  // Apply Promotion if present
+  let discount = 0;
+  if (promotion) {
+    if (promotion.type === "percentage") {
+      discount = basePrice * (promotion.value / 100);
+      if (promotion.maxDiscount && discount > promotion.maxDiscount) {
+        discount = promotion.maxDiscount;
+      }
+    } else if (promotion.type === "fixed") {
+      discount = promotion.value;
+    }
+  }
+
+  const subtotal = Math.max(0, basePrice - discount);
+  const taxes = subtotal * (taxRate / 100);
   const fees = serviceFee;
-  const totalPrice = basePrice + taxes + fees;
+  const totalPrice = subtotal + taxes + fees;
 
   const originalPrice = location.originalPrice || location.pricePerDay;
-  const savings = Math.max(0, (originalPrice - location.pricePerDay) * days);
+  const savings = Math.max(0, (originalPrice - location.pricePerDay) * days) + discount;
 
   return {
     days: days,
@@ -118,6 +133,8 @@ export function calculateQuote(
     taxes,
     fees,
     totalPrice,
+    discount,
+    subtotal,
     savings,
   };
 }

@@ -53,6 +53,14 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { use } from "react";
 
@@ -663,28 +671,45 @@ function LocationDetailsContent({ id }: { id: string }) {
 
             {/* Booking Widget - Desktop */}
             <div className="hidden lg:block">
-              <BookingWidget location={location} />
+              <BookingWidget location={location} className="sticky top-24" />
             </div>
           </div>
         </div>
       </main>
 
       {/* Mobile Booking Bar */}
-      <div className="sticky bottom-0 border-t border-border bg-card p-4 lg:hidden">
+      <div className="sticky bottom-0 border-t border-border bg-card p-4 lg:hidden z-40">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold text-foreground">
-              {formatCurrency(quote.totalPrice)}
-              <span className="text-sm font-normal text-muted-foreground"> total</span>
-            </p>
-            <div className="flex items-center gap-2 text-sm">
-              <Star className="h-3 w-3 fill-accent text-accent" />
-              <span className="font-medium">{location.rating}</span>
-              <span className="text-muted-foreground">· {quote.days} days</span>
-            </div>
-          </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="flex flex-col items-start text-left hover:opacity-80 transition-opacity">
+                <p className="text-lg font-bold text-foreground">
+                  {formatCurrency(quote.totalPrice)}
+                  <span className="text-sm font-normal text-muted-foreground"> total</span>
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <Star className="h-3 w-3 fill-accent text-accent" />
+                  <span className="font-medium">{location.rating}</span>
+                  <span className="text-muted-foreground">· {quote.days.toFixed(1)} days</span>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[90vh] p-0 rounded-t-3xl overflow-hidden flex flex-col">
+              <SheetHeader className="p-6 border-b shrink-0">
+                <SheetTitle>Secure Your Spot</SheetTitle>
+                <SheetDescription>
+                  Modify dates or view the price breakdown for {location.name}.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto p-4 pb-12">
+                <BookingWidget location={location} className="border-none shadow-none p-0" />
+              </div>
+            </SheetContent>
+          </Sheet>
           <Button
             size="lg"
+            className="px-8"
             disabled={availability.status === "soldout"}
             onClick={handleReserve}
           >

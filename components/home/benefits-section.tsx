@@ -57,7 +57,7 @@ export function BenefitsSection() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-7">
           {benefits.map((benefit) => (
             <div
               key={benefit.title}
