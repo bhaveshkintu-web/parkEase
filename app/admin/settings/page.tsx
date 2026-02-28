@@ -130,6 +130,7 @@ export default function AdminSettingsPage() {
     requireEmailVerification: true,
     minBookingDuration: 120,
     modificationGapMinutes: 120,
+    gracePeriodMinutes: 120,
     taxRate: 12,
     serviceFee: 5.99,
   });
@@ -749,6 +750,42 @@ export default function AdminSettingsPage() {
                       await updateGeneralSettings({ modificationGapMinutes: generalSettings.modificationGapMinutes }, adminId);
                       setIsSaving(false);
                       toast({ title: "Setting updated", description: "Modification time gap has been saved." });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="gracePeriodMinutes">No-Show Grace Period</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Minutes before a no-show reservation is automatically expired.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="gracePeriodMinutes"
+                    type="number"
+                    className="w-24 text-right"
+                    value={generalSettings.gracePeriodMinutes || 120}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        gracePeriodMinutes: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      await updateGeneralSettings({ gracePeriodMinutes: generalSettings.gracePeriodMinutes }, adminId);
+                      setIsSaving(false);
+                      toast({ title: "Setting updated", description: "No-show grace period has been saved." });
                     }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

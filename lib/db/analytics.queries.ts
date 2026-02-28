@@ -271,8 +271,6 @@ export async function getBookingDistribution(dateRange: DateRange): Promise<{ ca
     },
   });
 
-  console.log("bookings=====", bookings);
-  
 
   // Categorize bookings
   let airportCount = 0;
@@ -339,7 +337,7 @@ export async function getTopLocations(dateRange: DateRange, limit: number = 10):
           status: { notIn: ['CANCELLED', 'REJECTED'] },
         },
         include: {
-          payment: {
+          payments: {
             select: { amount: true, status: true },
           },
         },
@@ -349,9 +347,11 @@ export async function getTopLocations(dateRange: DateRange, limit: number = 10):
 
   // Calculate metrics for each location
   const locationMetrics: TopLocationData[] = locations.map((location) => {
-    const validPayments = location.bookings
-      .filter((b) => b.payment && b.payment.status === 'SUCCESS')
-      .map((b) => b.payment!.amount);
+    const validPayments = location.bookings.flatMap((b) =>
+      b.payments
+        .filter((p) => p.status === 'SUCCESS')
+        .map((p) => p.amount)
+    );
 
     const revenue = validPayments.reduce((sum, amt) => sum + amt, 0);
     const bookingsCount = location.bookings.length;
