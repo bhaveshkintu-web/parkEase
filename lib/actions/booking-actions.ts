@@ -877,14 +877,16 @@ export async function rejectBooking(bookingId: string, reason: string) {
 export async function cleanupExpiredBookings() {
   try {
     const now = new Date();
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const settings = await getGeneralSettings();
+    const gracePeriodMinutes = settings.gracePeriodMinutes || 120;
+    const expirationThreshold = new Date(now.getTime() - gracePeriodMinutes * 60 * 1000);
 
-    // Find sessions that are RESERVED/PENDING but their checkout time was > 2 hours ago
+    // Find sessions that are RESERVED/PENDING but their checkout time was > grace period ago
     const expiredSessions = await prisma.parkingSession.findMany({
       where: {
         status: { in: ["RESERVED", "PENDING", "reserved", "pending"] },
         booking: {
-          checkOut: { lt: twoHoursAgo },
+          checkOut: { lt: expirationThreshold },
           status: { notIn: ["CANCELLED", "COMPLETED", "REJECTED"] }
         }
       },

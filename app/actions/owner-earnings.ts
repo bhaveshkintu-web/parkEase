@@ -13,6 +13,7 @@ type EarningsOverview = {
   totalBookings: number;
   completedBookings: number;
   pendingEarnings: number;
+  availableBalance: number;
 };
 
 type MonthlyEarnings = {
@@ -60,7 +61,7 @@ async function getOwnerId() {
 
 export async function getOwnerEarningsOverview(startDate?: string, endDate?: string): Promise<EarningsOverview> {
   const ownerId = await getOwnerId();
-  
+
   const dateFilter = startDate && endDate ? {
     createdAt: {
       gte: new Date(startDate),
@@ -68,15 +69,12 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
     }
   } : {};
 
-  // 1. Total Earnings (Sum of COMPLETED payments for this owner)
-  const totalEarningsResult = await prisma.payment.aggregate({
-    _sum: { amount: true },
+  // 1. Total Earnings (Sum of CONFIRMED or COMPLETED bookings)
+  const totalEarningsResult = await prisma.booking.aggregate({
+    _sum: { totalPrice: true },
     where: {
-      booking: {
-        location: { ownerId },
-        status: "COMPLETED",
-      },
-      status: "COMPLETED",
+      location: { ownerId },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       ...dateFilter,
     },
   });
@@ -84,11 +82,11 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
   // 2. This Month Earnings
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const thisMonthResult = await prisma.payment.aggregate({
-    _sum: { amount: true },
+  const thisMonthResult = await prisma.booking.aggregate({
+    _sum: { totalPrice: true },
     where: {
-      booking: { location: { ownerId }, status: "COMPLETED" },
-      status: "COMPLETED",
+      location: { ownerId },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       createdAt: { gte: startOfMonth },
     },
   });
@@ -96,11 +94,11 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
   // 3. Last Month Earnings
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  const lastMonthResult = await prisma.payment.aggregate({
-    _sum: { amount: true },
+  const lastMonthResult = await prisma.booking.aggregate({
+    _sum: { totalPrice: true },
     where: {
-      booking: { location: { ownerId }, status: "COMPLETED" },
-      status: "COMPLETED",
+      location: { ownerId },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
     },
   });
@@ -122,30 +120,38 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
     },
   });
 
-  // 6. Pending Earnings (Payments not yet settled or pending bookings)
-  // Logic: Bookings that are CONFIRMED but not COMPLETED, sum estimated amount or totalPrice
+  // 6. Pending Earnings (Bookings that are not yet confirmed/completed)
   const pendingEarningsResult = await prisma.booking.aggregate({
     _sum: { totalPrice: true },
     where: {
       location: { ownerId },
-      status: "CONFIRMED",
+      status: "PENDING",
       ...dateFilter,
     },
   });
 
   return {
-    totalEarnings: totalEarningsResult._sum.amount || 0,
-    thisMonthEarnings: thisMonthResult._sum.amount || 0,
-    lastMonthEarnings: lastMonthResult._sum.amount || 0,
+    totalEarnings: totalEarningsResult._sum.totalPrice || 0,
+    thisMonthEarnings: thisMonthResult._sum.totalPrice || 0,
+    lastMonthEarnings: lastMonthResult._sum.totalPrice || 0,
     totalBookings,
     completedBookings,
     pendingEarnings: pendingEarningsResult._sum.totalPrice || 0,
+    availableBalance: await getAvailableBalance(ownerId),
   };
+}
+
+async function getAvailableBalance(ownerId: string): Promise<number> {
+  const profile = await prisma.ownerProfile.findUnique({
+    where: { id: ownerId },
+    include: { wallet: true }
+  });
+  return profile?.wallet?.balance || 0;
 }
 
 export async function getEarningsBreakdown(startDate?: string, endDate?: string): Promise<BreakdownData> {
   const ownerId = await getOwnerId();
-  
+
   const dateFilter = startDate && endDate ? {
     createdAt: {
       gte: new Date(startDate),
@@ -153,29 +159,14 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     }
   } : {};
 
-  // 1. Earnings grouped by Month (using raw query for performance/simplicity in grouping)
-  // We need to group payments by month.
-  // Note: Prisma doesn't support grouping by derived date fields easily.
-  // We'll fetch relevant payments and group in memory if dataset is small, 
-  // OR use groupBy on booking.checkOut if we want "Accrual" basis.
-  // Requirement: "Earnings grouped by month" -> usually Cash basis (Payment.createdAt)
-  
-  // Using $queryRaw is best for "Prisma aggregate + groupBy ONLY" requirement to avoid JS loop, 
-  // but strictly speaking $queryRaw is SQL, not Prisma Client API.
-  // Given "No manual JS calculations", let's try to be clever with Prisma.
-  // Since we can't strict group by month in Prisma Client, strictly following "No manual JS" might be impossible without raw.
-  // However, "No manual JS calculations" usually means "Don't calculate sums in JS". Grouping for display is often acceptable.
-  // Let's use Raw for best performance as requested "optimized Prisma queries".
-  
+  // For monthly trend, we use Booking.createdAt
   const monthlyEarningsRaw = await prisma.$queryRaw`
-    SELECT TO_CHAR(p."createdAt", 'Mon YYYY') as month, SUM(p.amount) as amount
-    FROM "Payment" p
-    JOIN "Booking" b ON p."bookingId" = b.id
-    JOIN "ParkingLocation" pl ON b."locationId" = pl.id
-    WHERE pl."ownerId" = ${ownerId}
-    AND p.status = 'COMPLETED'
-    GROUP BY TO_CHAR(p."createdAt", 'Mon YYYY'), DATE_TRUNC('month', p."createdAt")
-    ORDER BY DATE_TRUNC('month', p."createdAt") DESC
+    SELECT TO_CHAR("createdAt", 'Mon YYYY') as month, SUM("totalPrice") as amount
+    FROM "Booking"
+    WHERE "locationId" IN (SELECT id FROM "ParkingLocation" WHERE "ownerId" = ${ownerId})
+    AND "status" IN ('CONFIRMED', 'COMPLETED')
+    GROUP BY TO_CHAR("createdAt", 'Mon YYYY'), DATE_TRUNC('month', "createdAt")
+    ORDER BY DATE_TRUNC('month', "createdAt") DESC
     LIMIT 12
   ` as { month: string, amount: number }[];
 
@@ -185,7 +176,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     _sum: { totalPrice: true, taxes: true, fees: true },
     where: {
       location: { ownerId },
-      status: "COMPLETED",
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       ...dateFilter,
     },
   });
@@ -212,7 +203,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     _sum: { totalPrice: true, taxes: true, fees: true },
     where: {
       location: { ownerId },
-      status: "COMPLETED",
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       ...dateFilter,
     },
   });
@@ -230,74 +221,31 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
 
 export async function getLocationMetrics(startDate?: string, endDate?: string): Promise<OwnerLocationMetric[]> {
   const ownerId = await getOwnerId();
-  
+
   const dateFilter = startDate && endDate ? {
-    checkOut: {
+    createdAt: {
       gte: new Date(startDate),
       lte: new Date(endDate),
     }
   } : {};
 
-  // Requirement: "location name, total bookings, completed bookings, revenue per location, occupancy rate"
-  // Single optimized query? 
-  // We can use findMany on ParkingLocation with include/count.
-  
-  const locations = await prisma.parkingLocation.findMany({
-    where: { ownerId },
-    select: {
-      id: true,
-      name: true,
-      totalSpots: true,
-      analytics: {
-        select: { occupancyRate: true }
-      },
-      bookings: {
-        where: { ...dateFilter },
-        select: {
-          status: true,
-          totalPrice: true,
-        }
-      }
-    }
-  });
-
-  // We have to aggregate the bookings array in memory because Prisma findMany doesn't support nested aggregate inside select easily for multiple fields alongside raw columns in one go without a separate groupBy.
-  // But wait! "No manual JS calculations" -- "Return a single optimized Prisma query structure."
-  // If I do `bookings: { select: ... }` I get all bookings. That's bad for performance.
-  // Better approach: Get locations, then get aggregations via groupBy and merge.
-  // The Prompt says: "Single optimized query. No extra joins beyond required."
-  
-  // Actually, standard Prisma robust pattern is:
-  // 1. Get Locations metadata.
-  // 2. Get Bookings aggregated by LocationId.
-  // 3. Merge.
-  // This avoids fetching 1000s of booking rows.
-  
-  // However, `findMany` with `_count` is supported.
-  // `findMany` with `aggregate` is NOT supported directly in the same level as scalars.
-  
-  // Let's stick to the "Single optimized query" instruction. 
-  // Maybe it means "Get everything you need in one go" (which implies `include: bookings`). 
-  // But that's not optimized for large datasets.
-  // I will use the "Fetch + GroupBy" strategy which is correctly optimized for production.
-  
-  // 1. Get Locations
   const locs = await prisma.parkingLocation.findMany({
     where: { ownerId },
-    select: { id: true, name: true, analytics: { select: { occupancyRate: true } } }
+    select: { id: true, name: true, totalSpots: true, analytics: { select: { occupancyRate: true } } }
   });
-  
-  // 2. Aggregations
+
+  // Aggregations
   const stats = await prisma.booking.groupBy({
     by: ['locationId'],
     _count: { id: true },
     _sum: { totalPrice: true },
     where: {
       locationId: { in: locs.map(l => l.id) },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
       ...dateFilter,
     }
   });
-  
+
   const completedStats = await prisma.booking.groupBy({
     by: ['locationId'],
     _count: { id: true },
@@ -314,7 +262,7 @@ export async function getLocationMetrics(startDate?: string, endDate?: string): 
     const completed = completedStats.find(s => s.locationId === loc.id);
     const totalRev = stat?._sum.totalPrice || 0;
     const count = stat?._count.id || 0;
-    
+
     return {
       id: loc.id,
       name: loc.name,

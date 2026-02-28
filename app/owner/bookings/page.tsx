@@ -543,6 +543,7 @@ export default function OwnerBookingsPage() {
                       <SelectItem value="confirmed">Confirmed</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -618,6 +619,14 @@ export default function OwnerBookingsPage() {
                   >
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Completed ({stats.completed})
+                  </Badge>
+                  <Badge
+                    variant={statusFilter === "expired" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setStatusFilter("expired")}
+                  >
+                    <XCircle className="w-3 h-3 mr-1" />
+                    Expired ({stats.expired})
                   </Badge>
                 </div>
               </CardContent>

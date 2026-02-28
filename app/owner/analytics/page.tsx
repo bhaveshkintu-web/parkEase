@@ -606,9 +606,8 @@ export default function OwnerAnalyticsPage() {
                         <td className="text-center py-4 px-4">
                           <div className="flex items-center justify-center gap-2">
                             <Progress value={loc.occupancy} className="w-16 h-2" />
-                            <span className={`text-sm font-medium ${
-                              loc.occupancy >= 70 ? "text-green-600" : loc.occupancy >= 40 ? "text-amber-600" : "text-red-600"
-                            }`}>
+                            <span className={`text-sm font-medium ${loc.occupancy >= 70 ? "text-green-600" : loc.occupancy >= 40 ? "text-amber-600" : "text-red-600"
+                              }`}>
                               {loc.occupancy}%
                             </span>
                           </div>
@@ -684,9 +683,8 @@ export default function OwnerAnalyticsPage() {
                     <p className="text-xs text-muted-foreground capitalize">{w.shift} shift</p>
                   </div>
                 </div>
-                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  w.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                }`}>
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${w.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                  }`}>
                   {w.status}
                 </div>
               </div>
