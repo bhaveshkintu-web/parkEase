@@ -112,10 +112,16 @@ export function BookingProvider({
   defaultCheckIn?: Date;
   defaultCheckOut?: Date;
 }) {
-  // Always initialize with defaults to match server SSR
+  // Use a stable default state for SSR and initial client render
   const [state, setState] = useState<BookingState>(() => getInitialState(defaultCheckIn, defaultCheckOut));
+  const [isMounted, setIsMounted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [minBookingDuration, setMinBookingDuration] = useState(120);
+
+  // Set isMounted on first client-side effect
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchDuration = async () => {
@@ -133,6 +139,8 @@ export function BookingProvider({
 
   // Load from session storage only on client mount
   useEffect(() => {
+    if (!isMounted) return;
+
     const loadFromStorage = () => {
       try {
         const stored = sessionStorage.getItem(STORAGE_KEY);

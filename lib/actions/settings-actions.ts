@@ -14,6 +14,7 @@ export interface PlatformSettingsData {
   requireEmailVerification: boolean;
   minBookingDuration: number;
   modificationGapMinutes: number;
+  gracePeriodMinutes: number;
   taxRate: number;
   serviceFee: number;
 }
@@ -48,6 +49,7 @@ const DEFAULT_SETTINGS: SettingValue[] = [
   { key: "platform.requireEmailVerification", value: "true", type: "boolean", category: "general", description: "Require email verification for bookings" },
   { key: "booking.minDuration", value: "120", type: "number", category: "general", description: "Minimum booking duration (minutes)" },
   { key: "booking.modificationGap", value: "120", type: "number", category: "general", description: "Minutes before check-in that a reservation can be modified" },
+  { key: "booking.gracePeriod", value: "120", type: "number", category: "general", description: "Minutes before a no-show reservation is expired" },
   { key: "booking.taxRate", value: "12", type: "number", category: "general", description: "Default tax rate percentage" },
   { key: "booking.serviceFee", value: "5.99", type: "number", category: "general", description: "Default service fee amount" },
 
@@ -217,6 +219,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       requireEmailVerification: settings.requireEmailVerification ?? true,
       minBookingDuration: settings.minDuration ?? 120,
       modificationGapMinutes: (settings.modificationGap as number) ?? 120,
+      gracePeriodMinutes: (settings.gracePeriod as number) ?? 120,
       taxRate: (settings.taxRate as number) ?? 12,
       serviceFee: (settings.serviceFee as number) ?? 5.99,
     };
@@ -232,6 +235,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       requireEmailVerification: true,
       minBookingDuration: 120,
       modificationGapMinutes: 120,
+      gracePeriodMinutes: 120,
       taxRate: 12,
       serviceFee: 5.99,
     };
@@ -340,6 +344,7 @@ export async function updateGeneralSettings(
       requireEmailVerification: "platform.requireEmailVerification",
       minBookingDuration: "booking.minDuration",
       modificationGapMinutes: "booking.modificationGap",
+      gracePeriodMinutes: "booking.gracePeriod",
       taxRate: "booking.taxRate",
       serviceFee: "booking.serviceFee",
     };
@@ -441,6 +446,11 @@ export async function isSmsNotificationsEnabled(): Promise<boolean> {
 export async function getModificationGap(): Promise<number> {
   const gap = await getSetting("booking.modificationGap");
   return typeof gap === "number" ? gap : 120;
+}
+
+export async function getGracePeriod(): Promise<number> {
+  const period = await getSetting("booking.gracePeriod");
+  return typeof period === "number" ? period : 120;
 }
 
 export async function getPlatformTaxRate(): Promise<number> {
