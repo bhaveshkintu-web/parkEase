@@ -8,6 +8,19 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60 * 24, // 1 day absolute maximum
+  },
+
+  cookies: {
+    sessionToken: {
+      name: `parkease.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 
   providers: [

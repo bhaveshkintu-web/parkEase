@@ -199,6 +199,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreSession();
   }, []);
 
+  // Inactivity timeout: auto-logout after 1 hour of no user activity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+    let timer: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        signOut({ redirect: true, callbackUrl: "/" });
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const activityEvents = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
+    activityEvents.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer(); // Start the timer immediately on login
+
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [isAuthenticated]); // Restarts whenever authentication state changes
+
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/session");

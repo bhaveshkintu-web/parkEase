@@ -34,8 +34,22 @@ import {
   Map,
   ArrowUpDown,
 } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
+import dynamic from "next/dynamic";
 import Loading from "./loading";
+
+// Dynamically import MapView to avoid SSR issues with Leaflet
+const MapView = dynamic(() => import("@/components/parking/map-view"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center bg-muted animate-pulse rounded-xl">
+      <div className="text-center">
+        <Map className="mx-auto mb-4 h-8 w-8 text-muted-foreground animate-bounce" />
+        <p className="text-sm text-muted-foreground">Loading Map...</p>
+      </div>
+    </div>
+  ),
+});
 
 type SortOption = "price-low" | "price-high" | "rating" | "distance";
 
@@ -72,6 +86,11 @@ function ParkingResultsContent() {
   const [sortBy, setSortBy] = useState<SortOption>("price-low");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -226,19 +245,23 @@ function ParkingResultsContent() {
                 </SheetContent>
               </Sheet>
 
-              {/* Sort Dropdown */}
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[160px]">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="distance">Distance</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Sort Dropdown - Prevent hydration error by rendering only on mount */}
+              {isMounted ? (
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                  <SelectTrigger className="w-[160px]">
+                    <ArrowUpDown className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="distance">Highest Distance</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="h-10 w-[160px] animate-pulse rounded-md bg-muted" />
+              )}
 
               {/* View Toggle */}
               <div className="hidden items-center rounded-lg border border-border sm:flex">
@@ -295,29 +318,8 @@ function ParkingResultsContent() {
                   )}
                 </div>
               ) : (
-                <div className="relative h-[600px] overflow-hidden rounded-xl border border-border bg-muted">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <Map className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-                      <p className="text-lg font-medium text-foreground">Map View</p>
-                      <p className="text-sm text-muted-foreground">
-                        Interactive map showing {sortedLocations.length} locations
-                      </p>
-                    </div>
-                  </div>
-                  {/* Location Pins Preview */}
-                  {sortedLocations.slice(0, 5).map((location, index) => (
-                    <div
-                      key={location.id}
-                      className="absolute flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-lg"
-                      style={{
-                        left: `${20 + index * 15}%`,
-                        top: `${30 + (index % 3) * 20}%`,
-                      }}
-                    >
-                      ${Math.round(location.pricePerDay)}
-                    </div>
-                  ))}
+                <div className="relative h-[600px] overflow-hidden rounded-xl border border-border bg-muted z-0">
+                  <MapView locations={sortedLocations} />
                 </div>
               )}
             </div>
