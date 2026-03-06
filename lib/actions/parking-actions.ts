@@ -51,6 +51,9 @@ export async function getParkingLocations(searchParams?: {
     const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
     const settings = await getGeneralSettings();
+    const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
+    const now = new Date();
+    const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
 
     const locations = await prisma.parkingLocation.findMany({
       where: {
@@ -63,15 +66,22 @@ export async function getParkingLocations(searchParams?: {
       include: {
         reviews: true,
         pricingRules: true,
-        _count: {
-          select: {
+        spots: {
+          where: {
+            status: "ACTIVE",
             bookings: {
-              where: {
-                status: { in: ["CONFIRMED", "PENDING"] },
-                AND: [
-                  { checkIn: { lt: checkOut } },
-                  { checkOut: { gt: checkIn } },
-                ],
+              none: {
+                OR: [
+                  { parkingSession: { status: "checked_in" } },
+                  {
+                    status: { in: ["CONFIRMED", "PENDING"] },
+                    checkOut: { gt: checkIn },
+                    AND: [
+                      { checkIn: { lt: checkOut } },
+                      { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
+                    ]
+                  }
+                ]
               },
             },
           },
@@ -80,7 +90,7 @@ export async function getParkingLocations(searchParams?: {
     });
 
     const locationsWithStats: ParkingLocationSearchResult[] = locations
-      .filter((loc) => loc.totalSpots - loc._count.bookings > 0)
+      .filter((loc) => loc.spots.length > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
         const rating = reviewCount > 0
@@ -105,7 +115,7 @@ export async function getParkingLocations(searchParams?: {
           rating,
           reviewCount,
           pricing,
-          availableSpots: loc.totalSpots - loc._count.bookings,
+          availableSpots: loc.spots.length,
           airport: loc.airportCode ? (require("@/lib/data").airports.find((a: any) => a.code === loc.airportCode)?.name || loc.airportCode) : "General",
           latitude: loc.latitude,
           longitude: loc.longitude,
@@ -153,24 +163,44 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
     const checkIn = ci ? new Date(ci) : new Date();
     const checkOut = co ? new Date(co) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000);
 
-    const overlappingBookings = await prisma.booking.count({
+    const settings = await getGeneralSettings();
+    const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
+    const now = new Date();
+    const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+
+    const activeSpotsCount = await prisma.parkingSpot.count({
       where: {
         locationId: id,
-        status: { in: ["CONFIRMED", "PENDING"] },
-        AND: [
-          { checkIn: { lt: checkOut } },
-          { checkOut: { gt: checkIn } },
+        status: "ACTIVE"
+      }
+    });
+
+    const overlappingBookingsOnActiveSpots = await prisma.booking.count({
+      where: {
+        spot: {
+          locationId: id,
+          status: "ACTIVE"
+        },
+        OR: [
+          { parkingSession: { status: "checked_in" } },
+          {
+            status: { in: ["CONFIRMED", "PENDING"] },
+            checkOut: { gt: checkIn },
+            AND: [
+              { checkIn: { lt: checkOut } },
+              { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
+            ]
+          }
         ],
       },
     });
 
     const availability = {
-      totalSpots: location.totalSpots,
-      availableSpots: location.totalSpots - overlappingBookings,
-      isAvailable: location.totalSpots - overlappingBookings > 0
+      totalSpots: activeSpotsCount,
+      availableSpots: activeSpotsCount - overlappingBookingsOnActiveSpots,
+      isAvailable: activeSpotsCount - overlappingBookingsOnActiveSpots > 0
     };
 
-    const settings = await getGeneralSettings();
     const pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
 
     return {
@@ -364,11 +394,11 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
       };
     }
 
-    const { cancellationPolicy, cancellationDeadline, ...rest } = result.data;
+    const { cancellationPolicy, cancellationDeadline, spotIdentifiers, ...rest } = result.data;
 
     const current = await prisma.parkingLocation.findUnique({
       where: { id },
-      select: { totalSpots: true, availableSpots: true }
+      include: { spots: { include: { _count: { select: { bookings: true } } } } } as any
     });
 
     if (!current) return { success: false, error: "Location not found" };
@@ -376,29 +406,56 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
     const newTotalSpots = rest.totalSpots;
     let newAvailableSpots = current.availableSpots;
 
-    // If total spots changed, recalculate available spots based on existing occupancy
     if (newTotalSpots !== current.totalSpots) {
       const occupiedSpots = Math.max(0, current.totalSpots - current.availableSpots);
       newAvailableSpots = Math.max(0, newTotalSpots - occupiedSpots);
     }
 
-    const updatedLocation = await prisma.parkingLocation.update({
-      where: { id },
-      data: {
-        ...rest,
-        availableSpots: newAvailableSpots,
-        cancellationPolicy: {
-          type: cancellationPolicy,
-          hours: parseInt(cancellationDeadline) || 0,
-          deadline: cancellationPolicy === "strict" ? "No refunds" : `${cancellationDeadline} hours before check-in`,
-          description: cancellationPolicy === "free"
-            ? `Free cancellation up to ${cancellationDeadline} hours before check-in`
-            : cancellationPolicy === "moderate"
-              ? `50% refund up to ${cancellationDeadline} hours before check-in`
-              : "Non-refundable"
+    const updatedLocation = await prisma.$transaction(async (tx) => {
+      // 1. Sync Spots
+      if (spotIdentifiers && spotIdentifiers.length > 0) {
+        const existingIdentifiers = ((current as any).spots || []).map((s: any) => s.identifier);
+
+        // Spots to add
+        const toAdd = spotIdentifiers.filter((idStr: string) => !existingIdentifiers.includes(idStr));
+        if (toAdd.length > 0) {
+          await (tx as any).parkingSpot.createMany({
+            data: toAdd.map((idStr: string) => ({
+              locationId: id,
+              identifier: idStr,
+            }))
+          });
+        }
+
+        // Spots to remove
+        const toRemove = ((current as any).spots || []).filter((s: any) => !spotIdentifiers.includes(s.identifier));
+        for (const spot of toRemove) {
+          if (spot._count.bookings === 0) {
+            await (tx as any).parkingSpot.delete({ where: { id: spot.id } });
+          } else {
+            // Keep it but maybe mark as INACTIVE if we had that logic active
+          }
+        }
+      }
+
+      return await tx.parkingLocation.update({
+        where: { id },
+        data: {
+          ...rest,
+          availableSpots: newAvailableSpots,
+          cancellationPolicy: {
+            type: cancellationPolicy,
+            hours: parseInt(cancellationDeadline) || 0,
+            deadline: cancellationPolicy === "strict" ? "No refunds" : `${cancellationDeadline} hours before check-in`,
+            description: cancellationPolicy === "free"
+              ? `Free cancellation up to ${cancellationDeadline} hours before check-in`
+              : cancellationPolicy === "moderate"
+                ? `50% refund up to ${cancellationDeadline} hours before check-in`
+                : "Non-refundable"
+          },
+          updatedAt: new Date(),
         },
-        updatedAt: new Date(),
-      },
+      });
     });
 
     revalidatePath("/owner/locations");
@@ -455,18 +512,27 @@ export async function syncAllLocationsAvailability() {
     let fixedCount = 0;
 
     for (const location of locations) {
+      const settings = await getGeneralSettings();
+      const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
+      const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+
       // Recalculate actually occupied/reserved spots
-      // A spot is "occupied" if there is an overlapping booking that is CONFIRMED or PENDING
-      // and NOT yet completed/cancelled.
+      // A spot is "occupied" if:
+      // 1. It is currently checked_in (ParkingSession)
+      // 2. It is CONFIRMED and within the grace period overlap of "now"
       const occupiedCount = await prisma.booking.count({
         where: {
           locationId: location.id,
-          status: { in: ["CONFIRMED", "PENDING"] },
-          // We consider it occupied if it overlaps with "now" or is in the future but already reserved
-          // More accurately, we check how many are active right now
-          AND: [
-            { checkIn: { lte: now } },
-            { checkOut: { gte: now } }
+          OR: [
+            { parkingSession: { status: "checked_in" } },
+            {
+              status: { in: ["CONFIRMED", "PENDING"] },
+              checkOut: { gt: now },
+              AND: [
+                { checkIn: { lt: now } },
+                { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
+              ]
+            }
           ]
         }
       });

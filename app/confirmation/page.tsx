@@ -338,6 +338,12 @@ Visit our website at parkzipply.com for help.
                     <h3 className="font-semibold text-foreground">{bookingLocation.name}</h3>
                     <p className="text-sm text-muted-foreground">{bookingLocation.address}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
+                      {booking?.spotIdentifier && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                          <CheckCircle className="h-3 w-3" />
+                          Spot: {booking.spotIdentifier}
+                        </span>
+                      )}
                       {bookingLocation.shuttle && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                           <Bus className="h-3 w-3" />

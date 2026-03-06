@@ -577,7 +577,13 @@ export default function ReservationDetailPage({
                         <p className="text-sm text-muted-foreground mt-4">
                           Show this QR code or confirmation number at the parking facility entrance
                         </p>
-                        <div className="flex gap-2 mt-4 justify-center md:justify-start">
+                        <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
+                          {reservation.spotIdentifier && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800">
+                              <Car className="w-4 h-4" />
+                              <span>Reserved Spot: {reservation.spotIdentifier}</span>
+                            </div>
+                          )}
                           {/* <Button variant="outline" size="sm" className="bg-transparent">
                             <Download className="w-4 h-4 mr-2" />
                             Add to Wallet
