@@ -129,6 +129,7 @@ export const ownerLocationSchema = z.object({
   open24Hours: z.boolean().default(false),
   cancellationPolicy: z.enum(["free", "moderate", "strict"]).default("free"),
   cancellationDeadline: z.string().default("24"),
+  spotIdentifiers: z.array(z.union([z.string(), z.any()])).optional(),
 });
 
 // Admin review moderation validations

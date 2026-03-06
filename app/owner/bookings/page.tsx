@@ -1102,6 +1102,15 @@ export default function OwnerBookingsPage() {
                           <p className="text-[9px] text-emerald-600/70 uppercase font-black mb-1">Verified Location</p>
                           <p className="font-black text-foreground">{selectedBooking.location?.name}</p>
                         </div>
+                        <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100/50">
+                          <p className="text-[9px] text-blue-600/70 uppercase font-black mb-1">Allocated Spot</p>
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-blue-600" />
+                            <p className="font-black text-foreground">
+                              {selectedBooking.spotIdentifier || <span className="text-muted-foreground font-medium italic">Not Allocated Yet</span>}
+                            </p>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-1 gap-3">
                           <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border shadow-sm">
                             <div className="flex items-center gap-3">
@@ -1111,6 +1120,9 @@ export default function OwnerBookingsPage() {
                               <div>
                                 <p className="text-[9px] text-muted-foreground uppercase font-black">Check-in</p>
                                 <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkIn))}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                                  {new Date(selectedBooking.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -1122,6 +1134,9 @@ export default function OwnerBookingsPage() {
                               <div>
                                 <p className="text-[9px] text-muted-foreground uppercase font-black">Check-out</p>
                                 <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkOut))}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                                  {new Date(selectedBooking.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
                               </div>
                             </div>
                           </div>

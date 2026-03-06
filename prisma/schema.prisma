@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -143,6 +143,26 @@ model ParkingLocation {
   watchmanShifts      WatchmanShift[]
   watchmen            Watchman[]         @relation("ParkingLocationToWatchman")
   savedByUsers        SavedLocation[]
+  spots               ParkingSpot[]
+}
+
+model ParkingSpot {
+  id          String          @id @default(cuid())
+  locationId  String
+  identifier  String          // e.g. "A1", "B-03", "101"
+  status      SpotStatus      @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  location    ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+
+  @@unique([locationId, identifier])
+  @@index([locationId])
+}
+
+enum SpotStatus {
+  ACTIVE
+  INACTIVE
 }
 
 model Booking {
@@ -169,10 +189,13 @@ model Booking {
   promoDiscount    Float?
   confirmationCode String          @unique
   qrCode           String?
+  spotId           String?
+  spotIdentifier   String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   location         ParkingLocation @relation(fields: [locationId], references: [id])
   user             User?           @relation(fields: [userId], references: [id])
+  spot             ParkingSpot?    @relation(fields: [spotId], references: [id])
   disputes         Dispute[]
   parkingSession   ParkingSession?
   payments         Payment[]

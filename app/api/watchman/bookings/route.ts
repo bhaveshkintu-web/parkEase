@@ -152,7 +152,8 @@ export async function GET(request: NextRequest) {
                 status: b.status.toLowerCase(),
                 confirmationCode: b.confirmationCode,
                 sessionStatus: b.parkingSession?.status || "pending",
-                sessionId: b.parkingSession?.id
+                sessionId: b.parkingSession?.id,
+                spotIdentifier: b.spotIdentifier
             }))
         });
 

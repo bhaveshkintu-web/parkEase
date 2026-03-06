@@ -239,6 +239,8 @@ export async function GET(req: NextRequest) {
         status: b.status.toLowerCase(),
         confirmationCode: b.confirmationCode,
         qrCode: b.qrCode || b.confirmationCode,
+        spotId: b.spotId,
+        spotIdentifier: b.spotIdentifier,
         createdAt: b.createdAt,
         modificationHistory: [],
         cancellationEligibility: {

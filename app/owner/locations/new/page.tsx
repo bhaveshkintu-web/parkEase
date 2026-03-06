@@ -64,6 +64,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { airports } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { SpotIdentifierGrid } from "@/components/owner/spot-identifier-grid";
+import { generateSpotIdentifiers } from "@/lib/actions/spot-actions";
 
 const amenityOptions = [
   { id: "covered", label: "Covered Parking", icon: Car },
@@ -113,6 +115,7 @@ interface FormData {
   latitude: number;
   longitude: number;
   images: string[];
+  spotIdentifiers: string[];
 }
 
 interface RedeemStep {
@@ -148,6 +151,7 @@ const initialFormData: FormData = {
   latitude: 0,
   longitude: 0,
   images: [],
+  spotIdentifiers: [],
 };
 
 const initialRedeemSteps: RedeemStep[] = [
@@ -194,8 +198,13 @@ export default function OwnerNewLocationPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
   const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      return newData;
+    });
+
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
@@ -415,6 +424,7 @@ export default function OwnerNewLocationPage() {
         open24Hours: formData.open24Hours,
         cancellationPolicy: formData.cancellationPolicy,
         cancellationDeadline: formData.cancellationDeadline,
+        spotIdentifiers: formData.spotIdentifiers,
       };
 
       // Call the real API
@@ -809,6 +819,32 @@ export default function OwnerNewLocationPage() {
                       placeholder={`e.g., 6'6" or No limit`}
                     />
                   </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">Parking Spot Identifiers</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Assign names to each physical spot (e.g. A1, A2, B1...)
+                      </p>
+                    </div>
+                  </div>
+
+                  <SpotIdentifierGrid
+                    identifiers={formData.spotIdentifiers}
+                    onChange={(ids) => handleInputChange("spotIdentifiers", ids)}
+                    maxSpots={parseInt(formData.totalSpots) || 200}
+                  />
+
+                  {formData.spotIdentifiers.length !== parseInt(formData.totalSpots) && formData.totalSpots && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Warning: You have {formData.spotIdentifiers.length} identifiers defined, but total spots is set to {formData.totalSpots}.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
 
                 <Separator />
