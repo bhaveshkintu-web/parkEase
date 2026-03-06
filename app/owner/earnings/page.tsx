@@ -36,6 +36,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { getOwnerEarningsOverview, getEarningsBreakdown, getLocationMetrics } from "@/app/actions/owner-earnings";
+import type { OverviewMetrics } from "@/lib/types/analytics.types";
 
 export default function OwnerEarningsPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -46,14 +47,15 @@ export default function OwnerEarningsPage() {
   const [overview, setOverview] = useState<any>(null);
   const [breakdown, setBreakdown] = useState<any>(null);
   const [locations, setLocations] = useState<any[]>([]);
-
+  const [exporting, setExporting] = useState(false);
+  const [period, setPeriod] = useState<"this_month" | "last_month" | "all_time">("this_month");
   const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
       const [ovData, brData, locData] = await Promise.all([
-        getOwnerEarningsOverview(),
-        getEarningsBreakdown(),
-        getLocationMetrics()
+        getOwnerEarningsOverview(period),
+        getEarningsBreakdown(period),
+        getLocationMetrics(period)
       ]);
       setOverview(ovData);
       setBreakdown(brData);
@@ -64,7 +66,7 @@ export default function OwnerEarningsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     fetchAllData();
@@ -93,18 +95,38 @@ export default function OwnerEarningsPage() {
   const chartConfig = {
     amount: { label: "Revenue", color: "hsl(var(--primary))" },
   };
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      exportToCSV(overview);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const displayEarnings =
+  period === "this_month"
+    ? overview.thisMonthEarnings
+    : period === "last_month"
+    ? overview.lastMonthEarnings
+    : overview.totalEarnings;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/owner">
-            <Button variant="ghost" size="icon"><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
           </Link>
           <h1 className="text-2xl font-bold">Earnings</h1>
         </div>
         <div className="flex gap-2">
-          <Select defaultValue="this_month">
+          <Select
+            value={period}
+            onValueChange={(value) => setPeriod(value as any)}
+          >
             <SelectTrigger className="w-[140px]">
               <Calendar className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Period" />
@@ -115,7 +137,19 @@ export default function OwnerEarningsPage() {
               <SelectItem value="all_time">All Time</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline"><Download className="w-4 h-4 mr-2" /> Export</Button>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting || loading}
+            className="bg-transparent"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Export
+          </Button>
         </div>
       </div>
 
@@ -132,7 +166,7 @@ export default function OwnerEarningsPage() {
             <Card>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase font-bold">Total Earnings</p>
+                <p className="text-xs text-muted-foreground uppercase font-bold">Total Earnings</p>
                   <p className="text-xl font-bold">{formatCurrency(overview.totalEarnings)}</p>
                 </div>
                 <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><DollarSign className="w-5 h-5" /></div>
@@ -141,8 +175,16 @@ export default function OwnerEarningsPage() {
             <Card>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase font-bold">This Month</p>
-                  <p className="text-xl font-bold">{formatCurrency(overview.thisMonthEarnings)}</p>
+                  <p className="text-xs text-muted-foreground uppercase font-bold">
+                    {period === "this_month"
+                      ? "This Month"
+                      : period === "last_month"
+                      ? "Last Month"
+                      : "All Time"}
+                  </p>
+                  <p className="text-xl font-bold">
+                    {formatCurrency(displayEarnings)}
+                  </p>
                 </div>
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><TrendingUp className="w-5 h-5" /></div>
               </CardContent>
@@ -300,3 +342,28 @@ export default function OwnerEarningsPage() {
   );
 }
 
+
+// CSV Export Utility
+function exportToCSV(
+  overview: OverviewMetrics | null,
+) {
+  let csv = "Owner Earnings Report\n\n";
+
+  // Overview Section with Total Earnings
+  csv += "EARNINGS OVERVIEW\n";
+  if (overview) {
+    csv += `Total Earnings,${formatCurrency(overview.totalEarnings)}\n`;
+    csv += `This Month Earnings,${formatCurrency(overview.thisMonthEarnings)}\n`;
+    csv += `Pending Earnings,${formatCurrency(overview.pendingEarnings)}\n`;
+    csv += `Completed Bookings,${overview.completedBookings}\n`;
+    csv += `Total Bookings,${overview.totalBookings}\n`;
+    csv += `Wallet Balance,${formatCurrency(overview.availableBalance)}\n`;
+  }
+
+  // Download CSV
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `owner-earnings-${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+}
