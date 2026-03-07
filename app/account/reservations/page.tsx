@@ -54,19 +54,24 @@ export default function ReservationsPage() {
   const getFilteredBookings = () => {
     switch (activeTab) {
       case "upcoming":
-        // Include bookings where checkIn is today or in the future
-        return bookings.filter(
-          (b) =>
+        // Include bookings where checkIn is today or in the future AND they aren't marked as checked_out
+        return bookings.filter((b) => {
+          const isPhysicallyCheckedOut = b.parkingSession?.status === "checked_out";
+          return (
+            !isPhysicallyCheckedOut &&
             (b.status === "CONFIRMED" || b.status === "PENDING") &&
             new Date(b.checkIn) >= startOfToday
-        );
+          );
+        });
       case "past":
-        // Include bookings where checkOut is before today
-        return bookings.filter(
-          (b) =>
+        // Include bookings where checkOut is before today OR they are physically checked_out
+        return bookings.filter((b) => {
+          const isPhysicallyCheckedOut = b.parkingSession?.status === "checked_out";
+          return (
             (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
-            new Date(b.checkOut) < startOfToday
-        );
+            (new Date(b.checkOut) < startOfToday || isPhysicallyCheckedOut)
+          );
+        });
       case "cancelled":
         return bookings.filter((b) => b.status === "CANCELLED" || b.status === "REJECTED");
       case "expired":
@@ -79,23 +84,28 @@ export default function ReservationsPage() {
   const filteredBookings = getFilteredBookings();
 
   // Calculate counts for each tab
-  const upcomingCount = bookings.filter(
-    (b) =>
+  const upcomingCount = bookings.filter((b) => {
+    const isPhysicallyCheckedOut = b.parkingSession?.status === "checked_out";
+    return (
+      !isPhysicallyCheckedOut &&
       (b.status === "CONFIRMED" || b.status === "PENDING") &&
       new Date(b.checkIn) >= startOfToday
-  ).length;
+    );
+  }).length;
 
-  const pastCount = bookings.filter(
-    (b) =>
+  const pastCount = bookings.filter((b) => {
+    const isPhysicallyCheckedOut = b.parkingSession?.status === "checked_out";
+    return (
       (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
-      new Date(b.checkOut) < startOfToday
-  ).length;
+      (new Date(b.checkOut) < startOfToday || isPhysicallyCheckedOut)
+    );
+  }).length;
 
   const cancelledCount = bookings.filter((b) => b.status === "CANCELLED" || b.status === "REJECTED").length;
   const expiredCount = bookings.filter((b) => b.status === "EXPIRED").length;
 
-  const getStatusBadge = (status: string, checkOut: string) => {
-    const isPast = new Date(checkOut) < startOfToday;
+  const getStatusBadge = (status: string, checkOut: string, parkingSession?: any) => {
+    const isPast = new Date(checkOut) < startOfToday || parkingSession?.status === "checked_out";
 
     switch (status) {
       case "CONFIRMED":
@@ -254,7 +264,7 @@ export default function ReservationsPage() {
                               {booking.location.airportCode && ` (${booking.location.airportCode})`}
                             </div>
                           </div>
-                          {getStatusBadge(booking.status, booking.checkOut)}
+                          {getStatusBadge(booking.status, booking.checkOut, booking.parkingSession)}
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -290,12 +300,20 @@ export default function ReservationsPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-border">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <QrCode className="w-4 h-4" />
-                            <span>Confirmation: {booking.confirmationCode}</span>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-3 border-t border-border">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <QrCode className="w-4 h-4" />
+                              <span>Confirmation: {booking.confirmationCode}</span>
+                            </div>
+                            {booking.spotIdentifier && (
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-100 dark:border-blue-800">
+                                <Car className="w-3.5 h-3.5" />
+                                <span>Spot: {booking.spotIdentifier}</span>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 w-full sm:w-auto">
                             {activeTab === "upcoming" && (() => {
                               const checkInTime = new Date(booking.checkIn).getTime();
                               const minutesUntilCheckIn = (checkInTime - now.getTime()) / (1000 * 60);
@@ -345,6 +363,6 @@ export default function ReservationsPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 }

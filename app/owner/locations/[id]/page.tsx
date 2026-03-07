@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MediaManagementCard } from "@/components/owner/media-management-card";
+import { SpotOccupancyView } from "@/components/owner/spot-occupancy-view";
 
 export default function OwnerLocationDetailsPage() {
   const params = useParams();
@@ -181,10 +182,25 @@ export default function OwnerLocationDetailsPage() {
           <Tabs defaultValue="details">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="occupancy" className="relative text-xs sm:text-sm">
+                Spot Occupancy
+              </TabsTrigger>
               <TabsTrigger value="amenities">Amenities</TabsTrigger>
               <TabsTrigger value="reviews">Reviews ({location.reviewCount})</TabsTrigger>
               <TabsTrigger value="pricing">Pricing Rules</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="occupancy" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Real-time Spot Status</CardTitle>
+                  <CardDescription>View current occupancy and guest details for each parking spot.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SpotOccupancyView locationId={locationId} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="details" className="mt-4 space-y-4">
               <Card>

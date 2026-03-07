@@ -7,6 +7,7 @@ import { BookingStatus } from "@prisma/client";
 import { calculatePricing, generateConfirmationCode } from "../utils/booking-utils";
 import { getGeneralSettings } from "./settings-actions";
 import { notifyOwnerOfNewBooking, sendReservationReceipt } from "@/lib/notifications";
+import { allocateSpotForBooking } from "./spot-actions";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -19,6 +20,7 @@ export async function getUserBookings() {
       where: { userId },
       include: {
         location: true,
+        parkingSession: true,
       },
       orderBy: {
         checkIn: "desc",
@@ -189,20 +191,11 @@ export async function createBooking(data: any) {
       if (!location) throw new Error("Parking location not found");
       if (location.status !== "ACTIVE") throw new Error("Location not active");
 
-      // b. Check for overlapping bookings
-      const overlappingCount = await tx.booking.count({
-        where: {
-          locationId,
-          status: { in: ["CONFIRMED", "PENDING"] },
-          AND: [
-            { checkIn: { lt: checkOutDate } },
-            { checkOut: { gt: checkInDate } },
-          ],
-        },
-      });
+      // b. Allocate a specific parking spot
+      const spot = await allocateSpotForBooking(locationId, checkInDate, checkOutDate, tx);
 
-      if (location.totalSpots - overlappingCount <= 0) {
-        throw new Error("No spots available for the selected dates");
+      if (!spot) {
+        throw new Error("No parking spots available for the selected dates");
       }
 
       // c. Handle Promotion
@@ -261,6 +254,8 @@ export async function createBooking(data: any) {
           promoCode: (promotion as any) ? (promotion as any).code : null,
           promoDiscount: (pricing as any).discount,
           confirmationCode,
+          spotId: spot.id,
+          spotIdentifier: spot.identifier,
         },
       });
 
@@ -588,11 +583,62 @@ export async function updateBookingDates(
     if (!booking) return { success: false, error: "Booking not found" };
     if (booking.userId !== userId) return { success: false, error: "Unauthorized" };
 
+    const settings = await getGeneralSettings();
+    const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
+    const now = new Date();
+    const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update the booking dates and pricing if provided
+      // --- Spot Allocation Logic ---
+      let finalSpotId = booking.spotId;
+      let finalSpotIdentifier = booking.spotIdentifier;
+
+      // 1. Check if original spot is available for the new window (excluding current booking)
+      const conflictOnOriginal = await (tx as any).booking.findFirst({
+        where: {
+          spotId: booking.spotId,
+          id: { not: bookingId },
+          OR: [
+            { parkingSession: { status: "checked_in" } },
+            {
+              status: { in: ["CONFIRMED", "PENDING"] },
+              checkOut: { gt: checkIn },
+              AND: [
+                { checkIn: { lt: checkOut } },
+                { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
+              ]
+            }
+          ]
+        },
+        orderBy: { checkIn: "asc" }
+      });
+
+      if (conflictOnOriginal) {
+        // Original spot is taken in the new window.
+
+        // If already parked (active session), we cannot move them
+        const isParked = booking.parkingSession && booking.parkingSession.checkInTime && !booking.parkingSession.checkOutTime;
+
+        if (isParked) {
+          const conflictingTime = conflictOnOriginal.checkIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          throw new Error(`This slot is booked for this time (${conflictingTime}) and we can't provide you another spot because we can't give 2 spot for one person`);
+        }
+
+        // If future booking, attempt to re-allocate a different spot
+        const newSpot = await allocateSpotForBooking(booking.locationId, checkIn, checkOut, tx);
+        if (!newSpot) {
+          throw new Error("No spots available for the selected time slot.");
+        }
+        finalSpotId = newSpot.id;
+        finalSpotIdentifier = newSpot.identifier;
+      }
+
+      // 2. Update the booking dates and pricing if provided
       const updateData: any = {
         checkIn,
         checkOut,
+        spotId: finalSpotId,
+        spotIdentifier: finalSpotIdentifier,
       };
 
       if (pricingData) {
@@ -886,16 +932,17 @@ export async function cleanupExpiredBookings() {
   try {
     const now = new Date();
     const settings = await getGeneralSettings();
-    const gracePeriodMinutes = settings.gracePeriodMinutes || 120;
+    const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
     const expirationThreshold = new Date(now.getTime() - gracePeriodMinutes * 60 * 1000);
 
-    // Find sessions that are RESERVED/PENDING but their checkout time was > grace period ago
+    // Find sessions that are RESERVED but their scheduled checkIn was > grace period ago
+    // AND they haven't actually checked in (status is still RESERVED in session)
     const expiredSessions = await prisma.parkingSession.findMany({
       where: {
-        status: { in: ["RESERVED", "PENDING", "reserved", "pending"] },
+        status: "RESERVED",
         booking: {
-          checkOut: { lt: expirationThreshold },
-          status: { notIn: ["CANCELLED", "COMPLETED", "REJECTED"] }
+          checkIn: { lt: expirationThreshold },
+          status: "CONFIRMED"
         }
       },
       include: {
@@ -922,7 +969,7 @@ export async function cleanupExpiredBookings() {
         // 2. Update Booking status
         await tx.booking.update({
           where: { id: session.bookingId },
-          data: { status: "EXPIRED" as any } // Mark as EXPIRED instead of COMPLETED
+          data: { status: "NO_SHOW" as any }
         });
 
         // 3. Release the spot

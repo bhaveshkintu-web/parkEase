@@ -769,7 +769,7 @@ export default function AdminSettingsPage() {
                     id="gracePeriodMinutes"
                     type="number"
                     className="w-24 text-right"
-                    value={generalSettings.gracePeriodMinutes || 120}
+                    value={generalSettings.gracePeriodMinutes ?? 120}
                     onChange={(e) =>
                       setGeneralSettings((prev) => ({
                         ...prev,
@@ -792,8 +792,6 @@ export default function AdminSettingsPage() {
                   </Button>
                 </div>
               </div>
-
-              {/* Tax Rate */}
               <div className="flex items-center justify-between border-t border-border pt-6">
                 <div className="space-y-0.5">
                   <Label htmlFor="taxRate">Platform Tax Rate (%)</Label>
@@ -973,9 +971,9 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         {/* Promotion Settings */}
-        <TabsContent value="promotions" className="space-y-6">
+        < TabsContent value="promotions" className="space-y-6" >
           {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          < div className="grid grid-cols-2 lg:grid-cols-4 gap-4" >
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Active Promotions</p>
@@ -1115,7 +1113,7 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-6">
+        < TabsContent value="notifications" className="space-y-6" >
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1274,7 +1272,7 @@ export default function AdminSettingsPage() {
             </CardFooter>
           </Card>
         </TabsContent>
-      </Tabs>
+      </Tabs >
 
       {/* Commission Dialog */}
       <Dialog
@@ -1282,7 +1280,8 @@ export default function AdminSettingsPage() {
         onOpenChange={(open) => {
           setIsCommissionDialogOpen(open);
           if (!open) resetCommissionForm();
-        }}
+        }
+        }
       >
         <DialogContent>
           <DialogHeader>
@@ -1716,7 +1715,7 @@ export default function AdminSettingsPage() {
       </AlertDialog>
 
       {/* Audit Log Dialog */}
-      <Dialog open={showAuditLog} onOpenChange={setShowAuditLog}>
+      < Dialog open={showAuditLog} onOpenChange={setShowAuditLog} >
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

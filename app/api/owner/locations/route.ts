@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { ownerLocationSchema } from "@/lib/validations";
 import { notifyAdminsOfLocationSubmission } from "@/lib/notifications";
+import { createSpotsForLocation, generateSpotIdentifiers } from "@/lib/actions/spot-actions";
 
 /**
  * @api {post} /api/owner/locations Create a new parking location
@@ -134,6 +135,15 @@ export async function POST(req: NextRequest) {
           occupancyRate: 0,
         },
       });
+
+      // Create Parking Spots
+      // If owner provided specific identifiers, use them. 
+      // Otherwise, generate default ones (A1, A2...) based on totalSpots.
+      const identifiers = (data as any).spotIdentifiers && (data as any).spotIdentifiers.length > 0
+        ? (data as any).spotIdentifiers
+        : generateSpotIdentifiers("A1", data.totalSpots);
+
+      await createSpotsForLocation(location.id, identifiers, tx);
 
       return location;
     });

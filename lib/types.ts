@@ -120,6 +120,8 @@ export interface Booking {
   status: "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
   confirmationCode: string;
   qrCode: string;
+  spotId?: string;
+  spotIdentifier?: string;
   createdAt: Date;
 }
 

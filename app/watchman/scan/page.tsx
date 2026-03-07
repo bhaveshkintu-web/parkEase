@@ -53,6 +53,8 @@ interface ScanResult {
       firstName: string;
       lastName: string;
     };
+    spotIdentifier?: string;
+    status: string;
   };
 }
 
@@ -95,6 +97,7 @@ export default function WatchmanScanPage() {
   const handleManualSearch = () => {
     setError("");
 
+    const now = new Date();
     // Search in DB bookings first
     let booking = dbBookings.find(
       (b) =>
@@ -125,14 +128,23 @@ export default function WatchmanScanPage() {
       return;
     }
 
-    // Determine if this is a check-in or check-out
-    const now = new Date();
     const checkInDate = new Date(booking.checkIn);
-    const checkOutDate = new Date(booking.checkOut);
 
-    // If within check-in window or hasn't checked in yet
-    const isCheckIn = now >= new Date(checkInDate.getTime() - 2 * 60 * 60 * 1000); // 2 hours before
-    const isCheckOut = now >= checkOutDate || booking.status === "confirmed";
+    // 1. Strict No-Show / Expired Block
+    const normalizedStatus = booking.status.toLowerCase();
+    if (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show") {
+      setError(`Cannot process: This booking is marked as ${normalizedStatus.toUpperCase()}.`);
+      return;
+    }
+
+    // 2. Early Check-in Prevention
+    const isCheckInType = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending");
+    if (isCheckInType && now < checkInDate) {
+      const checkInTimeStr = checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const checkInDateStr = checkInDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      setError(`Check-in not available until ${checkInTimeStr} on ${checkInDateStr}`);
+      return;
+    }
 
     setScanResult({
       type: (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out",
@@ -155,6 +167,8 @@ export default function WatchmanScanPage() {
           firstName: booking.guestInfo.firstName,
           lastName: booking.guestInfo.lastName,
         },
+        spotIdentifier: booking.spotIdentifier,
+        status: booking.status.toLowerCase(),
       },
     });
   };
@@ -200,6 +214,23 @@ export default function WatchmanScanPage() {
     // Determine if this is a check-in or check-out
     const type = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out";
 
+    // Block expired or no-show bookings
+    const now = new Date();
+    const checkInDate = new Date(booking.checkIn);
+    const normalizedStatus = booking.status.toLowerCase();
+
+    if (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show") {
+      setError(`Cannot process: This booking is marked as ${normalizedStatus.toUpperCase()}.`);
+      return;
+    }
+
+    // Early Check-in Prevention
+    if (type === "check_in" && now < checkInDate) {
+      const checkInTimeStr = checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setError(`Check-in not available until ${checkInTimeStr}`);
+      return;
+    }
+
     setScanResult({
       type,
       booking: {
@@ -220,6 +251,8 @@ export default function WatchmanScanPage() {
           firstName: booking.guestInfo.firstName,
           lastName: booking.guestInfo.lastName,
         },
+        spotIdentifier: booking.spotIdentifier,
+        status: booking.status.toLowerCase(),
       },
     });
   };
@@ -474,6 +507,14 @@ export default function WatchmanScanPage() {
                     {scanResult.booking.guestInfo.lastName}
                   </span>
                 </div>
+                {scanResult.booking.spotIdentifier && (
+                  <div className="flex items-center justify-between pt-2 border-t border-dashed">
+                    <span className="text-sm font-bold text-primary italic uppercase tracking-wider">Allocated Spot</span>
+                    <span className="text-lg font-black text-primary px-3 py-1 bg-primary/10 rounded-md">
+                      {scanResult.booking.spotIdentifier}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Vehicle Info */}
