@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getBookingDetails } from "@/lib/actions/booking-actions";
 import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
-import { extendBookingAction } from "@/lib/actions/extension-actions";
+import { extendBookingAction, checkExtensionOverlapAction } from "@/lib/actions/extension-actions";
 import { formatCurrency, formatTime, formatDate } from "@/lib/data";
-import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
@@ -36,6 +36,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
     const [mockExpiryYear, setMockExpiryYear] = useState("");
     const [mockCvv, setMockCvv] = useState("");
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [overlapInfo, setOverlapInfo] = useState<{ hasOverlap: boolean; maxAllowedMinutes: number | null; nextBookingCheckIn?: Date } | null>(null);
 
     const formatCardNumber = (val: string) => {
         return val.replace(/\D/g, "").replace(/(\d{4})/g, "$1 ").trim().substring(0, 19);
@@ -55,21 +56,40 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                 }
             });
         });
-    }, []);
+
+        // Check for overlaps
+        checkExtensionOverlapAction(booking.id).then(res => {
+            if (res.success) {
+                setOverlapInfo({
+                    hasOverlap: res.hasOverlap ?? false,
+                    maxAllowedMinutes: res.maxAllowedMinutes ?? null,
+                    nextBookingCheckIn: res.nextBookingCheckIn ? new Date(res.nextBookingCheckIn) : undefined
+                });
+            }
+        });
+    }, [booking.id]);
 
     const options = [
-        { label: "30 Minutes", minutes: 30, basePrice: booking.location.pricePerDay / 48 }, // Crude hourly conversion
+        { label: "30 Minutes", minutes: 30, basePrice: booking.location.pricePerDay / 48 },
         { label: "1 Hour", minutes: 60, basePrice: booking.location.pricePerDay / 24 },
         { label: "2 Hours", minutes: 120, basePrice: booking.location.pricePerDay / 12 },
     ];
 
+    // Filter options based on overlap
+    const availableOptions = options.filter(opt => {
+        if (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null) {
+            return opt.minutes <= overlapInfo.maxAllowedMinutes;
+        }
+        return true;
+    });
+
     if (isCustomMode) {
         const customMinutes = customHours * 60;
-        options.push({ label: "Custom", minutes: customMinutes, basePrice: (booking.location.pricePerDay / 48) * (customMinutes / 30) });
+        availableOptions.push({ label: "Custom", minutes: customMinutes, basePrice: (booking.location.pricePerDay / 48) * (customMinutes / 30) });
     }
 
     // Calculate total price with taxes and fees
-    const enrichedOptions = options.map(opt => {
+    const enrichedOptions = availableOptions.map(opt => {
         const _basePrice = opt.basePrice;
         const subtotal = _basePrice;
         const addTaxes = subtotal * (taxRate / 100);
@@ -153,6 +173,18 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
     return (
         <div className="space-y-6">
+            {overlapInfo?.hasOverlap && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 text-amber-800">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                        <p className="font-bold">Limited Extension Available</p>
+                        <p className="opacity-90">
+                            Another reservation starts at {formatTime(overlapInfo.nextBookingCheckIn!)}.
+                            You can extend for a maximum of <b>{overlapInfo.maxAllowedMinutes} minutes</b>.
+                        </p>
+                    </div>
+                </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {enrichedOptions.filter(o => o.label !== "Custom").map((opt) => (
                     <div
@@ -206,6 +238,11 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                     <p className="text-xs text-muted-foreground">
                         {customHours * 60} minutes total
                     </p>
+                    {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && customHours * 60 > overlapInfo.maxAllowedMinutes && (
+                        <p className="text-xs text-destructive font-bold">
+                            ⚠️ Exceeds available time limit ({overlapInfo.maxAllowedMinutes} mins)
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -351,10 +388,12 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                     <Button
                         className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
                         onClick={handleExtend}
-                        disabled={isProcessing || (!isStripeConfigured && !isMockFormValid)}
+                        disabled={isProcessing || (!isStripeConfigured && !isMockFormValid) || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
                     >
                         {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                        Pay & Extend Session
+                        {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes
+                            ? "Time Slot Unavailable"
+                            : "Pay & Extend Session"}
                     </Button>
                 </div>
             )}
@@ -467,6 +506,19 @@ export default function ExtendParkingPage() {
                                     <div>
                                         <p className="font-bold leading-tight">{booking.location.name}</p>
                                         <p className="text-sm text-muted-foreground mt-1">{booking.location.address}</p>
+                                    </div>
+                                </div>
+
+                                {/* Assigned Spot */}
+                                <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                                        <SquareParking className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Assigned Spot</p>
+                                        <p className="font-black text-lg leading-tight">
+                                            {booking.spotIdentifier || "General Parking"}
+                                        </p>
                                     </div>
                                 </div>
 
