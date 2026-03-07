@@ -15,8 +15,6 @@ type EarningsOverview = {
   pendingEarnings: number;
   availableBalance: number;
   thisYearEarnings: number;
-  startDate?: string;
-  endDate?: string;
   customEarnings: number;
 };
 
@@ -61,34 +59,43 @@ async function getOwnerId() {
   return (session.user as any).ownerId as string;
 }
 
-// --- Actions ---
+// reusable date filter
+function buildDateFilter(startDate?: string, endDate?: string) {
 
-export async function getOwnerEarningsOverview(startDate?: string, endDate?: string): Promise<EarningsOverview> {
-  const ownerId = await getOwnerId();
-
-  let dateFilter = {};
-
-  if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-  
-    end.setDate(end.getDate() + 1); // include full end day
-  
-    dateFilter = {
-      createdAt: {
-        gte: start,
-        lt: end,
-      }
-    };
+  if (!startDate || !endDate) {
+    return {};
   }
 
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // Check if dates are valid
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return {};
+  }
+
+  // include full end day
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    createdAt: {
+      gte: start,
+      lte: end,
+    },
+  };
+}
+
+// --- Actions ---
+export async function getOwnerEarningsOverview(startDate?: string, endDate?: string): Promise<EarningsOverview> {
+  const ownerId = await getOwnerId();
+  const dateFilter = buildDateFilter(startDate, endDate);
+  
   // 1. Total Earnings (Sum of CONFIRMED or COMPLETED bookings)
   const totalEarningsResult = await prisma.booking.aggregate({
     _sum: { totalPrice: true },
     where: {
       location: { ownerId },
       status: { in: ["CONFIRMED", "COMPLETED"] },
-      ...dateFilter,
     },
   });
 
@@ -144,41 +151,28 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
   });
 
   // 7. This Year Earnings
-const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-const thisYearResult = await prisma.booking.aggregate({
-  _sum: { totalPrice: true },
-  where: {
-    location: { ownerId },
-    status: { in: ["CONFIRMED", "COMPLETED"] },
-    createdAt: {
-      gte: startOfYear,
-    },
-  },
-});
-
-// 8. Custom Date Range Earnings
-let customResult = { _sum: { totalPrice: 0 } };
-
-if (startDate && endDate) {
-
-  const start = new Date(startDate);
-
-  const end = new Date(endDate);
-  end.setDate(end.getDate() + 1); // move to next day
-
-  customResult = await prisma.booking.aggregate({
+  const thisYearResult = await prisma.booking.aggregate({
     _sum: { totalPrice: true },
     where: {
       location: { ownerId },
       status: { in: ["CONFIRMED", "COMPLETED"] },
       createdAt: {
-        gte: start,
-        lt: end, // less than next day
+        gte: startOfYear,
       },
     },
   });
-}
+
+  // 8. Custom Date Range Earnings
+  const customResult = await prisma.booking.aggregate({
+    _sum: { totalPrice: true },
+    where: {
+      location: { ownerId },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
+      ...dateFilter,
+    },
+  });
 
   return {
     totalEarnings: totalEarningsResult._sum.totalPrice || 0,
@@ -204,15 +198,10 @@ async function getAvailableBalance(ownerId: string): Promise<number> {
 export async function getEarningsBreakdown(startDate?: string, endDate?: string): Promise<BreakdownData> {
   const ownerId = await getOwnerId();
 
-  const dateFilter = startDate && endDate ? {
-    createdAt: {
-      gte: new Date(startDate),
-      lte: new Date(endDate),
-    }
-  } : {};
+  const dateFilter = buildDateFilter(startDate, endDate);
 
-  // For monthly trend, we use Booking.createdAt
-  const monthlyEarningsRaw = await prisma.$queryRaw`
+ // For monthly trend, we use Booking.createdAt
+  const monthlyEarningsRaw = await prisma.$queryRaw<{ month: string; amount: number }[]>`
     SELECT TO_CHAR("createdAt", 'Mon YYYY') as month, SUM("totalPrice") as amount
     FROM "Booking"
     WHERE "locationId" IN (SELECT id FROM "ParkingLocation" WHERE "ownerId" = ${ownerId})
@@ -222,7 +211,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     LIMIT 12
   ` as { month: string, amount: number }[];
 
-  // 2. Earnings grouped by Location
+// 2. Earnings grouped by Location
   const locationEarnings = await prisma.booking.groupBy({
     by: ['locationId'],
     _sum: { totalPrice: true, taxes: true, fees: true },
@@ -233,7 +222,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     },
   });
 
-  // Fetch location names
+// Fetch location names
   const locationIds = locationEarnings.map(e => e.locationId);
   const locations = await prisma.parkingLocation.findMany({
     where: { id: { in: locationIds } },
@@ -250,7 +239,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     };
   });
 
-  // 3. Total tax, fees, net
+ // 3. Total tax, fees, net
   const totals = await prisma.booking.aggregate({
     _sum: { totalPrice: true, taxes: true, fees: true },
     where: {
@@ -274,19 +263,14 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
 export async function getLocationMetrics(startDate?: string, endDate?: string): Promise<OwnerLocationMetric[]> {
   const ownerId = await getOwnerId();
 
-  const dateFilter = startDate && endDate ? {
-    createdAt: {
-      gte: new Date(startDate),
-      lte: new Date(endDate),
-    }
-  } : {};
+  const dateFilter = buildDateFilter(startDate, endDate);
 
   const locs = await prisma.parkingLocation.findMany({
     where: { ownerId },
     select: { id: true, name: true, totalSpots: true, analytics: { select: { occupancyRate: true } } }
   });
 
-  // Aggregations
+// Aggregations
   const stats = await prisma.booking.groupBy({
     by: ['locationId'],
     _count: { id: true },
@@ -308,7 +292,7 @@ export async function getLocationMetrics(startDate?: string, endDate?: string): 
     }
   });
 
-  // Merge
+    // Merge
   return locs.map(loc => {
     const stat = stats.find(s => s.locationId === loc.id);
     const completed = completedStats.find(s => s.locationId === loc.id);

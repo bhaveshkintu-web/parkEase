@@ -395,7 +395,7 @@ useEffect(() => {
             <p className="text-center text-muted-foreground py-10">No locations found.</p>
           )}
         </TabsContent>
-        
+
       </Tabs>
     </div>
   );
