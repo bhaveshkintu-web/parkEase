@@ -122,6 +122,9 @@ export async function GET(request: NextRequest) {
           notes: s.notes,
           expectedCheckIn: booking.checkIn.toISOString(),
           expectedCheckOut: booking.checkOut.toISOString(),
+          overstayMinutes: s.overstayMinutes,
+          overstayCharge: s.overstayCharge,
+          paymentStatus: s.paymentStatus,
         };
       })
     });
@@ -223,12 +226,57 @@ export async function POST(request: NextRequest) {
         });
       }
     } else if (action === "check-out") {
+      const now = new Date();
+      const checkOutLimit = new Date(booking.checkOut);
+
+      // Calculate overstay if any
+      if (now > checkOutLimit && parkingSession.paymentStatus !== "PAID") {
+        const diffMs = now.getTime() - checkOutLimit.getTime();
+        const diffMins = Math.ceil(diffMs / 60000);
+
+        // Find location to get rates
+        const location = await prisma.parkingLocation.findUnique({
+          where: { id: booking.locationId }
+        });
+
+        const ratePer15Min = (location?.pricePerDay || 20) / (24 * 4);
+        const overstayRateUnit = Math.ceil(diffMins / 15);
+        const overstayCharge = overstayRateUnit * (ratePer15Min * 2); // Double rate
+
+        // Mark as waiting for payment
+        await prisma.parkingSession.update({
+          where: { id: parkingSession.id },
+          data: {
+            overstayMinutes: diffMins,
+            overstayCharge: overstayCharge,
+            paymentStatus: "PENDING",
+            actualCheckOutTime: now,
+          }
+        });
+
+        await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: "WAITING_OVERSTAY_PAYMENT" as any }
+        });
+
+        return NextResponse.json({
+          success: false,
+          error: "OVERSTAY_DETECTED",
+          details: {
+            overstayMinutes: diffMins,
+            overstayCharge: overstayCharge,
+            checkOutLimit: checkOutLimit.toISOString(),
+          }
+        }, { status: 402 }); // 402 Payment Required
+      }
+
       parkingSession = await prisma.parkingSession.update({
         where: { id: parkingSession.id },
         data: {
           status: "checked_out",
-          checkOutTime: new Date(),
-          updatedAt: new Date()
+          checkOutTime: now,
+          actualCheckOutTime: now,
+          updatedAt: now
         }
       });
 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "concurrently \"next dev\" \"npx tsx scripts/check-expiry-notifications.ts\"",
     "lint": "eslint .",
     "start": "next start",
     "migration-dev": "npx prisma migrate dev --name add_user_password",
@@ -102,6 +102,7 @@
     "@types/nodemailer": "^7.0.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "ts-node": "^10.9.2",
