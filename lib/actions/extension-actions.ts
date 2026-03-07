@@ -24,10 +24,10 @@ export async function checkExtensionOverlapAction(bookingId: string) {
         const nextBooking = await (prisma.booking as any).findFirst({
             where: {
                 id: { not: bookingId },
-                locationId: booking.locationId,
-                ...(booking.spotId ? { spotId: booking.spotId } : {}),
+                locationId: (booking as any).locationId,
+                ...((booking as any).spotId ? { spotId: (booking as any).spotId } : {}),
                 checkIn: { gt: currentCheckOut },
-                status: { in: ["CONFIRMED", "PENDING"] },
+                status: { in: ["CONFIRMED", "PENDING"] as any },
             },
             orderBy: { checkIn: "asc" },
             select: { checkIn: true, guestFirstName: true, guestLastName: true, confirmationCode: true }
@@ -83,13 +83,13 @@ export async function extendBookingAction(bookingId: string, additionalMinutes: 
         const conflictingBooking = await (prisma.booking as any).findFirst({
             where: {
                 id: { not: bookingId },
-                locationId: booking.locationId,
-                ...(booking.spotId ? { spotId: booking.spotId } : {}),
+                locationId: (booking as any).locationId,
+                ...((booking as any).spotId ? { spotId: (booking as any).spotId } : {}),
                 checkIn: {
-                    gt: booking.checkOut,  // starts after the CURRENT checkout
+                    gt: (booking as any).checkOut,  // starts after the CURRENT checkout
                     lt: newCheckOut,       // starts before the NEW checkout
                 },
-                status: { in: ["CONFIRMED", "PENDING"] },
+                status: { in: ["CONFIRMED", "PENDING"] as any },
             },
             orderBy: { checkIn: "asc" },
             select: { checkIn: true, confirmationCode: true }
