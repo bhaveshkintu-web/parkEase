@@ -14,6 +14,10 @@ type EarningsOverview = {
   completedBookings: number;
   pendingEarnings: number;
   availableBalance: number;
+  thisYearEarnings: number;
+  startDate?: string;
+  endDate?: string;
+  customEarnings: number;
 };
 
 type MonthlyEarnings = {
@@ -62,12 +66,21 @@ async function getOwnerId() {
 export async function getOwnerEarningsOverview(startDate?: string, endDate?: string): Promise<EarningsOverview> {
   const ownerId = await getOwnerId();
 
-  const dateFilter = startDate && endDate ? {
-    createdAt: {
-      gte: new Date(startDate),
-      lte: new Date(endDate),
-    }
-  } : {};
+  let dateFilter = {};
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+  
+    end.setDate(end.getDate() + 1); // include full end day
+  
+    dateFilter = {
+      createdAt: {
+        gte: start,
+        lt: end,
+      }
+    };
+  }
 
   // 1. Total Earnings (Sum of CONFIRMED or COMPLETED bookings)
   const totalEarningsResult = await prisma.booking.aggregate({
@@ -130,6 +143,43 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
     },
   });
 
+  // 7. This Year Earnings
+const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+const thisYearResult = await prisma.booking.aggregate({
+  _sum: { totalPrice: true },
+  where: {
+    location: { ownerId },
+    status: { in: ["CONFIRMED", "COMPLETED"] },
+    createdAt: {
+      gte: startOfYear,
+    },
+  },
+});
+
+// 8. Custom Date Range Earnings
+let customResult = { _sum: { totalPrice: 0 } };
+
+if (startDate && endDate) {
+
+  const start = new Date(startDate);
+
+  const end = new Date(endDate);
+  end.setDate(end.getDate() + 1); // move to next day
+
+  customResult = await prisma.booking.aggregate({
+    _sum: { totalPrice: true },
+    where: {
+      location: { ownerId },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
+      createdAt: {
+        gte: start,
+        lt: end, // less than next day
+      },
+    },
+  });
+}
+
   return {
     totalEarnings: totalEarningsResult._sum.totalPrice || 0,
     thisMonthEarnings: thisMonthResult._sum.totalPrice || 0,
@@ -138,6 +188,8 @@ export async function getOwnerEarningsOverview(startDate?: string, endDate?: str
     completedBookings,
     pendingEarnings: pendingEarningsResult._sum.totalPrice || 0,
     availableBalance: await getAvailableBalance(ownerId),
+    thisYearEarnings: thisYearResult._sum.totalPrice || 0,
+    customEarnings: customResult._sum.totalPrice || 0,
   };
 }
 

@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 import { getOwnerEarningsOverview, getEarningsBreakdown, getLocationMetrics } from "@/app/actions/owner-earnings";
 import type { OverviewMetrics } from "@/lib/types/analytics.types";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function OwnerEarningsPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -48,29 +50,41 @@ export default function OwnerEarningsPage() {
   const [breakdown, setBreakdown] = useState<any>(null);
   const [locations, setLocations] = useState<any[]>([]);
   const [exporting, setExporting] = useState(false);
-  const [period, setPeriod] = useState<"this_month" | "last_month" | "all_time">("this_month");
-  const fetchAllData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [ovData, brData, locData] = await Promise.all([
-        getOwnerEarningsOverview(period),
-        getEarningsBreakdown(period),
-        getLocationMetrics(period)
-      ]);
-      setOverview(ovData);
-      setBreakdown(brData);
-      setLocations(locData);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load earnings data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
+  const [period, setPeriod] = useState<"this_month" | "last_month" | "this_year" | "custom" | "all_time">("this_month");
+  const [startDate, setStartDate] = useState<Date | undefined>();
+const [endDate, setEndDate] = useState<Date | undefined>();
+const fetchAllData = useCallback(async () => {
+  try {
+    setLoading(true);
 
-  useEffect(() => {
+    const start = startDate ? startDate.toISOString() : undefined;
+    const end = endDate ? endDate.toISOString() : undefined;
+
+    const [ovData, brData, locData] = await Promise.all([
+      getOwnerEarningsOverview(start, end),
+      getEarningsBreakdown(start, end),
+      getLocationMetrics(start, end)
+    ]);
+    setOverview(ovData);
+    setBreakdown(brData);
+    setLocations(locData);
+  } catch (err) {
+    console.error(err);
+    setError("Failed to load earnings data.");
+  } finally {
+    setLoading(false);
+  }
+}, [period, startDate, endDate]);
+
+useEffect(() => {
+  if (period === "custom") {
+    if (startDate && endDate) {
+      fetchAllData();
+    }
+  } else {
     fetchAllData();
-  }, [fetchAllData]);
+  }
+}, [period, startDate, endDate]);
 
   if (loading) {
     return (
@@ -109,6 +123,10 @@ export default function OwnerEarningsPage() {
     ? overview.thisMonthEarnings
     : period === "last_month"
     ? overview.lastMonthEarnings
+    : period === "this_year"
+    ? overview.thisYearEarnings
+    : period === "custom"
+    ? overview.customEarnings
     : overview.totalEarnings;
 
   return (
@@ -127,16 +145,53 @@ export default function OwnerEarningsPage() {
             value={period}
             onValueChange={(value) => setPeriod(value as any)}
           >
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px]">
               <Calendar className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Period" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="this_month">This Month</SelectItem>
               <SelectItem value="last_month">Last Month</SelectItem>
+              <SelectItem value="this_year">This Year</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
               <SelectItem value="all_time">All Time</SelectItem>
             </SelectContent>
           </Select>
+          {period === "custom" && (
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    {startDate ? startDate.toDateString() : "Start Date"}
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-auto p-0">
+                  <CalendarPicker
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline">
+                    {endDate ? endDate.toDateString() : "End Date"}
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-auto p-0">
+                  <CalendarPicker
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
           <Button
             variant="outline"
             onClick={handleExport}
@@ -166,7 +221,7 @@ export default function OwnerEarningsPage() {
             <Card>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                <p className="text-xs text-muted-foreground uppercase font-bold">Total Earnings</p>
+                  <p className="text-xs text-muted-foreground uppercase font-bold">Total Earnings</p>
                   <p className="text-xl font-bold">{formatCurrency(overview.totalEarnings)}</p>
                 </div>
                 <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><DollarSign className="w-5 h-5" /></div>
@@ -180,6 +235,10 @@ export default function OwnerEarningsPage() {
                       ? "This Month"
                       : period === "last_month"
                       ? "Last Month"
+                      : period === "this_year"
+                      ? "This Year"
+                      : period === "custom"
+                      ? "Custom"
                       : "All Time"}
                   </p>
                   <p className="text-xl font-bold">
@@ -336,7 +395,7 @@ export default function OwnerEarningsPage() {
             <p className="text-center text-muted-foreground py-10">No locations found.</p>
           )}
         </TabsContent>
-
+        
       </Tabs>
     </div>
   );
