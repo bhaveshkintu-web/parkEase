@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import { markOverstayAsPaidAction, sendOverstayLinkAction } from "@/lib/actions/overstay-actions";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,7 @@ export default function WatchmanScanPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [overstayInfo, setOverstayInfo] = useState<any | null>(null);
   const [dbBookings, setDbBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -273,6 +275,14 @@ export default function WatchmanScanPage() {
       }
 
       if (!result.success) {
+        if (result.error === "OVERSTAY_DETECTED") {
+          setOverstayInfo({
+            booking: scanResult.booking,
+            ...(result as any).details
+          });
+          setScanResult(null);
+          return;
+        }
         throw new Error(result.error || "Action failed");
       }
 
@@ -614,6 +624,80 @@ export default function WatchmanScanPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Overstay Dialog */}
+      <Dialog open={!!overstayInfo} onOpenChange={() => setOverstayInfo(null)}>
+        <DialogContent className="max-w-md border-2 border-red-500 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 text-2xl font-black">
+              <AlertTriangle className="w-8 h-8" />
+              Overstay Detected
+            </DialogTitle>
+            <DialogDescription className="text-red-700 font-medium">
+              This vehicle has exceeded the booked duration. Payment is required before check-out.
+            </DialogDescription>
+          </DialogHeader>
+
+          {overstayInfo && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-muted rounded-xl space-y-1">
+                  <span className="text-[10px] uppercase font-black text-muted-foreground">Original Checkout</span>
+                  <p className="font-bold text-sm">{formatTime(overstayInfo.checkOutLimit)}</p>
+                </div>
+                <div className="p-4 bg-red-50 border border-red-100 rounded-xl space-y-1 text-red-700">
+                  <span className="text-[10px] uppercase font-black">Overstay Time</span>
+                  <p className="font-bold text-lg">{overstayInfo.overstayMinutes} Minutes</p>
+                </div>
+              </div>
+
+              <div className="p-6 bg-red-600 text-white rounded-2xl shadow-xl space-y-2 text-center">
+                <p className="text-sm font-bold uppercase tracking-widest opacity-80">Overstay Charge</p>
+                <p className="text-4xl font-black tracking-tighter">
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(overstayInfo.overstayCharge)}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-center text-muted-foreground px-4">
+                  Please ask the customer to pay using the link below or by scanning the QR code on their phone.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    className="w-full h-12 bg-black text-white hover:bg-zinc-800 font-bold"
+                    onClick={async () => {
+                      const res = await sendOverstayLinkAction(overstayInfo.booking.id, overstayInfo.overstayCharge);
+                      if (res.success) {
+                        toast({ title: "Payment Link Sent", description: "The customer has received the payment link." });
+                      } else {
+                        toast({ title: "Failed", description: (res as any).error, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    Send Payment Link to Email
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 border-2 border-primary text-primary font-bold"
+                    onClick={async () => {
+                      const res = await markOverstayAsPaidAction(overstayInfo.booking.id);
+                      if (res.success) {
+                        toast({ title: "Marked as Paid", description: "Overstay payment recorded." });
+                        setOverstayInfo(null);
+                        router.push("/watchman/sessions");
+                      } else {
+                        toast({ title: "Failed", description: (res as any).error, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    Mark as Paid (Cash/POS)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

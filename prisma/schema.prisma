@@ -192,6 +192,8 @@ model Booking {
   spotIdentifier   String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+  extensionPaymentId String?
+  overstayPaymentId  String?
   location         ParkingLocation @relation(fields: [locationId], references: [id])
   user             User?           @relation(fields: [userId], references: [id])
   spot             ParkingSpot?    @relation(fields: [spotId], references: [id])
@@ -209,6 +211,7 @@ model Payment {
   provider        String
   transactionId   String
   status          String
+  type            String?
   createdAt       DateTime       @default(now())
   paymentMethodId String?
   booking         Booking        @relation(fields: [bookingId], references: [id])
@@ -306,6 +309,12 @@ model ParkingSession {
   locationId   String
   checkInTime  DateTime?
   checkOutTime DateTime?
+  actualCheckInTime  DateTime?
+  actualCheckOutTime DateTime?
+  overstayMinutes    Int?
+  overstayCharge     Float?
+  paymentStatus      String?
+  expiryWarningSentAt DateTime?
   status       String
   updatedAt    DateTime        @updatedAt
   booking      Booking         @relation(fields: [bookingId], references: [id])
@@ -647,6 +656,8 @@ enum BookingStatus {
   COMPLETED
   REJECTED
   EXPIRED
+  OVERSTAY
+  WAITING_OVERSTAY_PAYMENT
 }
 
 enum ParkingStatus {
@@ -792,6 +803,7 @@ enum NotificationType {
   WITHDRAWAL_REJECTED
   REFUND_DEDUCTION
   NEW_BOOKING
+  SESSION_EXPIRY_WARNING
 }
 
 model UserSession {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import type {
   SavedVehicle,
   PaymentMethod,
@@ -786,8 +786,8 @@ interface DataStoreContextType {
 
   // Watchman: Sessions
   parkingSessions: ParkingSession[];
-  checkInVehicle: (sessionId: string, watchmanId: string) => Promise<{ success: boolean; error?: string }>;
-  checkOutVehicle: (sessionId: string, watchmanId: string) => Promise<{ success: boolean; error?: string }>;
+  checkInVehicle: (id: string, notes?: string) => Promise<{ success: boolean; error?: string }>;
+  checkOutVehicle: (id: string, notes?: string) => Promise<{ success: boolean; error?: string; details?: any; session?: any }>;
 
   // Admin: Disputes
   disputes: Dispute[];
@@ -1318,14 +1318,16 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: id, action: "check-out", notes }),
       });
-      if (!res.ok) throw new Error("Failed to check out");
-
       const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Failed to check out", details: data.details };
+      }
+
       const updatedSession = data.session;
       setParkingSessions((prev) =>
         prev.map((s) => (s.bookingId === id ? updatedSession : s))
       );
-      return { success: true };
+      return { success: true, session: updatedSession };
     } catch (error: any) {
       console.error(error);
       return { success: false, error: error.message };
@@ -1618,90 +1620,111 @@ export function DataStoreProvider({ children }: { children: React.ReactNode }) {
     setBookingRequests((prev) => prev.map((r) => (r.id === id ? updatedRequest : r)));
   }, []);
 
+  const contextValue = useMemo(() => ({
+    vehicles,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
+    setDefaultVehicle,
+    payments,
+    addPayment,
+    updatePayment,
+    deletePayment,
+    setDefaultPayment,
+    reservations,
+    addReservation,
+    updateReservation,
+    cancelReservation,
+    adminReviews,
+    setReviewData,
+    moderateReview,
+    deleteReview,
+    addOwnerReply,
+    updateOwnerReply,
+    deleteOwnerReply,
+    adminLocations,
+    addLocation,
+    updateLocation,
+    deleteLocation,
+    setLocationStatus,
+    watchmen,
+    addWatchman,
+    updateWatchman,
+    deleteWatchman,
+    wallet,
+    transactions,
+    requestWithdrawal,
+    parkingSessions,
+    checkInVehicle,
+    checkOutVehicle,
+    disputes,
+    updateDispute,
+    parkingApprovals,
+    reviewParkingApproval,
+    refundRequests,
+    processRefund,
+    commissionRules,
+    addCommissionRule,
+    updateCommissionRule,
+    deleteCommissionRule,
+    pricingRules,
+    addPricingRule,
+    updatePricingRule,
+    deletePricingRule,
+    promotions,
+    addPromotion,
+    updatePromotion,
+    deletePromotion,
+    cmsPages,
+    addCMSPage,
+    updateCMSPage,
+    deleteCMSPage,
+    publishCMSPage,
+    users,
+    ownerProfiles,
+    addOwnerProfile,
+    updateOwnerProfile,
+    deleteOwnerProfile,
+    approveOwner,
+    suspendOwner,
+    reactivateOwner,
+    verifyOwnerDocument,
+    isLoading,
+    initializeForUser,
+    initializeForOwner,
+    initializeForWatchman,
+    currentOwnerProfile,
+    bookingRequests,
+    fetchBookingRequests,
+    fetchWatchmanLocations,
+    addBookingRequest,
+    updateBookingRequestStatus,
+  }), [
+    vehicles, addVehicle, updateVehicle, deleteVehicle, setDefaultVehicle,
+    payments, addPayment, updatePayment, deletePayment, setDefaultPayment,
+    reservations, addReservation, updateReservation, cancelReservation,
+    adminReviews, setReviewData, moderateReview, deleteReview,
+    addOwnerReply, updateOwnerReply, deleteOwnerReply,
+    adminLocations, addLocation, updateLocation, deleteLocation, setLocationStatus,
+    watchmen, addWatchman, updateWatchman, deleteWatchman,
+    wallet, transactions, requestWithdrawal,
+    parkingSessions, checkInVehicle, checkOutVehicle,
+    disputes, updateDispute,
+    parkingApprovals, reviewParkingApproval,
+    refundRequests, processRefund,
+    commissionRules, addCommissionRule, updateCommissionRule, deleteCommissionRule,
+    pricingRules, addPricingRule, updatePricingRule, deletePricingRule,
+    promotions, addPromotion, updatePromotion, deletePromotion,
+    cmsPages, addCMSPage, updateCMSPage, deleteCMSPage, publishCMSPage,
+    users, ownerProfiles, addOwnerProfile, updateOwnerProfile, deleteOwnerProfile,
+    approveOwner, suspendOwner, reactivateOwner, verifyOwnerDocument,
+    isLoading, initializeForUser, initializeForOwner, initializeForWatchman,
+    currentOwnerProfile, bookingRequests, fetchBookingRequests,
+    fetchWatchmanLocations, addBookingRequest, updateBookingRequestStatus
+  ]);
+
   return (
-    <DataStoreContext.Provider
-      value={{
-        vehicles,
-        addVehicle,
-        updateVehicle,
-        deleteVehicle,
-        setDefaultVehicle,
-        payments,
-        addPayment,
-        updatePayment,
-        deletePayment,
-        setDefaultPayment,
-        reservations,
-        addReservation,
-        updateReservation,
-        cancelReservation,
-        // Admin: Reviews
-        adminReviews,
-        setReviewData,
-        moderateReview,
-        deleteReview,
-        addOwnerReply,
-        updateOwnerReply,
-        deleteOwnerReply,
-        adminLocations,
-        addLocation,
-        updateLocation,
-        deleteLocation,
-        setLocationStatus,
-        watchmen,
-        addWatchman,
-        updateWatchman,
-        deleteWatchman,
-        wallet,
-        transactions,
-        requestWithdrawal,
-        parkingSessions,
-        checkInVehicle,
-        checkOutVehicle,
-        disputes,
-        updateDispute,
-        parkingApprovals,
-        reviewParkingApproval,
-        refundRequests,
-        processRefund,
-        commissionRules,
-        addCommissionRule,
-        updateCommissionRule,
-        deleteCommissionRule,
-        pricingRules,
-        addPricingRule,
-        updatePricingRule,
-        deletePricingRule,
-        promotions,
-        addPromotion,
-        updatePromotion,
-        deletePromotion,
-        cmsPages,
-        addCMSPage,
-        updateCMSPage,
-        deleteCMSPage,
-        publishCMSPage,
-        users,
-        ownerProfiles,
-        addOwnerProfile,
-        updateOwnerProfile,
-        deleteOwnerProfile,
-        approveOwner,
-        suspendOwner,
-        reactivateOwner,
-        verifyOwnerDocument,
-        isLoading,
-        initializeForUser,
-        initializeForOwner,
-        initializeForWatchman,
-        currentOwnerProfile,
-        bookingRequests,
-        fetchBookingRequests,
-        fetchWatchmanLocations,
-        addBookingRequest,
-        updateBookingRequestStatus,
-      }}
-    >
+    <DataStoreContext.Provider value={contextValue}>
       {children}
     </DataStoreContext.Provider>
   );

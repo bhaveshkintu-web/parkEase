@@ -37,10 +37,18 @@ export async function getUserBookings() {
 /**
  * Retrieves detailed information for a specific booking.
  */
-export async function getBookingDetails(bookingId: string) {
+export async function getBookingDetails(bookingId: string, isPublic: boolean = false) {
   try {
-    const userId = await getAuthUserId();
-    console.log(`[getBookingDetails] Searching. ID: ${bookingId}, AuthUser: ${userId}`);
+    let userId = null;
+    try {
+      userId = await getAuthUserId();
+    } catch (authError) {
+      if (!isPublic) {
+        console.warn(`[getBookingDetails] Unauthorized access attempt (no session).`);
+        return { success: false, error: "Authentication required to view this reservation" };
+      }
+    }
+    console.log(`[getBookingDetails] Searching. ID: ${bookingId}, AuthUser: ${userId}, isPublic: ${isPublic}`);
 
     if (!bookingId || bookingId === 'undefined') {
       console.error("[getBookingDetails] Invalid booking ID provided");
@@ -111,7 +119,7 @@ export async function getBookingDetails(bookingId: string) {
       return { success: false, error: "Reservation not found" };
     }
 
-    if (booking.userId !== userId) {
+    if (!isPublic && booking.userId && booking.userId !== userId) {
       console.warn(`[getBookingDetails] Unauthorized access attempt. Booking owner: ${booking.userId}, Request user: ${userId}`);
       return { success: false, error: "You do not have permission to view this reservation" };
     }
