@@ -17,6 +17,7 @@ export interface PlatformSettingsData {
   gracePeriodMinutes: number;
   taxRate: number;
   serviceFee: number;
+  defaultCommissionRate: number;
 }
 
 export interface NotificationSettingsData {
@@ -222,6 +223,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       gracePeriodMinutes: (settings.gracePeriod as number) ?? 120,
       taxRate: (settings.taxRate as number) ?? 12,
       serviceFee: (settings.serviceFee as number) ?? 5.99,
+      defaultCommissionRate: (settings.defaultCommissionRate as number) ?? 15,
     };
   } catch (error) {
     console.error("GET_GENERAL_SETTINGS_ERROR:", error);
@@ -238,6 +240,7 @@ export async function getGeneralSettings(): Promise<PlatformSettingsData> {
       gracePeriodMinutes: 120,
       taxRate: 12,
       serviceFee: 5.99,
+      defaultCommissionRate: 15,
     };
   }
 }
@@ -347,6 +350,7 @@ export async function updateGeneralSettings(
       gracePeriodMinutes: "booking.gracePeriod",
       taxRate: "booking.taxRate",
       serviceFee: "booking.serviceFee",
+      defaultCommissionRate: "booking.defaultCommissionRate",
     };
 
     for (const [field, value] of Object.entries(data)) {
@@ -461,4 +465,9 @@ export async function getPlatformTaxRate(): Promise<number> {
 export async function getPlatformServiceFee(): Promise<number> {
   const fee = await getSetting("booking.serviceFee");
   return typeof fee === "number" ? fee : 5.99;
+}
+
+export async function getPlatformCommissionRate(): Promise<number> {
+  const rate = await getSetting("booking.defaultCommissionRate");
+  return typeof rate === "number" ? rate : 15;
 }

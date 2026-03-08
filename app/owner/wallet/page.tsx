@@ -20,6 +20,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
@@ -30,7 +43,11 @@ import {
   Loader2,
   AlertCircle,
   Search,
+  Calendar as CalendarIcon,
+  Filter
 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function OwnerWalletPage() {
   const [wallet, setWallet] = useState<any>(null);
@@ -43,6 +60,12 @@ export default function OwnerWalletPage() {
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("transactions");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
+  const [datePreset, setDatePreset] = useState<string>("all");
 
   // Bank details dialog
   const [isBankDialogOpen, setIsBankDialogOpen] = useState(false);
@@ -61,13 +84,41 @@ export default function OwnerWalletPage() {
     type: "ALL"
   });
 
+  const handlePresetChange = (value: string) => {
+    setDatePreset(value);
+    const now = new Date();
+
+    switch (value) {
+      case "all":
+        setDateRange({ from: undefined, to: undefined });
+        break;
+      case "this-month":
+        setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+        break;
+      case "last-month":
+        const lastMonth = subMonths(now, 1);
+        setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+        break;
+      case "this-year":
+        setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+        break;
+      default:
+        break;
+    }
+  };
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const timestamp = new Date().getTime();
+
+      let walletUrl = `/api/owner/wallet?t=${timestamp}`;
+      if (dateRange.from) walletUrl += `&from=${dateRange.from.toISOString()}`;
+      if (dateRange.to) walletUrl += `&to=${dateRange.to.toISOString()}`;
+
       const [walletRes, txRes, withdrawalRes] = await Promise.all([
-        fetch(`/api/owner/wallet?t=${timestamp}`),
-        fetch(`/api/owner/wallet/transactions?page=${txFilters.page}&limit=${txFilters.limit}&search=${txFilters.search}&type=${txFilters.type}&t=${timestamp}`),
+        fetch(walletUrl),
+        fetch(`/api/owner/wallet/transactions?page=${txFilters.page}&limit=500&search=${txFilters.search}&type=${txFilters.type}&t=${timestamp}`),
         fetch(`/api/owner/wallet/withdraw?t=${timestamp}`),
       ]);
 
@@ -89,7 +140,7 @@ export default function OwnerWalletPage() {
     } finally {
       setLoading(false);
     }
-  }, [txFilters]);
+  }, [txFilters, dateRange]);
 
   useEffect(() => {
     if (wallet?.owner) {
@@ -175,14 +226,20 @@ export default function OwnerWalletPage() {
     }
   };
 
-  const getTransactionIcon = (type: string) => {
+  const getTransactionIcon = (type: string, amount: number) => {
+    if (amount < 0) {
+      return <ArrowUpRight className="w-4 h-4 text-red-600" />;
+    }
     switch (type) {
       case "CREDIT":
+      case "EARNED":
         return <ArrowDownLeft className="w-4 h-4 text-green-600" />;
+      case "DEPOSITED":
+        return <ArrowDownLeft className="w-4 h-4 text-blue-600" />;
       case "WITHDRAWAL":
         return <ArrowUpRight className="w-4 h-4 text-red-600" />;
       case "REFUND":
-        return <ArrowDownLeft className="w-4 h-4 text-blue-600" />;
+        return <ArrowDownLeft className="w-4 h-4 text-green-600" />;
       case "COMMISSION":
         return <ArrowUpRight className="w-4 h-4 text-amber-600" />;
       default:
@@ -422,35 +479,97 @@ export default function OwnerWalletPage() {
         </Dialog>
       </div>
 
+      {/* Summary Cards */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Financial Overview
+          </h2>
+          <p className="text-sm text-muted-foreground italic">
+            {dateRange.from && dateRange.to ? (
+              <>Showing data from {format(dateRange.from, "PP")} to {format(dateRange.to, "PP")}</>
+            ) : "Showing lifetime data"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select value={datePreset} onValueChange={handlePresetChange}>
+            <SelectTrigger className="w-[180px] bg-background">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filter Period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="this-month">This Month</SelectItem>
+              <SelectItem value="last-month">Last Month</SelectItem>
+              <SelectItem value="this-year">This Year</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {datePreset === "custom" && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left font-normal", !dateRange.from && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.to ? (
+                      <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range: any) => setDateRange({ from: range?.from, to: range?.to })}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Available Balance"
+          title="Total Balance"
+          value={formatCurrency(wallet?.lifetimeEarnings || 0)}
+          icon={TrendingUp}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-100"
+          subtitle={datePreset === 'all' ? "Total lifetime earnings" : "Earnings for selected period"}
+        />
+        <StatCard
+          title="Available to Withdraw"
           value={formatCurrency(walletBalance)}
           icon={Wallet}
           iconColor="text-primary"
           iconBgColor="bg-primary/10"
         />
         <StatCard
-          title="Total Earnings"
-          value={formatCurrency(totalEarnings)}
-          icon={TrendingUp}
-          iconColor="text-green-600"
-          iconBgColor="bg-green-100"
-        />
-        <StatCard
           title="Total Withdrawn"
-          value={formatCurrency(totalWithdrawn)}
+          value={formatCurrency(wallet?.totalWithdrawn || 0)}
           icon={ArrowUpRight}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
+          subtitle={datePreset === 'all' ? "Total withdrawn" : "Withdrawn in selected period"}
         />
         <StatCard
-          title="Pending"
-          value={formatCurrency(pendingWithdrawalsSum)}
+          title="Pending Withdrawal"
+          value={formatCurrency(wallet?.pendingWithdrawn || 0)}
           icon={Clock}
           iconColor="text-amber-600"
           iconBgColor="bg-amber-100"
-          subtitle={`${withdrawals.filter((w: any) => w.status === "PENDING").length} requests`}
+          subtitle={datePreset === 'all' ? "Total pending" : "Pending in selected period"}
         />
       </div>
 
@@ -492,18 +611,24 @@ export default function OwnerWalletPage() {
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div
-                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${tx.type === "CREDIT" || tx.type === "REFUND"
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${tx.amount < 0
+                          ? "bg-red-50"
+                          : tx.type === "CREDIT" || tx.type === "EARNED" || tx.type === "REFUND"
                             ? "bg-green-100"
-                            : tx.type === "COMMISSION"
-                              ? "bg-amber-100"
-                              : "bg-red-50"
+                            : tx.type === "DEPOSITED"
+                              ? "bg-blue-100"
+                              : tx.type === "COMMISSION"
+                                ? "bg-amber-100"
+                                : "bg-red-50"
                           }`}
                       >
-                        {getTransactionIcon(tx.type)}
+                        {getTransactionIcon(tx.type, tx.amount)}
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-foreground text-sm truncate">
-                          {tx.description}
+                          {tx.type === "COMMISSION" && wallet?.commissionRate && !tx.description.includes("%")
+                            ? `${tx.description.replace("(Platform Commission)", "")} (Platform Commission ${wallet.commissionRate}%)`
+                            : tx.description}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono uppercase text-muted-foreground tracking-tighter">
@@ -517,9 +642,13 @@ export default function OwnerWalletPage() {
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
                       <p
-                        className={`font-bold text-lg ${tx.type === "CREDIT" || tx.type === "REFUND"
+                        className={`font-bold text-lg ${tx.amount < 0
+                          ? "text-foreground"
+                          : tx.type === "CREDIT" || tx.type === "EARNED" || tx.type === "REFUND"
                             ? "text-green-600"
-                            : "text-foreground"
+                            : tx.type === "DEPOSITED"
+                              ? "text-blue-600"
+                              : "text-foreground"
                           }`}
                       >
                         {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}

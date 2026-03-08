@@ -133,6 +133,7 @@ export default function AdminSettingsPage() {
     gracePeriodMinutes: 120,
     taxRate: 12,
     serviceFee: 5.99,
+    defaultCommissionRate: 15,
   });
 
   // Notification Settings State
@@ -803,9 +804,6 @@ export default function AdminSettingsPage() {
                   <Input
                     id="taxRate"
                     type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
                     className="w-24 text-right"
                     value={generalSettings.taxRate}
                     onChange={(e) =>
@@ -821,13 +819,45 @@ export default function AdminSettingsPage() {
                     disabled={isSaving}
                     onClick={async () => {
                       setIsSaving(true);
-                      const result = await updateGeneralSettings({ taxRate: generalSettings.taxRate }, adminId);
+                      await updateGeneralSettings({ taxRate: generalSettings.taxRate }, adminId);
                       setIsSaving(false);
-                      if (result.success) {
-                        toast({ title: "Saved", description: `Tax rate updated to ${generalSettings.taxRate}%` });
-                      } else {
-                        toast({ title: "Error", description: "Failed to save tax rate.", variant: "destructive" });
-                      }
+                      toast({ title: "Setting updated", description: "Tax rate has been saved." });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <div className="space-y-0.5">
+                  <Label htmlFor="defaultCommissionRate">Standard Platform Commission (%)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Standard commission deducted from owner earnings when no specific rules apply.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="defaultCommissionRate"
+                    type="number"
+                    className="w-24 text-right"
+                    value={generalSettings.defaultCommissionRate}
+                    onChange={(e) =>
+                      setGeneralSettings((prev) => ({
+                        ...prev,
+                        defaultCommissionRate: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      setIsSaving(true);
+                      await updateGeneralSettings({ defaultCommissionRate: generalSettings.defaultCommissionRate }, adminId);
+                      setIsSaving(false);
+                      toast({ title: "Setting updated", description: "Standard commission rate has been saved." });
                     }}
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
@@ -1274,14 +1304,12 @@ export default function AdminSettingsPage() {
         </TabsContent>
       </Tabs >
 
-      {/* Commission Dialog */}
       <Dialog
         open={isCommissionDialogOpen}
         onOpenChange={(open) => {
           setIsCommissionDialogOpen(open);
           if (!open) resetCommissionForm();
-        }
-        }
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -1450,9 +1478,8 @@ export default function AdminSettingsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
-      {/* Promotion Dialog */}
       <Dialog
         open={isPromoDialogOpen}
         onOpenChange={(open) => {
@@ -1653,10 +1680,10 @@ export default function AdminSettingsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog
+      < AlertDialog
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
       >
@@ -1684,10 +1711,10 @@ export default function AdminSettingsPage() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Maintenance Mode Confirmation */}
-      <AlertDialog
+      < AlertDialog
         open={showMaintenanceConfirm}
         onOpenChange={setShowMaintenanceConfirm}
       >
@@ -1712,7 +1739,7 @@ export default function AdminSettingsPage() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Audit Log Dialog */}
       < Dialog open={showAuditLog} onOpenChange={setShowAuditLog} >
@@ -1765,7 +1792,7 @@ export default function AdminSettingsPage() {
             )}
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }

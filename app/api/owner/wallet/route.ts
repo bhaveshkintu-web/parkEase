@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { getPlatformCommissionRate } from "@/lib/actions/settings-actions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,20 +12,31 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = session.user.id;
+    const { searchParams } = new URL(req.url);
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    const dateFilter: any = {};
+    if (from || to) {
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.gte = new Date(from);
+      if (to) dateFilter.createdAt.lte = new Date(to);
+    }
 
     const wallet = await prisma.wallet.findFirst({
       where: { owner: { userId } },
       include: {
         owner: true,
         transactions: {
+          where: dateFilter,
           orderBy: { createdAt: "desc" },
-          take: 20,
+          take: 50,
         },
       },
     });
 
     if (!wallet) {
-      // Check if owner exists but no wallet
+      // ... (existing logic for creating wallet if missing)
       const ownerProfile = await prisma.ownerProfile.findUnique({
         where: { userId }
       });
@@ -34,19 +46,68 @@ export async function GET(req: NextRequest) {
           data: {
             ownerId: ownerProfile.id,
             balance: 0,
+            totalBalance: 0,
             currency: "USD",
           },
-          include: { 
+          include: {
             owner: true,
-            transactions: true 
+            transactions: true
           }
         });
-        return NextResponse.json(newWallet);
+        return NextResponse.json({
+          ...newWallet,
+          lifetimeEarnings: 0,
+          totalWithdrawn: 0,
+          pendingWithdrawn: 0
+        });
       }
       return NextResponse.json({ error: "Owner profile not found" }, { status: 404 });
     }
 
-    return NextResponse.json(wallet);
+    // Calculate period stats
+    const statsWhere = {
+      walletId: wallet.id,
+      ...dateFilter
+    };
+
+    // 1. Period Earnings: Sum of (DEPOSITED) - Sum of (REFUND)
+    const deposits = await prisma.walletTransaction.aggregate({
+      where: { ...statsWhere, type: "DEPOSITED" as any },
+      _sum: { amount: true }
+    });
+
+    const refunds = await prisma.walletTransaction.aggregate({
+      where: { ...statsWhere, type: "REFUND" as any },
+      _sum: { amount: true }
+    });
+
+    // 2. Period Withdrawn: Sum of completed WITHDRAWAL (negative amounts)
+    const withdrawn = await prisma.walletTransaction.aggregate({
+      where: {
+        ...statsWhere,
+        type: "WITHDRAWAL" as any,
+        status: "COMPLETED"
+      },
+      _sum: { amount: true }
+    });
+
+    // 3. Period Pending: Sum of pending WITHDRAWAL
+    const pending = await prisma.walletTransaction.aggregate({
+      where: {
+        ...statsWhere,
+        type: "WITHDRAWAL" as any,
+        status: "PENDING"
+      },
+      _sum: { amount: true }
+    });
+
+    return NextResponse.json({
+      ...wallet,
+      lifetimeEarnings: (deposits._sum.amount || 0) - Math.abs(refunds._sum.amount || 0),
+      totalWithdrawn: Math.abs(withdrawn._sum.amount || 0),
+      pendingWithdrawn: Math.abs(pending._sum.amount || 0),
+      commissionRate: await getPlatformCommissionRate()
+    });
   } catch (error) {
     console.error("[OWNER_WALLET_GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

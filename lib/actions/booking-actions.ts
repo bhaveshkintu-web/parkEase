@@ -8,6 +8,7 @@ import { calculatePricing, generateConfirmationCode } from "../utils/booking-uti
 import { getGeneralSettings } from "./settings-actions";
 import { notifyOwnerOfNewBooking, sendReservationReceipt } from "@/lib/notifications";
 import { allocateSpotForBooking } from "./spot-actions";
+import { FinanceService } from "@/lib/finance-service";
 
 /**
  * Retrieves all bookings for the authenticated user.
@@ -280,6 +281,9 @@ export async function createBooking(data: any) {
           status: "RESERVED",
         },
       });
+
+      // NEW: Record preliminary earnings (increments owner's totalBalance)
+      await FinanceService.recordPreliminaryEarnings(booking.id, tx);
 
       // k. Update Analytics
       await tx.locationAnalytics.upsert({
@@ -971,6 +975,10 @@ export async function cleanupExpiredBookings() {
             data: { availableSpots: { increment: 1 } }
           });
         }
+
+        // 4. Release held earnings to owner (moving from totalBalance to available)
+        await FinanceService.creditEarnings(session.bookingId, tx);
+
         count++;
       }
       return count;
