@@ -38,12 +38,12 @@ export default function OwnerWalletPage() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("transactions");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  
+
   // Bank details dialog
   const [isBankDialogOpen, setIsBankDialogOpen] = useState(false);
   const [isUpdatingBank, setIsUpdatingBank] = useState(false);
@@ -109,8 +109,8 @@ export default function OwnerWalletPage() {
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
     if (amount <= 0 || amount > (wallet?.balance || 0)) {
-        toast.error("Invalid withdrawal amount");
-        return;
+      toast.error("Invalid withdrawal amount");
+      return;
     }
 
     try {
@@ -249,115 +249,115 @@ export default function OwnerWalletPage() {
                 Withdraw Funds
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Withdraw Funds</DialogTitle>
-              <DialogDescription>
-                Transfer funds to your linked bank account
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <p className="text-xs font-medium text-primary uppercase tracking-wider">Available Balance</p>
-                <p className="text-3xl font-bold text-foreground mt-1">
-                  {formatCurrency(walletBalance)}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Withdrawal Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0.00"
-                    className="pl-8 h-12 text-lg"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    max={walletBalance}
-                  />
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Withdraw Funds</DialogTitle>
+                <DialogDescription>
+                  Transfer funds to your linked bank account
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-xs font-medium text-primary uppercase tracking-wider">Available Balance</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {formatCurrency(walletBalance)}
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  {[25, 50].map((percent) => (
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Withdrawal Amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="0.00"
+                      className="pl-8 h-12 text-lg"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      max={walletBalance}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {[25, 50].map((percent) => (
+                      <Button
+                        key={percent}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          setWithdrawAmount(((walletBalance * percent) / 100).toFixed(2))
+                        }
+                      >
+                        {percent}%
+                      </Button>
+                    ))}
                     <Button
-                      key={percent}
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() =>
-                        setWithdrawAmount(((walletBalance * percent) / 100).toFixed(2))
-                      }
+                      onClick={() => setWithdrawAmount(walletBalance.toFixed(2))}
                     >
-                      {percent}%
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setWithdrawAmount(walletBalance.toFixed(2))}
-                  >
-                    Max
-                  </Button>
-                </div>
-              </div>
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Building className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground text-sm">
-                          {wallet?.owner?.bankName || "Linked Bank"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {wallet?.owner?.accountNumber ? `****${wallet.owner.accountNumber.slice(-4)}` : "No account linked"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-xs h-8 text-primary"
-                      onClick={() => {
-                        setIsWithdrawDialogOpen(false);
-                        setIsBankDialogOpen(true);
-                      }}
-                    >
-                      {wallet?.owner?.accountNumber ? "Edit" : "Link"}
+                      Max
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setIsWithdrawDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleWithdraw}
-                className="min-w-[120px]"
-                disabled={
-                  isWithdrawing ||
-                  !withdrawAmount ||
-                  parseFloat(withdrawAmount) <= 0 ||
-                  parseFloat(withdrawAmount) > walletBalance
-                }
-              >
-                {isWithdrawing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  `Withdraw ${withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ""}`
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+                </div>
+                <Card className="bg-muted/30 border-dashed">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Building className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">
+                            {wallet?.owner?.bankName || "Linked Bank"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {wallet?.owner?.accountNumber ? `****${wallet.owner.accountNumber.slice(-4)}` : "No account linked"}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8 text-primary"
+                        onClick={() => {
+                          setIsWithdrawDialogOpen(false);
+                          setIsBankDialogOpen(true);
+                        }}
+                      >
+                        {wallet?.owner?.accountNumber ? "Edit" : "Link"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsWithdrawDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleWithdraw}
+                  className="min-w-[120px]"
+                  disabled={
+                    isWithdrawing ||
+                    !withdrawAmount ||
+                    parseFloat(withdrawAmount) <= 0 ||
+                    parseFloat(withdrawAmount) > walletBalance
+                  }
+                >
+                  {isWithdrawing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    `Withdraw ${withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ""}`
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {/* Bank Details Dialog */}
         <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
@@ -402,7 +402,7 @@ export default function OwnerWalletPage() {
                   id="routingNumber"
                   placeholder="9-digit routing number"
                   value={bankDetails.routingNumber}
-                   onChange={(e) => setBankDetails(prev => ({ ...prev, routingNumber: e.target.value }))}
+                  onChange={(e) => setBankDetails(prev => ({ ...prev, routingNumber: e.target.value }))}
                 />
               </div>
             </div>
@@ -410,7 +410,7 @@ export default function OwnerWalletPage() {
               <Button variant="ghost" onClick={() => setIsBankDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleUpdateBankDetails}
                 disabled={isUpdatingBank || !bankDetails.bankName || !bankDetails.accountNumber || !bankDetails.bankAccountName}
               >
@@ -458,20 +458,20 @@ export default function OwnerWalletPage() {
         <CardHeader className="border-b pb-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
-               <TabsList className="bg-muted/50">
+              <TabsList className="bg-muted/50">
                 <TabsTrigger value="transactions">Transactions</TabsTrigger>
                 <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
               </TabsList>
-              
+
               {activeTab === "transactions" && (
                 <div className="relative w-full sm:w-64">
-                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                   <Input 
-                    placeholder="Search by reference..." 
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by reference..."
                     className="pl-9"
                     value={txFilters.search}
                     onChange={(e) => setTxFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
-                   />
+                  />
                 </div>
               )}
             </div>
@@ -492,13 +492,12 @@ export default function OwnerWalletPage() {
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div
-                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                          tx.type === "CREDIT" || tx.type === "REFUND"
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${tx.type === "CREDIT" || tx.type === "REFUND"
                             ? "bg-green-100"
                             : tx.type === "COMMISSION"
-                            ? "bg-amber-100"
-                            : "bg-red-50"
-                        }`}
+                              ? "bg-amber-100"
+                              : "bg-red-50"
+                          }`}
                       >
                         {getTransactionIcon(tx.type)}
                       </div>
@@ -507,22 +506,21 @@ export default function OwnerWalletPage() {
                           {tx.description}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                           <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono uppercase text-muted-foreground tracking-tighter">
-                             Ref: {tx.reference || "N/A"}
-                           </span>
-                           <span className="text-xs text-muted-foreground">
-                             • {formatDate(tx.createdAt)}
-                           </span>
+                          <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono uppercase text-muted-foreground tracking-tighter">
+                            Ref: {tx.reference || "N/A"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            • {formatDate(tx.createdAt)}
+                          </span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
                       <p
-                        className={`font-bold text-lg ${
-                          tx.type === "CREDIT" || tx.type === "REFUND"
+                        className={`font-bold text-lg ${tx.type === "CREDIT" || tx.type === "REFUND"
                             ? "text-green-600"
                             : "text-foreground"
-                        }`}
+                          }`}
                       >
                         {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
                       </p>
@@ -532,8 +530,8 @@ export default function OwnerWalletPage() {
                           tx.status.toLowerCase() === "completed"
                             ? "success"
                             : tx.status.toLowerCase() === "pending"
-                            ? "warning"
-                            : "secondary"
+                              ? "warning"
+                              : "default"
                         }
                       />
                     </div>
@@ -567,7 +565,7 @@ export default function OwnerWalletPage() {
                           Requested on {formatDate(withdrawal.requestedAt)}
                         </p>
                         {withdrawal.adminNotes && (
-                           <p className="text-[11px] text-amber-600 mt-1 italic">Note: {withdrawal.adminNotes}</p>
+                          <p className="text-[11px] text-amber-600 mt-1 italic">Note: {withdrawal.adminNotes}</p>
                         )}
                       </div>
                     </div>
@@ -581,10 +579,10 @@ export default function OwnerWalletPage() {
                           withdrawal.status === "PROCESSED"
                             ? "success"
                             : withdrawal.status === "PENDING"
-                            ? "warning"
-                            : withdrawal.status === "APPROVED"
-                            ? "info"
-                            : "error"
+                              ? "warning"
+                              : withdrawal.status === "APPROVED"
+                                ? "info"
+                                : "error"
                         }
                       />
                     </div>
