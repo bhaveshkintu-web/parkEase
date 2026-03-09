@@ -48,13 +48,24 @@ import {
   ShieldCheck,
   Calendar as CalendarIcon,
   Filter,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 export default function AdminWalletPage() {
   const [wallet, setWallet] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [txMeta, setTxMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("transactions");
+
+  const [txFilters, setTxFilters] = useState({
+    page: 1,
+    limit: 10,
+    search: "",
+    type: "ALL"
+  });
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -84,16 +95,20 @@ export default function AdminWalletPage() {
     switch (value) {
       case "all":
         setDateRange({ from: undefined, to: undefined });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "this-month":
         setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "last-month":
         const lastMonth = subMonths(now, 1);
         setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "this-year":
         setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       default:
         break;
@@ -104,20 +119,34 @@ export default function AdminWalletPage() {
     try {
       setLoading(true);
       const timestamp = new Date().getTime();
-      let url = `/api/admin/wallet?t=${timestamp}`;
-      if (dateRange.from) url += `&from=${dateRange.from.toISOString()}`;
-      if (dateRange.to) url += `&to=${dateRange.to.toISOString()}`;
+      let walletUrl = `/api/admin/wallet?t=${timestamp}`;
+      if (dateRange.from) walletUrl += `&from=${dateRange.from.toISOString()}`;
+      if (dateRange.to) walletUrl += `&to=${dateRange.to.toISOString()}`;
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch admin wallet");
-      const data = await res.json();
-      setWallet(data);
-      if (data) {
+      let txUrl = `/api/admin/wallet/transactions?page=${txFilters.page}&limit=${txFilters.limit}&search=${txFilters.search}&type=${txFilters.type}&t=${timestamp}`;
+      if (dateRange.from) txUrl += `&startDate=${dateRange.from.toISOString()}`;
+      if (dateRange.to) txUrl += `&endDate=${dateRange.to.toISOString()}`;
+
+      const [walletRes, txRes] = await Promise.all([
+        fetch(walletUrl),
+        fetch(txUrl)
+      ]);
+
+      if (!walletRes.ok || !txRes.ok) throw new Error("Failed to fetch admin wallet data");
+
+      const walletData = await walletRes.json();
+      const txData = await txRes.json();
+
+      setWallet(walletData);
+      setTransactions(txData.transactions || []);
+      setTxMeta(txData.meta || { total: 0, page: 1, totalPages: 1 });
+
+      if (walletData) {
         setBankDetails({
-          bankName: data.bankName || "",
-          accountName: data.accountName || "",
-          accountNumber: data.accountNumber || "",
-          routingNumber: data.routingNumber || ""
+          bankName: walletData.bankName || "",
+          accountName: walletData.accountName || "",
+          accountNumber: walletData.accountNumber || "",
+          routingNumber: walletData.routingNumber || ""
         });
       }
     } catch (err: any) {
@@ -126,7 +155,7 @@ export default function AdminWalletPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, txFilters]);
 
   useEffect(() => {
     fetchData();
@@ -315,16 +344,44 @@ export default function AdminWalletPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>System Transactions</CardTitle>
-          <CardDescription>Recent commission and revenue events</CardDescription>
+        <CardHeader className="border-b pb-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
+            <div>
+              <CardTitle>System Transactions</CardTitle>
+              <CardDescription>Recent commission and revenue events</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search ref..."
+                  className="pl-9 h-9"
+                  value={txFilters.search}
+                  onChange={(e) => setTxFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+                />
+              </div>
+              <Select
+                value={txFilters.type}
+                onValueChange={(value) => setTxFilters(prev => ({ ...prev, type: value, page: 1 }))}
+              >
+                <SelectTrigger className="w-[130px] h-9">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Types</SelectItem>
+                  <SelectItem value="COMMISSION">Commission</SelectItem>
+                  <SelectItem value="WITHDRAWAL">Revenue Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
-            {!wallet?.transactions?.length ? (
+            {!transactions.length ? (
               <div className="text-center py-10 text-muted-foreground">No system transactions yet</div>
             ) : (
-              wallet.transactions.map((tx: any) => (
+              transactions.map((tx: any) => (
                 <div key={tx.id} className="flex items-center justify-between p-4 px-6 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tx.amount < 0
@@ -353,6 +410,61 @@ export default function AdminWalletPage() {
               ))
             )}
           </div>
+
+          {txMeta.totalPages > 1 && (
+            <div className="flex items-center justify-between gap-4 flex-wrap p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {(txMeta.page - 1) * txFilters.limit + 1} to{" "}
+                {Math.min(txMeta.page * txFilters.limit, txMeta.total)} of{" "}
+                {txMeta.total} results
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxFilters(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  disabled={txMeta.page === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">Previous</span>
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, txMeta.totalPages) }, (_, i) => {
+                    let page: number;
+                    if (txMeta.totalPages <= 5) {
+                      page = i + 1;
+                    } else if (txMeta.page <= 3) {
+                      page = i + 1;
+                    } else if (txMeta.page >= txMeta.totalPages - 2) {
+                      page = txMeta.totalPages - 4 + i;
+                    } else {
+                      page = txMeta.page - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={txMeta.page === page ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setTxFilters(prev => ({ ...prev, page }))}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxFilters(prev => ({ ...prev, page: Math.min(txMeta.totalPages, prev.page + 1) }))}
+                  disabled={txMeta.page === txMeta.totalPages}
+                >
+                  <span className="hidden sm:inline mr-1">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

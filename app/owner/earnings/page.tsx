@@ -39,6 +39,8 @@ import { getOwnerEarningsOverview, getEarningsBreakdown, getLocationMetrics } fr
 import type { OverviewMetrics } from "@/lib/types/analytics.types";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function OwnerEarningsPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -50,41 +52,43 @@ export default function OwnerEarningsPage() {
   const [breakdown, setBreakdown] = useState<any>(null);
   const [locations, setLocations] = useState<any[]>([]);
   const [exporting, setExporting] = useState(false);
-  const [period, setPeriod] = useState<"this_month" | "last_month" | "this_year" | "custom" | "all_time">("this_month");
-  const [startDate, setStartDate] = useState<Date | undefined>();
-const [endDate, setEndDate] = useState<Date | undefined>();
-const fetchAllData = useCallback(async () => {
-  try {
-    setLoading(true);
+  const [period, setPeriod] = useState<"this-month" | "last-month" | "this-year" | "custom" | "all-time">("this-month");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
+  const fetchAllData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    const start = startDate ? startDate.toISOString() : undefined;
-    const end = endDate ? endDate.toISOString() : undefined;
+      const start = dateRange.from ? dateRange.from.toISOString() : undefined;
+      const end = dateRange.to ? dateRange.to.toISOString() : undefined;
 
-    const [ovData, brData, locData] = await Promise.all([
-      getOwnerEarningsOverview(start, end),
-      getEarningsBreakdown(start, end),
-      getLocationMetrics(start, end)
-    ]);
-    setOverview(ovData);
-    setBreakdown(brData);
-    setLocations(locData);
-  } catch (err) {
-    console.error(err);
-    setError("Failed to load earnings data.");
-  } finally {
-    setLoading(false);
-  }
-}, [period, startDate, endDate]);
+      const [ovData, brData, locData] = await Promise.all([
+        getOwnerEarningsOverview(start, end),
+        getEarningsBreakdown(start, end),
+        getLocationMetrics(start, end)
+      ]);
+      setOverview(ovData);
+      setBreakdown(brData);
+      setLocations(locData);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load earnings data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [period, dateRange]);
 
-useEffect(() => {
-  if (period === "custom") {
-    if (startDate && endDate) {
+  useEffect(() => {
+    if (period === "custom") {
+      if (dateRange.from && dateRange.to) {
+        fetchAllData();
+      }
+    } else {
       fetchAllData();
     }
-  } else {
-    fetchAllData();
-  }
-}, [period, startDate, endDate]);
+  }, [period, dateRange]);
 
   if (loading) {
     return (
@@ -119,15 +123,32 @@ useEffect(() => {
   };
 
   const displayEarnings =
-  period === "this_month"
-    ? overview.thisMonthEarnings
-    : period === "last_month"
-    ? overview.lastMonthEarnings
-    : period === "this_year"
-    ? overview.thisYearEarnings
-    : period === "custom"
-    ? overview.customEarnings
-    : overview.totalEarnings;
+    period === "this-month"
+      ? overview.thisMonthEarnings
+      : period === "last-month"
+        ? overview.lastMonthEarnings
+        : period === "this-year"
+          ? overview.thisYearEarnings
+          : period === "custom"
+            ? overview.customEarnings
+            : overview.totalEarnings;
+
+  const handlePeriodChange = (value: string) => {
+    const val = value as any;
+    setPeriod(val);
+    const now = new Date();
+
+    if (val === "all-time") {
+      setDateRange({ from: undefined, to: undefined });
+    } else if (val === "this-month") {
+      setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+    } else if (val === "last-month") {
+      const lastMonth = subMonths(now, 1);
+      setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+    } else if (val === "this-year") {
+      setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 p-6">
@@ -140,53 +161,48 @@ useEffect(() => {
           </Link>
           <h1 className="text-2xl font-bold">Earnings</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={period}
-            onValueChange={(value) => setPeriod(value as any)}
+            onValueChange={handlePeriodChange}
           >
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[160px] bg-background">
+              <Calendar className="w-4 h-4 mr-2 text-primary" />
               <SelectValue placeholder="Period" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="this_month">This Month</SelectItem>
-              <SelectItem value="last_month">Last Month</SelectItem>
-              <SelectItem value="this_year">This Year</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-              <SelectItem value="all_time">All Time</SelectItem>
+              <SelectItem value="this-month">This Month</SelectItem>
+              <SelectItem value="last-month">Last Month</SelectItem>
+              <SelectItem value="this-year">This Year</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+              <SelectItem value="all-time">All Time</SelectItem>
             </SelectContent>
           </Select>
           {period === "custom" && (
             <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline">
-                    {startDate ? startDate.toDateString() : "Start Date"}
+                  <Button variant="outline" className={cn("justify-start text-left font-normal h-10 px-3", !dateRange.from && "text-muted-foreground")}>
+                    <Calendar className="mr-2 h-4 w-4 text-primary" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <>{format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d")}</>
+                      ) : (
+                        format(dateRange.from, "MMM d")
+                      )
+                    ) : (
+                      <span>Pick dates</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
-
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="end">
                   <CalendarPicker
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline">
-                    {endDate ? endDate.toDateString() : "End Date"}
-                  </Button>
-                </PopoverTrigger>
-
-                <PopoverContent className="w-auto p-0">
-                  <CalendarPicker
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range: any) => setDateRange({ from: range?.from, to: range?.to })}
+                    numberOfMonths={2}
                   />
                 </PopoverContent>
               </Popover>
@@ -231,15 +247,15 @@ useEffect(() => {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase font-bold">
-                    {period === "this_month"
+                    {period === "this-month"
                       ? "This Month"
-                      : period === "last_month"
-                      ? "Last Month"
-                      : period === "this_year"
-                      ? "This Year"
-                      : period === "custom"
-                      ? "Custom"
-                      : "All Time"}
+                      : period === "last-month"
+                        ? "Last Month"
+                        : period === "this-year"
+                          ? "This Year"
+                          : period === "custom"
+                            ? "Selected Range"
+                            : "All Time"}
                   </p>
                   <p className="text-xl font-bold">
                     {formatCurrency(displayEarnings)}
@@ -277,12 +293,19 @@ useEffect(() => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b pb-2">
-                    <span className="text-sm font-medium">Last Month Earnings</span>
-                    <span className="font-bold">{formatCurrency(overview.lastMonthEarnings)}</span>
+                    <span className="text-sm font-medium">
+                      {period === "this-month" ? "This Month Earnings" :
+                        period === "last-month" ? "Last Month Earnings" :
+                          period === "this-year" ? "This Year Earnings" :
+                            period === "custom" ? "Range Earnings" : "Lifetime Earnings"}
+                    </span>
+                    <span className="font-bold">{formatCurrency(displayEarnings)}</span>
                   </div>
                   <div className="flex justify-between items-center border-b pb-2">
-                    <span className="text-sm font-medium">Completed Bookings</span>
-                    <span className="font-bold">{overview.completedBookings}</span>
+                    <span className="text-sm font-medium">
+                      {period === "all-time" ? "Total Bookings" : "Period Bookings"}
+                    </span>
+                    <span className="font-bold">{overview.totalBookings}</span>
                   </div>
                 </div>
               </CardContent>
@@ -404,7 +427,7 @@ useEffect(() => {
 
 // CSV Export Utility
 function exportToCSV(
-  overview: OverviewMetrics | null,
+  overview: any | null,
 ) {
   let csv = "Owner Earnings Report\n\n";
 
