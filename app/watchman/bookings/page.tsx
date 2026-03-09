@@ -430,7 +430,7 @@ export default function WatchmanBookingsPage() {
                               <p className="text-xs text-muted-foreground">{formatDate(checkInDate)}</p>
                             </div>
                             {booking.status?.toLowerCase() !== "completed" && booking.sessionStatus !== "checked_out" && (
-                              <Link href="/watchman/scan">
+                              <Link href={`/watchman/scan?code=${encodeURIComponent(booking.confirmationCode || plate)}`}>
                                 <Button size="sm" variant={booking.sessionStatus === "checked_in" ? "secondary" : "default"}>
                                   {booking.sessionStatus === "checked_in" ? (
                                     <>

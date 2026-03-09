@@ -80,6 +80,8 @@ export async function PATCH(
         });
 
         if (!currentSession) throw new Error("Session not found");
+        if (currentSession.status === "checked_out") throw new Error("This vehicle has already been checked out");
+        if (currentSession.booking.status === "COMPLETED") throw new Error("This booking is already completed");
 
         const now = new Date();
         const checkOutLimit = new Date(currentSession.booking.checkOut);

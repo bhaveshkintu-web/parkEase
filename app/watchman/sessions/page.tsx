@@ -64,6 +64,15 @@ export default function WatchmanSessionsPage() {
     }
   }, []);
 
+  const formatDuration = (minutes: number) => {
+    if (!minutes) return "0 Minutes";
+    if (minutes < 60) return `${minutes} Minutes`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (mins === 0) return `${hours} ${hours === 1 ? 'Hour' : 'Hours'}`;
+    return `${hours} ${hours === 1 ? 'Hour' : 'Hours'} ${mins} ${mins === 1 ? 'Min' : 'Mins'}`;
+  };
+
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
@@ -308,7 +317,11 @@ export default function WatchmanSessionsPage() {
                             <Button
                               size="sm"
                               className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                              onClick={() => handleAction(session.id, "check-in")}
+                              onClick={() => {
+                                // Redirect to scan page with confirmation code or plate
+                                const code = session.confirmationCode || session.vehiclePlate;
+                                router.push(`/watchman/scan?code=${encodeURIComponent(code)}`);
+                              }}
                             >
                               <CheckCircle className="w-4 h-4 mr-2" />
                               Check In
@@ -396,7 +409,7 @@ export default function WatchmanSessionsPage() {
                   </div>
                   <div className="p-4 bg-red-50 border border-red-100 rounded-xl space-y-1 text-red-700">
                     <span className="text-[10px] uppercase font-black">Overstay Time</span>
-                    <p className="font-bold text-lg">{overstayInfo.overstayMinutes} Minutes</p>
+                    <p className="font-bold text-lg">{formatDuration(overstayInfo.overstayMinutes)}</p>
                   </div>
                 </div>
 
@@ -425,7 +438,6 @@ export default function WatchmanSessionsPage() {
                     >
                       Send Payment Link to Email
                     </Button>
-
                   </div>
                 </div>
               </div>

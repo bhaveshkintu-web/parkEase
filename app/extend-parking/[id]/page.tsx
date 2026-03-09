@@ -535,17 +535,7 @@ export default function ExtendParkingPage() {
                                     </div>
                                 </div>
 
-                                <div className="p-3 bg-primary/5 rounded-xl flex items-center gap-3">
-                                    <div className="p-2 bg-primary/10 rounded-lg">
-                                        <Clock className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-primary italic">Session ends in:</p>
-                                        <p className="font-black text-lg">
-                                            {Math.ceil((new Date(booking.checkOut).getTime() - new Date().getTime()) / 60000)} mins
-                                        </p>
-                                    </div>
-                                </div>
+                                {/*  */}
                             </CardContent>
                         </Card>
                     </div>

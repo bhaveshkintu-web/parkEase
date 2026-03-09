@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,8 +60,10 @@ interface ScanResult {
 
 import { useToast } from "@/hooks/use-toast";
 
-export default function WatchmanScanPage() {
+function ScannerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("code");
   const { toast } = useToast();
   const { reservations, checkInVehicle, checkOutVehicle } = useDataStore();
   const [manualCode, setManualCode] = useState("");
@@ -90,88 +92,176 @@ export default function WatchmanScanPage() {
     }
   };
 
+  const formatDuration = (minutes: number) => {
+    if (!minutes) return "0 Minutes";
+    if (minutes < 60) return `${minutes} Minutes`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (mins === 0) return `${hours} ${hours === 1 ? 'Hour' : 'Hours'}`;
+    return `${hours} ${hours === 1 ? 'Hour' : 'Hours'} ${mins} ${mins === 1 ? 'Min' : 'Mins'}`;
+  };
+
   useEffect(() => {
     fetchDbBookings();
   }, []);
 
-  const handleManualSearch = () => {
+  // 1. Immediately "write" the code in the input field so the user sees it
+  useEffect(() => {
+    if (codeParam) {
+      setManualCode(codeParam);
+    }
+  }, [codeParam]);
+
+  // Move search to be higher up for hoisting (or use function keyword)
+  async function handleManualSearch(overrideCode?: string) {
+    const codeToSearch = overrideCode || manualCode;
+    if (!codeToSearch) return;
+
     setError("");
+    setIsLoading(true);
 
-    const now = new Date();
-    // Search in DB bookings first
-    let booking = dbBookings.find(
-      (b) =>
-        b.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
-        b.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
-    );
-
-    // Fallback to mock reservations
-    if (!booking) {
-      const mockRes = reservations.find(
-        (r) =>
-          r.confirmationCode.toLowerCase() === manualCode.toLowerCase() ||
-          r.vehicleInfo.licensePlate.toLowerCase() === manualCode.toLowerCase()
+    try {
+      const now = new Date();
+      // Search in DB bookings first (local cache)
+      let booking = dbBookings.find(
+        (b) =>
+          b.confirmationCode.toLowerCase() === codeToSearch.toLowerCase() ||
+          (b.vehicleInfo?.licensePlate && b.vehicleInfo.licensePlate.toLowerCase() === codeToSearch.toLowerCase())
       );
-      if (mockRes) {
-        booking = {
-          ...mockRes,
-          vehiclePlate: mockRes.vehicleInfo.licensePlate,
-          locationName: mockRes.location.name,
-          total: mockRes.totalPrice,
-          status: mockRes.status
-        };
+
+      // Fallback to mock reservations
+      if (!booking) {
+        const mockRes = reservations.find(
+          (r) =>
+            r.confirmationCode.toLowerCase() === codeToSearch.toLowerCase() ||
+            (r.vehicleInfo?.licensePlate && r.vehicleInfo.licensePlate.toLowerCase() === codeToSearch.toLowerCase())
+        );
+        if (mockRes) {
+          booking = {
+            ...mockRes,
+            vehiclePlate: mockRes.vehicleInfo.licensePlate,
+            locationName: mockRes.location.name,
+            total: mockRes.totalPrice,
+            status: mockRes.status
+          };
+        }
       }
-    }
 
-    if (!booking) {
-      setError("No booking found with this code or license plate");
-      return;
-    }
+      // 3. NEW: If still not found, fetch from Server directly to catch old/expired ones
+      if (!booking) {
+        try {
+          const res = await fetch(`/api/watchman/bookings?search=${encodeURIComponent(codeToSearch)}`);
+          const data = await res.json();
+          if (data.success && data.bookings?.length > 0) {
+            booking = data.bookings[0];
+          }
+        } catch (e) {
+          console.error("Server search failed:", e);
+        }
+      }
 
-    const checkInDate = new Date(booking.checkIn);
+      if (!booking) {
+        setError("No booking found with this code or license plate");
+        return;
+      }
 
-    // 1. Strict No-Show / Expired Block
-    const normalizedStatus = booking.status.toLowerCase();
-    if (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show") {
-      setError(`Cannot process: This booking is marked as ${normalizedStatus.toUpperCase()}.`);
-      return;
-    }
+      const checkInDate = new Date(booking.checkIn);
+      const checkOutDate = new Date(booking.checkOut);
+      const normalizedStatus = booking.status.toLowerCase();
+      const sessionStatus = (booking.sessionStatus || "").toLowerCase();
 
-    // 2. Early Check-in Prevention
-    const isCheckInType = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending");
-    if (isCheckInType && now < checkInDate) {
-      const checkInTimeStr = checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const checkInDateStr = checkInDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      setError(`Check-in not available until ${checkInTimeStr} on ${checkInDateStr}`);
-      return;
-    }
+      // Check if already checked out
+      if (sessionStatus === "checked_out") {
+        setError("Already Checked Out: This vehicle has already been processed for departure.");
+        return;
+      }
 
-    setScanResult({
-      type: (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out",
-      booking: {
-        id: booking.id,
-        sessionId: booking.sessionId,
-        confirmationCode: booking.confirmationCode,
-        vehiclePlate: booking.vehiclePlate || booking.vehicleInfo.licensePlate,
-        vehicleInfo: {
-          make: booking.vehicleInfo.make,
-          model: booking.vehicleInfo.model,
-          color: booking.vehicleInfo.color,
+      const isCheckInType = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending");
+      const type = isCheckInType ? "check_in" : "check_out";
+
+      // 1. Strict No-Show / Expired Block (For those who never checked in)
+      if (isCheckInType && (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show")) {
+        setError("Session Expired: This booking is no longer valid.");
+        return;
+      }
+
+      if (isCheckInType && now > checkOutDate) {
+        setError("Session Expired: The check-in window for this booking has already passed.");
+        return;
+      }
+
+      // 2. Proactive Overstay Detection (For those who ARE checked in)
+      // If it's a check-out and it's past the checkout time, jump straight to overstay modal
+      if (type === "check_out" && now > checkOutDate && booking.paymentStatus !== "PAID") {
+        const result = await checkOutVehicle(booking.id, "");
+        if (!result.success && result.error === "OVERSTAY_DETECTED") {
+          setOverstayInfo({
+            booking: {
+              id: booking.id,
+              confirmationCode: booking.confirmationCode,
+              vehiclePlate: booking.vehiclePlate || booking.vehicleInfo?.licensePlate
+            },
+            ...(result as any).details
+          });
+          return;
+        }
+      }
+
+      // 3. Early Check-in Prevention
+      if (isCheckInType && now < checkInDate) {
+        const checkInTimeStr = checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const checkInDateStr = checkInDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        setError(`Check-in not available until ${checkInTimeStr} on ${checkInDateStr}`);
+        return;
+      }
+
+      setScanResult({
+        type,
+        booking: {
+          id: booking.id,
+          sessionId: booking.sessionId,
+          confirmationCode: booking.confirmationCode,
+          vehiclePlate: booking.vehiclePlate || booking.vehicleInfo.licensePlate,
+          vehicleInfo: {
+            make: booking.vehicleInfo.make,
+            model: booking.vehicleInfo.model,
+            color: booking.vehicleInfo.color,
+          },
+          checkIn: new Date(booking.checkIn),
+          checkOut: new Date(booking.checkOut),
+          location: {
+            name: booking.locationName || booking.location?.name,
+          },
+          guestInfo: {
+            firstName: booking.guestInfo.firstName,
+            lastName: booking.guestInfo.lastName,
+          },
+          spotIdentifier: booking.spotIdentifier,
+          status: booking.status.toLowerCase(),
         },
-        checkIn: new Date(booking.checkIn),
-        checkOut: new Date(booking.checkOut),
-        location: {
-          name: booking.locationName || booking.location?.name,
-        },
-        guestInfo: {
-          firstName: booking.guestInfo.firstName,
-          lastName: booking.guestInfo.lastName,
-        },
-        spotIdentifier: booking.spotIdentifier,
-        status: booking.status.toLowerCase(),
-      },
-    });
-  };
+      });
+    } catch (e: any) {
+      console.error("Search evaluation failed:", e);
+      setError("An error occurred while searching");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Handle auto-fill from query params
+  useEffect(() => {
+    if (codeParam && dbBookings.length > 0) {
+      handleManualSearch(codeParam);
+
+      // Clear the query parameter so it doesn't re-trigger on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete("code");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [codeParam, dbBookings.length]);
+
+
+
 
   const handleScan = async (data: string | null) => {
     if (!data) return;
@@ -206,26 +296,71 @@ export default function WatchmanScanPage() {
       }
     }
 
+    // NEW: If still not found, fetch from Server
+    if (!booking) {
+      try {
+        const res = await fetch(`/api/watchman/bookings?search=${encodeURIComponent(data)}`);
+        const resultData = await res.json();
+        if (resultData.success && resultData.bookings?.length > 0) {
+          booking = resultData.bookings[0];
+        }
+      } catch (e) {
+        console.error("Server scan search failed:", e);
+      }
+    }
+
     if (!booking) {
       setError("No booking found with this code");
       return;
     }
 
     // Determine if this is a check-in or check-out
-    const type = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending") ? "check_in" : "check_out";
+    const isCheckInType = (booking.status === "confirmed" || booking.status === "approved" || booking.status === "pending");
+    const type = isCheckInType ? "check_in" : "check_out";
 
     // Block expired or no-show bookings
     const now = new Date();
     const checkInDate = new Date(booking.checkIn);
+    const checkOutDate = new Date(booking.checkOut);
     const normalizedStatus = booking.status.toLowerCase();
+    const sessionStatus = (booking.sessionStatus || "").toLowerCase();
 
-    if (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show") {
-      setError(`Cannot process: This booking is marked as ${normalizedStatus.toUpperCase()}.`);
+    // Check if already checked out
+    if (sessionStatus === "checked_out") {
+      setError("Already Checked Out: This vehicle has already been processed for departure.");
       return;
     }
 
+    if (isCheckInType && (normalizedStatus === "expired" || normalizedStatus === "no_show" || normalizedStatus === "no-show")) {
+      setError("Session Expired: This booking is no longer valid.");
+      return;
+    }
+
+    if (isCheckInType && now > checkOutDate) {
+      setError("Session Expired: The check-in window for this booking has already passed.");
+      return;
+    }
+
+    // Proactive Overstay Detection
+    if (type === "check_out" && now > checkOutDate && booking.paymentStatus !== "PAID") {
+      setIsLoading(true);
+      const result = await checkOutVehicle(booking.id, "");
+      setIsLoading(false);
+      if (!result.success && result.error === "OVERSTAY_DETECTED") {
+        setOverstayInfo({
+          booking: {
+            id: booking.id,
+            confirmationCode: booking.confirmationCode,
+            vehiclePlate: booking.vehiclePlate || booking.vehicleInfo?.licensePlate
+          },
+          ...(result as any).details
+        });
+        return;
+      }
+    }
+
     // Early Check-in Prevention
-    if (type === "check_in" && now < checkInDate) {
+    if (isCheckInType && now < checkInDate) {
       const checkInTimeStr = checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setError(`Check-in not available until ${checkInTimeStr}`);
       return;
@@ -397,7 +532,7 @@ export default function WatchmanScanPage() {
                     onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}
                   />
                 </div>
-                <Button onClick={handleManualSearch} disabled={!manualCode}>
+                <Button onClick={() => handleManualSearch()} disabled={!manualCode}>
                   <Keyboard className="w-4 h-4 mr-2" />
                   Search
                 </Button>
@@ -493,24 +628,24 @@ export default function WatchmanScanPage() {
           {scanResult && (
             <div className="space-y-4 py-4">
               {/* Booking Info */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Confirmation</span>
-                  <span className="font-mono font-bold text-foreground">
+              <div className="p-4 rounded-lg bg-muted/30 space-y-4 border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-y-1">
+                  <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Confirmation</span>
+                  <span className="font-mono text-lg font-black text-foreground">
                     {scanResult.booking.confirmationCode}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Guest</span>
-                  <span className="font-medium text-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-y-1">
+                  <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Guest</span>
+                  <span className="text-lg font-bold text-foreground">
                     {scanResult.booking.guestInfo.firstName}{" "}
                     {scanResult.booking.guestInfo.lastName}
                   </span>
                 </div>
                 {scanResult.booking.spotIdentifier && (
-                  <div className="flex items-center justify-between pt-2 border-t border-dashed">
-                    <span className="text-sm font-bold text-primary italic uppercase tracking-wider">Allocated Spot</span>
-                    <span className="text-lg font-black text-primary px-3 py-1 bg-primary/10 rounded-md">
+                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-muted-foreground/30">
+                    <span className="text-sm font-bold text-teal-600 italic uppercase tracking-widest">ALLOCATED SPOT</span>
+                    <span className="text-xl font-black text-teal-700 px-4 py-1.5 bg-teal-50 border border-teal-100 rounded-lg">
                       {scanResult.booking.spotIdentifier}
                     </span>
                   </div>
@@ -649,7 +784,7 @@ export default function WatchmanScanPage() {
                 </div>
                 <div className="p-4 bg-red-50 border border-red-100 rounded-xl space-y-1 text-red-700">
                   <span className="text-[10px] uppercase font-black">Overstay Time</span>
-                  <p className="font-bold text-lg">{overstayInfo.overstayMinutes} Minutes</p>
+                  <p className="font-bold text-lg">{formatDuration(overstayInfo.overstayMinutes)}</p>
                 </div>
               </div>
 
@@ -678,22 +813,6 @@ export default function WatchmanScanPage() {
                   >
                     Send Payment Link to Email
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 border-2 border-primary text-primary font-bold"
-                    onClick={async () => {
-                      const res = await markOverstayAsPaidAction(overstayInfo.booking.id);
-                      if (res.success) {
-                        toast({ title: "Marked as Paid", description: "Overstay payment recorded." });
-                        setOverstayInfo(null);
-                        router.push("/watchman/sessions");
-                      } else {
-                        toast({ title: "Failed", description: (res as any).error, variant: "destructive" });
-                      }
-                    }}
-                  >
-                    Mark as Paid (Cash/POS)
-                  </Button>
                 </div>
               </div>
             </div>
@@ -701,5 +820,18 @@ export default function WatchmanScanPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function WatchmanScanPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground animate-pulse">Loading scanner...</p>
+      </div>
+    }>
+      <ScannerContent />
+    </Suspense>
   );
 }

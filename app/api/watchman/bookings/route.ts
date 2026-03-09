@@ -79,9 +79,18 @@ export async function GET(request: NextRequest) {
         // Get date filters from query params
         const searchParams = request.nextUrl.searchParams;
         const dateFilter = searchParams.get("date") || "today";
+        const searchTerm = searchParams.get("search");
 
         let dateQuery: any = {};
-        if (dateFilter === "today") {
+        if (searchTerm) {
+            // If searching specifically, ignore date filters to find expired/old ones
+            dateQuery = {
+                OR: [
+                    { confirmationCode: { equals: searchTerm, mode: 'insensitive' } },
+                    { vehiclePlate: { equals: searchTerm, mode: 'insensitive' } }
+                ]
+            };
+        } else if (dateFilter === "today") {
             dateQuery = {
                 OR: [
                     { checkIn: { gte: now, lt: tomorrow } },

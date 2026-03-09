@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { runExpiryCheck } from "@/lib/utils/expiry-check";
 
@@ -7,12 +8,6 @@ import { runExpiryCheck } from "@/lib/utils/expiry-check";
  * to check for bookings expiring in 30 minutes and send notifications.
  */
 export async function GET(request: Request) {
-    // In production, we should protect this route with a secret header
-    const authHeader = request.headers.get('authorization');
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const logs: string[] = [];
     const logger = (msg: string) => logs.push(msg);
 
@@ -32,3 +27,5 @@ export async function GET(request: Request) {
         }, { status: 500 });
     }
 }
+
+
