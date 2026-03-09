@@ -4,9 +4,10 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { RefundStatus } from "@prisma/client";
 import { NotificationService, NotificationType } from "@/lib/notifications";
+import { FinanceService } from "@/lib/finance-service";
 
 export async function PATCH(
-  request: Request, 
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -36,19 +37,31 @@ export async function PATCH(
         approvedAmount: approvedAmount !== undefined ? parseFloat(approvedAmount) : refundRequest.approvedAmount,
         processedAt: status === "PROCESSED" || status === "APPROVED" ? new Date() : refundRequest.processedAt,
       },
+      include: { booking: true }
     });
+
+    // Handle financial deduction if approved or processed
+    if ((status === "APPROVED" || status === "PROCESSED") && refundRequest.status === "PENDING") {
+      try {
+        const amountToDeduct = updatedRefund.approvedAmount || updatedRefund.amount;
+        await FinanceService.processRefundDeduction(updatedRefund.bookingId, amountToDeduct);
+      } catch (financeError) {
+        console.error("Failed to process refund deduction:", financeError);
+        // We log the error but don't fail the request since the status was updated
+      }
+    }
 
     // If there's a linked dispute, log the action
     if (refundRequest.disputeId) {
-        await prisma.disputeAuditLog.create({
-            data: {
-                disputeId: refundRequest.disputeId,
-                adminId: session.user.id,
-                action: `REFUND_${status}`,
-                notes: notes || `Refund request ${status.toLowerCase()}. Amount: ${approvedAmount || refundRequest.amount}`,
-                newValue: { status, approvedAmount }
-            }
-        });
+      await prisma.disputeAuditLog.create({
+        data: {
+          disputeId: refundRequest.disputeId,
+          adminId: session.user.id,
+          action: `REFUND_${status}`,
+          notes: notes || `Refund request ${status.toLowerCase()}. Amount: ${approvedAmount || refundRequest.amount}`,
+          newValue: { status, approvedAmount }
+        }
+      });
     }
 
     // If there's a matching user, notify them

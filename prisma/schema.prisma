@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "windows"]
 }
 
@@ -21,12 +21,12 @@ model User {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   password          String?
-  isGuest           Boolean           @default(false)
-  guestConvertedAt  DateTime?
   verifyToken       String?
   tokenExpiry       DateTime?
   resetToken        String?
   resetTokenExpiry  DateTime?
+  guestConvertedAt  DateTime?
+  isGuest           Boolean           @default(false)
   moderatedReviews  AdminReview[]
   bookings          Booking[]
   processedBookings BookingRequest[]  @relation("ProcessedBy")
@@ -34,15 +34,15 @@ model User {
   assignedDisputes  Dispute[]         @relation("AssignedDisputes")
   disputes          Dispute[]
   disputeAuditLogs  DisputeAuditLog[]
+  magicTokens       MagicToken[]
   notifications     Notification[]
   ownerProfile      OwnerProfile?
   paymentMethods    PaymentMethod[]
   reviews           Review[]
+  savedLocations    SavedLocation[]
   savedVehicles     SavedVehicle[]
   trustedDevices    TrustedDevice[]
   watchmanProfile   Watchman?
-  magicTokens       MagicToken[]
-  savedLocations    SavedLocation[]
 }
 
 model SavedLocation {
@@ -50,8 +50,8 @@ model SavedLocation {
   userId     String
   locationId String
   createdAt  DateTime        @default(now())
-  user       User            @relation(fields: [userId], references: [id])
   location   ParkingLocation @relation(fields: [locationId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
 
   @@unique([userId, locationId])
   @@index([userId])
@@ -137,31 +137,26 @@ model ParkingLocation {
   analytics           LocationAnalytics?
   owner               OwnerProfile       @relation(fields: [ownerId], references: [id])
   sessions            ParkingSession[]
+  spots               ParkingSpot[]
   pricingRules        PricingRule[]
   reviews             Review[]
+  savedByUsers        SavedLocation[]
   watchmanShifts      WatchmanShift[]
   watchmen            Watchman[]         @relation("ParkingLocationToWatchman")
-  savedByUsers        SavedLocation[]
-  spots               ParkingSpot[]
 }
 
 model ParkingSpot {
-  id          String          @id @default(cuid())
-  locationId  String
-  identifier  String          // e.g. "A1", "B-03", "101"
-  status      SpotStatus      @default(ACTIVE)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  location    ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  bookings    Booking[]
+  id         String          @id @default(cuid())
+  locationId String
+  identifier String
+  status     SpotStatus      @default(ACTIVE)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  bookings   Booking[]
+  location   ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([locationId, identifier])
   @@index([locationId])
-}
-
-enum SpotStatus {
-  ACTIVE
-  INACTIVE
 }
 
 model Booking {
@@ -181,20 +176,20 @@ model Booking {
   totalPrice       Float
   taxes            Float
   fees             Float
-  ownerEarnings    Float?
   status           BookingStatus   @default(PENDING)
+  confirmationCode String          @unique
+  qrCode           String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  ownerEarnings    Float?
   rejectionReason  String?
   promoCode        String?
   promoDiscount    Float?
-  confirmationCode String          @unique
-  qrCode           String?
   spotId           String?
   spotIdentifier   String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
   location         ParkingLocation @relation(fields: [locationId], references: [id])
-  user             User?           @relation(fields: [userId], references: [id])
   spot             ParkingSpot?    @relation(fields: [spotId], references: [id])
+  user             User?           @relation(fields: [userId], references: [id])
   disputes         Dispute[]
   parkingSession   ParkingSession?
   payments         Payment[]
@@ -216,14 +211,22 @@ model Payment {
 }
 
 model Wallet {
-  id           String              @id @default(cuid())
-  ownerId      String              @unique
-  balance      Float               @default(0)
-  currency     String              @default("USD")
-  lastUpdated  DateTime            @updatedAt
-  owner        OwnerProfile        @relation(fields: [ownerId], references: [id])
-  transactions WalletTransaction[]
-  withdrawals  WithdrawalRequest[]
+  id            String              @id @default(cuid())
+  ownerId       String?             @unique
+  balance       Float               @default(0)
+  currency      String              @default("USD")
+  lastUpdated   DateTime            @updatedAt
+  totalBalance  Float               @default(0)
+  accountName   String?
+  accountNumber String?
+  bankName      String?
+  routingNumber String?
+  type          WalletType          @default(OWNER)
+  owner         OwnerProfile?       @relation(fields: [ownerId], references: [id])
+  transactions  WalletTransaction[]
+  withdrawals   WithdrawalRequest[]
+
+  @@index([type])
 }
 
 model WalletTransaction {
@@ -246,19 +249,11 @@ model WithdrawalRequest {
   accountNumber String
   bankName      String
   routingNumber String?
-  status        WithdrawalStatus @default(PENDING)
   requestedAt   DateTime         @default(now())
   processedAt   DateTime?
   adminNotes    String?
+  status        WithdrawalStatus @default(PENDING)
   wallet        Wallet           @relation(fields: [walletId], references: [id])
-}
-
-enum WithdrawalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  PROCESSED
-  FAILED
 }
 
 model Watchman {
@@ -276,19 +271,19 @@ model Watchman {
 }
 
 model WatchmanShift {
-  id                 String              @id @default(cuid())
-  watchmanId         String
-  locationId         String
-  scheduledStart     DateTime
-  scheduledEnd       DateTime
-  actualStart        DateTime?
-  actualEnd          DateTime?
-  status             WatchmanShiftStatus @default(SCHEDULED)
-  totalCheckIns      Int                 @default(0)
-  totalCheckOuts     Int                 @default(0)
-  incidentsReported  Int                 @default(0)
-  location           ParkingLocation     @relation(fields: [locationId], references: [id])
-  watchman           Watchman            @relation(fields: [watchmanId], references: [id])
+  id                String              @id @default(cuid())
+  watchmanId        String
+  locationId        String
+  scheduledStart    DateTime
+  scheduledEnd      DateTime
+  actualStart       DateTime?
+  actualEnd         DateTime?
+  status            WatchmanShiftStatus @default(SCHEDULED)
+  incidentsReported Int                 @default(0)
+  totalCheckIns     Int                 @default(0)
+  totalCheckOuts    Int                 @default(0)
+  location          ParkingLocation     @relation(fields: [locationId], references: [id])
+  watchman          Watchman            @relation(fields: [watchmanId], references: [id])
 }
 
 model WatchmanActivityLog {
@@ -395,7 +390,6 @@ model DisputeAuditLog {
 model SavedVehicle {
   id           String   @id @default(cuid())
   userId       String
-  nickname     String?
   make         String
   model        String
   year         Int
@@ -404,6 +398,7 @@ model SavedVehicle {
   state        String
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
+  nickname     String?
   user         User     @relation(fields: [userId], references: [id])
 }
 
@@ -500,25 +495,19 @@ model Promotion {
   updatedAt       DateTime @updatedAt
 }
 
-enum CMSPageStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 model CMSPage {
-  id                String        @id @default(cuid())
-  slug              String        @unique
-  title             String
-  content           String        @db.Text
-  metaTitle         String?
-  metaDescription   String?
-  status            CMSPageStatus @default(DRAFT)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  publishedAt       DateTime?
-  createdBy         String
-  updatedBy         String?
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  content         String
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdBy       String
+  metaDescription String?
+  metaTitle       String?
+  updatedBy       String?
+  status          CMSPageStatus @default(DRAFT)
 
   @@index([slug])
   @@index([status])
@@ -532,10 +521,10 @@ model CommissionRule {
   appliesTo       String
   minBookingValue Float?
   maxCommission   Float?
-  priority        Int      @default(0)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  priority        Int      @default(0)
 }
 
 model PlatformSettings {
@@ -609,7 +598,6 @@ model WorkflowExecution {
   workflow    Workflow  @relation(fields: [workflowId], references: [id])
 }
 
-
 model Notification {
   id        String           @id @default(cuid())
   userId    String
@@ -624,6 +612,89 @@ model Notification {
 
   @@index([userId])
   @@index([status])
+}
+
+model BookingRequest {
+  id                String                 @id @default(cuid())
+  customerId        String?
+  customerName      String
+  customerPhone     String?
+  vehiclePlate      String
+  vehicleType       String
+  parkingId         String
+  parkingName       String
+  spotNumber        String?
+  originalBookingId String?
+  requestedStart    DateTime
+  requestedEnd      DateTime
+  estimatedAmount   Float
+  status            BookingRequestStatus   @default(PENDING)
+  notes             String?
+  requestedById     String
+  requestedAt       DateTime               @default(now())
+  processedById     String?
+  processedAt       DateTime?
+  rejectionReason   String?
+  bookingId         String?                @unique
+  customerEmail     String?
+  vehicleColor      String?
+  vehicleMake       String?
+  vehicleModel      String?
+  requestType       BookingRequestType     @default(WALK_IN)
+  priority          BookingRequestPriority @default(NORMAL)
+  location          ParkingLocation        @relation(fields: [parkingId], references: [id])
+  processedBy       User?                  @relation("ProcessedBy", fields: [processedById], references: [id])
+  requestedBy       User                   @relation("RequestedBy", fields: [requestedById], references: [id])
+
+  @@index([parkingId])
+  @@index([requestedById])
+  @@index([status])
+}
+
+model SupportTicket {
+  id            String       @id @default(cuid())
+  name          String
+  email         String
+  subject       String
+  message       String
+  status        TicketStatus @default(OPEN)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  internalNotes String?
+
+  @@index([email])
+  @@index([status])
+}
+
+model UserSession {
+  phone     String   @id @db.VarChar(20)
+  state     String   @default("idle") @db.VarChar(50)
+  data      Json?    @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+enum SpotStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WalletType {
+  OWNER
+  SYSTEM
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSED
+  FAILED
+}
+
+enum CMSPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum UserRole {
@@ -671,6 +742,8 @@ enum WalletTransactionType {
   REFUND
   COMMISSION
   MANUAL_ADJUSTMENT
+  DEPOSITED
+  EARNED
 }
 
 enum WatchmanShiftStatus {
@@ -701,43 +774,6 @@ enum DisputePriority {
   HIGH
 }
 
-model BookingRequest {
-  id                String                 @id @default(cuid())
-  customerId        String?
-  customerName      String
-  customerEmail     String?
-  customerPhone     String?
-  vehiclePlate      String
-  vehicleType       String
-  vehicleMake       String?
-  vehicleModel      String?
-  vehicleColor      String?
-  parkingId         String
-  parkingName       String
-  spotNumber        String?
-  requestType       BookingRequestType     @default(WALK_IN)
-  originalBookingId String?
-  requestedStart    DateTime
-  requestedEnd      DateTime
-  estimatedAmount   Float
-  status            BookingRequestStatus   @default(PENDING)
-  priority          BookingRequestPriority @default(NORMAL)
-  notes             String?
-  rejectionReason   String?
-  requestedById     String
-  requestedBy       User                   @relation("RequestedBy", fields: [requestedById], references: [id])
-  requestedAt       DateTime               @default(now())
-  processedById     String?
-  processedBy       User?                  @relation("ProcessedBy", fields: [processedById], references: [id])
-  processedAt       DateTime?
-  bookingId         String?                @unique
-  location          ParkingLocation        @relation(fields: [parkingId], references: [id])
-
-  @@index([parkingId])
-  @@index([requestedById])
-  @@index([status])
-}
-
 enum BookingRequestStatus {
   PENDING
   APPROVED
@@ -755,21 +791,6 @@ enum BookingRequestType {
 enum BookingRequestPriority {
   NORMAL
   URGENT
-}
-
-model SupportTicket {
-  id        String       @id @default(cuid())
-  name      String
-  email     String
-  subject   String
-  message   String
-  status    TicketStatus @default(OPEN)
-  internalNotes String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  @@index([email])
-  @@index([status])
 }
 
 enum TicketStatus {
@@ -793,11 +814,3 @@ enum NotificationType {
   REFUND_DEDUCTION
   NEW_BOOKING
 }
-
-model UserSession {
-  phone     String   @id @db.VarChar(20)
-  state     String   @default("idle") @db.VarChar(50)
-  data      Json?    @default("{}")
-  updatedAt DateTime @default(now()) @updatedAt
-}
-

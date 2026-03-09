@@ -55,6 +55,7 @@ const systemAdminNav: NavSection[] = [
   {
     title: "Finance",
     items: [
+      { label: "Wallet", href: "/admin/wallet", icon: Wallet },
       { label: "Commissions", href: "/admin/commissions", icon: Percent },
       { label: "Pricing Rules", href: "/admin/pricing", icon: Tag },
       { label: "Promotions", href: "/admin/promotions", icon: FileText },

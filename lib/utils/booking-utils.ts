@@ -37,7 +37,8 @@ export function calculatePricing(
   promotion?: { type: string; value: number } | null,
   commissionRule?: { type: string; value: number } | null,
   taxRate: number = 12,
-  serviceFee: number = 5.99
+  serviceFee: number = 5.99,
+  defaultCommissionRate: number = 15
 ) {
   const durationInHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
   const durationInDays = durationInHours / 24;
@@ -82,11 +83,11 @@ export function calculatePricing(
       commission = commissionRule.value;
     }
   } else {
-    // Default 15% commission if no rule found
-    commission = subtotal * 0.15;
+    // Default commission from settings if no rule found
+    commission = subtotal * (defaultCommissionRate / 100);
   }
 
-  const ownerEarnings = subtotal - commission;
+  const ownerEarnings = subtotal - commission + taxes;
 
   return {
     basePrice,

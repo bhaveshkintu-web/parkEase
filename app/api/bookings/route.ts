@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
         promotion,
         commissionRule,
         settings.taxRate,
-        settings.serviceFee
+        settings.serviceFee,
+        settings.defaultCommissionRate
       );
 
       // 3. Create Booking

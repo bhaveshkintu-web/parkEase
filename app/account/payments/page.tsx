@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CreditCard, Plus, MoreVertical, Trash2, Star, Loader2, AlertCircle } from "lucide-react";
+import { CreditCard, Plus, MoreVertical, Trash2, Star, Loader2, AlertCircle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PaymentMethod {
@@ -80,9 +80,9 @@ export default function PaymentsPage() {
         method: "DELETE",
       });
       const data = await res.json();
-      
+
       if (!res.ok) throw new Error(data.error || "Failed to delete");
-      
+
       toast({
         title: "Payment method deleted",
         description: "The payment method has been removed from your account.",
@@ -107,7 +107,7 @@ export default function PaymentsPage() {
         method: "PATCH",
       });
       if (!res.ok) throw new Error("Failed to update");
-      
+
       toast({
         title: "Default payment updated",
         description: "Your default payment method has been changed.",
@@ -172,11 +172,10 @@ export default function PaymentsPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between relative z-10">
                   <div className="flex items-start gap-5">
-                    <div className={`px-3 min-w-[56px] h-9 rounded-md flex items-center justify-center text-white font-black text-xs shadow-md transition-transform hover:scale-105 ${
-                      payment.brand.toLowerCase() === 'visa' ? 'bg-[#1A1F71]' :
+                    <div className={`px-3 min-w-[56px] h-9 rounded-md flex items-center justify-center text-white font-black text-xs shadow-md transition-transform hover:scale-105 ${payment.brand.toLowerCase() === 'visa' ? 'bg-[#1A1F71]' :
                       payment.brand.toLowerCase() === 'mastercard' ? 'bg-[#EB001B]' :
-                      payment.brand.toLowerCase() === 'amex' ? 'bg-[#0070D1]' : 'bg-slate-700'
-                    }`}>
+                        payment.brand.toLowerCase() === 'amex' ? 'bg-[#0070D1]' : 'bg-slate-700'
+                      }`}>
                       {payment.brand.toUpperCase()}
                     </div>
                     <div>
@@ -235,7 +234,7 @@ export default function PaymentsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 {/* Decorative Background Element */}
                 <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl" />
               </CardContent>
@@ -255,7 +254,7 @@ export default function PaymentsPage() {
             <Badge variant="outline" className="text-[9px] border-emerald-200 text-emerald-700 bg-emerald-50 font-black">256-BIT AES</Badge>
           </h4>
           <p className="text-xs text-emerald-800/70 mt-1 max-w-xl leading-relaxed">
-            Your payment data is fully encrypted and never stored on our servers. 
+            Your payment data is fully encrypted and never stored on our servers.
             We only store a secure reference token provided by our payment processor.
           </p>
         </div>
@@ -270,7 +269,7 @@ export default function PaymentsPage() {
             </div>
             <AlertDialogTitle className="text-xl font-bold">Remove Payment Method?</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              This card ending in <span className="font-bold text-foreground">•••• {payments.find(p => p.id === deleteId)?.last4}</span> will be permanently removed. 
+              This card ending in <span className="font-bold text-foreground">•••• {payments.find(p => p.id === deleteId)?.last4}</span> will be permanently removed.
               If it has active bookings, removal might be restricted.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -296,6 +295,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-
-// Missing import fix
-import { Shield } from "lucide-react";
