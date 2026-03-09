@@ -40,11 +40,47 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Crop as CropIcon, RefreshCw, FileCode, Monitor } from "lucide-react";
+import {TextStyle} from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import { Extension } from "@tiptap/core";
 
 interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
 }
+
+const GlobalStyle = Extension.create({
+  name: "globalStyle",
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: [
+          "paragraph",
+          "heading",
+          "textStyle",
+          "blockquote",
+          "listItem",
+        ],
+        attributes: {
+          style: {
+            default: null,
+            parseHTML: element => element.getAttribute("style"),
+            renderHTML: attributes => {
+              if (!attributes.style) {
+                return {};
+              }
+
+              return {
+                style: attributes.style,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+});
 
 const CustomImage = Image.extend({
   addAttributes() {
@@ -80,6 +116,9 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           class: "max-w-full h-auto rounded-lg inline-block",
         },
       }),
+      TextStyle,
+      Color,
+      GlobalStyle,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -310,7 +349,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
       // Switching from Code to Visual
       editor.commands.setContent(htmlContent);
     } else {
-      // Switching from Visual to Code
+            // Switching from Visual to Code
       setHtmlContent(editor.getHTML());
     }
     setIsCodeView(!isCodeView);
