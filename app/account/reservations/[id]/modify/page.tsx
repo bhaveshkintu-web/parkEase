@@ -11,52 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X } from "lucide-react";
+import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
+import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
+import { isStripeConfigured } from "@/lib/stripe";
+import { MockCardForm } from "@/components/mock-card-form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
-import { CreditCard, Plus } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus } from "lucide-react";
 
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const isStripeConfigured = stripePublishableKey && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
-const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : null;
-
-const MockBrandIcon = ({ brand }: { brand: string }) => {
-  const content = () => {
-    switch (brand) {
-      case "visa":
-        return <div className="text-[#1A1F71] font-black italic text-base select-none">VISA</div>;
-      case "mastercard":
-        return (
-          <div className="flex -space-x-1.5 select-none">
-            <div className="w-4 h-4 rounded-full bg-[#EB001B] opacity-90" />
-            <div className="w-4 h-4 rounded-full bg-[#FF5F00] opacity-90" />
-          </div>
-        );
-      case "amex":
-        return (
-          <div className="bg-[#0070D1] text-white px-1 rounded-sm text-[9px] font-black tracking-tighter select-none leading-tight">
-            AMEX
-          </div>
-        );
-      case "discover":
-        return <div className="text-[#FF6600] font-black italic text-[10px] select-none">DISCOVER</div>;
-      default:
-        return <CreditCard className="w-5 h-5 text-muted-foreground/40" />;
-    }
-  };
-
-  return (
-    <div className="w-12 flex items-center justify-center">
-      {content()}
-    </div>
-  );
-};
+const isStripeActive = isStripeConfigured();
 
 // Helper to format date for datetime-local input (correctly localized)
 function formatForInput(date: Date | string) {
@@ -109,40 +76,9 @@ export default function ModifyReservationPage({
   // Promotion State
   const [promotion, setPromotion] = React.useState<any>(null);
 
-  // Mock Payment State for Demo Mode
-  const [mockCardName, setMockCardName] = React.useState("");
-  const [mockCardNumber, setMockCardNumber] = React.useState("");
-  const [mockExpiryMonth, setMockExpiryMonth] = React.useState("");
-  const [mockExpiryYear, setMockExpiryYear] = React.useState("");
-  const [mockCvv, setMockCvv] = React.useState("");
-  const [mockCardBrand, setMockCardBrand] = React.useState("unknown");
-  const [mockCardTouched, setMockCardTouched] = React.useState<Record<string, boolean>>({});
+  // Mock Card state removed in favor of MockCardForm
 
-  // Brand detection for mock card
-  React.useEffect(() => {
-    const raw = mockCardNumber.replace(/\s/g, "");
-    if (raw.startsWith("4")) setMockCardBrand("visa");
-    else if (raw.startsWith("5")) setMockCardBrand("mastercard");
-    else if (raw.startsWith("3")) setMockCardBrand("amex");
-    else setMockCardBrand("unknown");
-  }, [mockCardNumber]);
-
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(" ");
-    } else {
-      return v;
-    }
-  };
+  // Card formatting removed in favor of card-utils
 
   React.useEffect(() => {
     async function loadBooking() {
@@ -719,8 +655,8 @@ export default function ModifyReservationPage({
                             <Plus className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-bold text-sm">Use a new card</p>
-                            <p className="text-xs text-muted-foreground">Enter card details below</p>
+                            <p className="font-bold text-sm">Use a new card / another payment method</p>
+                            <p className="text-xs text-muted-foreground">Select your preferred payment option below</p>
                           </div>
                         </div>
                       </div>
@@ -733,136 +669,17 @@ export default function ModifyReservationPage({
                   <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
                     {paymentMethods.length > 0 && <div className="border-t pt-4" />}
 
-                    {!isStripeConfigured ? (
-                      <div className="space-y-4">
-                        <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200 mb-2">
-                          <p className="font-bold flex items-center gap-2 text-amber-900">
-                            <AlertCircle className="h-4 w-4" />
-                            Stripe Demo Mode
-                          </p>
-                          <p className="mt-1 opacity-80 text-xs text-amber-700">
-                            Simulation active. Please enter any valid-format card details to continue.
-                          </p>
-                        </div>
-
-                        <div className="grid gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="mockCardName" className="text-xs font-bold uppercase text-muted-foreground">Cardholder Name</Label>
-                            <Input
-                              id="mockCardName"
-                              placeholder="John Doe"
-                              value={mockCardName}
-                              onChange={(e) => setMockCardName(e.target.value)}
-                              onBlur={() => setMockCardTouched({ ...mockCardTouched, cardName: true })}
-                              className={cn("h-12 rounded-xl border-2")}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="mockCardNumber" className="text-xs font-bold uppercase text-muted-foreground">Card Number</Label>
-                            <div className="relative">
-                              <Input
-                                id="mockCardNumber"
-                                placeholder="0000 0000 0000 0000"
-                                value={mockCardNumber}
-                                onChange={(e) => setMockCardNumber(formatCardNumber(e.target.value))}
-                                onBlur={() => setMockCardTouched({ ...mockCardTouched, cardNumber: true })}
-                                maxLength={mockCardBrand === 'amex' ? 17 : 19}
-                                className={cn("h-12 rounded-xl border-2 pl-20 font-mono")}
-                              />
-                              <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                                <MockBrandIcon brand={mockCardBrand} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Expiry Date</Label>
-                              <div className="flex gap-2">
-                                <select
-                                  value={mockExpiryMonth}
-                                  onChange={(e) => setMockExpiryMonth(e.target.value)}
-                                  className={cn("flex h-12 w-full rounded-xl border-2 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary")}
-                                >
-                                  <option value="">Month</option>
-                                  {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                  ))}
-                                </select>
-                                <select
-                                  value={mockExpiryYear}
-                                  onChange={(e) => setMockExpiryYear(e.target.value)}
-                                  className={cn("flex h-12 w-full rounded-xl border-2 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary")}
-                                >
-                                  <option value="">Year</option>
-                                  {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() + i)).map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="mockCvv" className="text-xs font-bold uppercase text-muted-foreground">CVV</Label>
-                              <Input
-                                id="mockCvv"
-                                placeholder="123"
-                                value={mockCvv}
-                                onChange={(e) => setMockCvv(e.target.value.replace(/\D/g, "").substring(0, mockCardBrand === 'amex' ? 4 : 3))}
-                                className={cn("h-12 rounded-xl border-2")}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50 mt-4">
-                          <Checkbox
-                            id="terms-demo"
-                            checked={agreedToTerms}
-                            onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                          />
-                          <Label htmlFor="terms-demo" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-                            <span>
-                              I agree to the{" "}
-                              <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                                Terms
-                              </Link>{" "}
-                              and{" "}
-                              <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                                Policy
-                              </Link>
-                              . I understand that my reservation is subject to availability.
-                            </span>
-                          </Label>
-                        </div>
-
-                        <Button
-                          type="button"
-                          onClick={handleSavedCardSubmit}
-                          className={cn(
-                            "w-full h-14 font-black text-lg transition-all duration-300",
-                            "hover:scale-[1.01] active:scale-[0.98] rounded-xl group mt-4"
-                          )}
-                          disabled={isPaymentSubmitting || !agreedToTerms || !mockCardName || mockCardNumber.length < 15 || !mockExpiryMonth || !mockExpiryYear || mockCvv.length < 3}
-                        >
-                          {isPaymentSubmitting ? (
-                            <div className="flex items-center gap-3">
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                              <span className="uppercase tracking-widest">Processing...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center w-full relative">
-                              <span className="uppercase tracking-widest font-black">
-                                Pay {formatCurrency(priceDifference)} & Save Changes
-                              </span>
-                              <Lock className="absolute right-0 h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <Elements stripe={stripePromise} options={{ clientSecret }}>
+                    {!isStripeActive ? (
+                      <MockCardForm
+                        onSuccess={handlePaymentSuccess}
+                        amount={priceDifference}
+                        isSubmitting={isPaymentSubmitting}
+                        setIsSubmitting={setIsPaymentSubmitting}
+                        agreedToTerms={agreedToTerms}
+                        setAgreedToTerms={setAgreedToTerms}
+                      />
+                    ) : clientSecret ? (
+                      <StripeElementsWrapper clientSecret={clientSecret}>
                         <StripePaymentForm
                           clientSecret={clientSecret}
                           amount={priceDifference}
@@ -879,7 +696,12 @@ export default function ModifyReservationPage({
                           agreedToTerms={agreedToTerms}
                           setAgreedToTerms={setAgreedToTerms}
                         />
-                      </Elements>
+                      </StripeElementsWrapper>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Initializing Secure Payment...</p>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -934,14 +756,19 @@ export default function ModifyReservationPage({
             </Card>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 mt-8">
             <Link href={`/account/reservations/${id}`}>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="rounded-xl px-8">
                 Cancel
               </Button>
             </Link>
             {!showPayment && (
-              <Button type="button" onClick={() => handleSubmit()} disabled={isSaving || !isModifiable}>
+              <Button
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={isSaving || !isModifiable}
+                className="rounded-xl px-8 font-bold"
+              >
                 {isSaving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

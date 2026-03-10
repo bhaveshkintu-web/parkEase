@@ -1,10 +1,6 @@
-"use client";
-
 import { useState } from "react";
 import {
-  CardNumberElement,
-  CardExpiryElement,
-  CardCvcElement,
+  PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
@@ -39,36 +35,23 @@ export function StripePaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
-  const [brand, setBrand] = useState<string>("unknown");
-
-  // Track completeness of each field
-  const [validation, setValidation] = useState({
-    number: false,
-    expiry: false,
-    cvc: false,
-  });
-
-  const isFormComplete = validation.number && validation.expiry && validation.cvc;
+  const [isReady, setIsReady] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || !isFormComplete || !agreedToTerms) return;
-
-    const cardNumberElement = elements.getElement(CardNumberElement);
-    if (!cardNumberElement) return;
+    if (!stripe || !elements || !agreedToTerms) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
-          payment_method: {
-            card: cardNumberElement,
-          },
-        }
-      );
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success`,
+        },
+        redirect: "if_required",
+      });
 
       if (stripeError) {
         setError(stripeError.message || "Payment failed. Please try again.");
@@ -78,6 +61,9 @@ export function StripePaymentForm({
       }
 
       if (paymentIntent && paymentIntent.status === "succeeded") {
+        onPaymentSuccess(paymentIntent.id);
+      } else if (paymentIntent && paymentIntent.status === "processing") {
+        // Typically for ACH or slower methods
         onPaymentSuccess(paymentIntent.id);
       } else {
         setError("Payment was not completed. Please try again.");
@@ -90,125 +76,48 @@ export function StripePaymentForm({
     }
   };
 
-  const elementOptions = {
-    style: {
-      base: {
-        fontSize: "16px",
-        color: "hsl(var(--foreground))",
-        fontFamily: 'Geist, system-ui, -apple-system, sans-serif',
-        fontWeight: "400",
-        "::placeholder": {
-          color: "#6b7280",
-        },
-      },
-      invalid: {
-        color: "hsl(var(--destructive))",
-      },
-    },
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Payment Method Header */}
       <div className="flex flex-col gap-1 border-b border-border pb-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
-            Payment Method
+            Secure Payment
           </h3>
-          <div className="flex gap-1.5">
-            <div className="h-5 w-8 rounded bg-blue-600 flex items-center justify-center text-[8px] font-black text-white shadow-sm">VISA</div>
-            <div className="h-5 w-8 rounded bg-orange-500 flex items-center justify-center text-[8px] font-black text-white shadow-sm">MC</div>
-            <div className="h-5 w-8 rounded bg-[#2E3B4E] flex items-center justify-center text-[8px] font-black text-[#D4AF37] shadow-sm">AMEX</div>
+          <div className="flex gap-1.5 opacity-60">
+            <Lock className="h-4 w-4" />
           </div>
         </div>
         <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary/5 p-2 px-3 border border-primary/10">
           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-xs font-semibold text-primary">Credit / Debit Card</span>
+          <span className="text-xs font-semibold text-primary uppercase tracking-tighter">Unified Secure Payment</span>
         </div>
       </div>
 
       <div className="space-y-4">
-        {/* Card Number Input */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="card-number" className="text-xs font-bold text-muted-foreground uppercase">
-              Card Number
-            </Label>
-            {validation.number && <Check className="h-3 w-3 text-emerald-500" />}
+        {!stripe || !elements ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground font-bold">Initializing Connection...</p>
           </div>
-          <div className={cn(
-            "relative flex items-center rounded-xl border-2 border-border bg-background px-4 py-3.5 transition-all duration-200",
-            "focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(16,185,129,0.1)]",
-            error && "border-destructive/50 focus-within:border-destructive/50 focus-within:shadow-[0_0_0_4px_rgba(239,68,68,0.1)]"
-          )}>
-            <div className="flex-1">
-              <CardNumberElement
-                id="card-number"
-                options={{
-                  ...elementOptions,
-                  placeholder: "4242 4242 4242 4242",
-                }}
-                onChange={(e) => {
-                  setValidation(prev => ({ ...prev, number: e.complete }));
-                  if (e.brand) setBrand(e.brand);
-                  if (e.error) setError(e.error.message);
-                  else setError(null);
-                }}
-              />
-            </div>
-            <div className="ml-2 flex items-center">
-              {brand !== "unknown" ? (
-                <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 italic">
-                  {brand}
-                </span>
-              ) : (
-                <Lock className="h-4 w-4 text-muted-foreground/30" />
-              )}
-            </div>
+        ) : (
+          <div className={cn("transition-all duration-500", !isReady && "opacity-0 h-0 overflow-hidden")}>
+            <PaymentElement
+              options={{ layout: "tabs" }}
+              onReady={() => setIsReady(true)}
+              onChange={(e) => {
+                if (e.complete) setError(null);
+              }}
+            />
           </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* Expiry */}
-          <div className="space-y-2">
-            <Label htmlFor="card-expiry" className="text-xs font-bold text-muted-foreground uppercase">
-              Expires
-            </Label>
-            <div className={cn(
-              "rounded-xl border-2 border-border bg-background px-4 py-3.5 transition-all duration-200",
-              "focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(16,185,129,0.1)]"
-            )}>
-              <CardExpiryElement
-                id="card-expiry"
-                options={{
-                  ...elementOptions,
-                  placeholder: "12 / 28",
-                }}
-                onChange={(e) => setValidation(prev => ({ ...prev, expiry: e.complete }))}
-              />
-            </div>
+        {!isReady && stripe && elements && (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Loading Payment Options...</p>
           </div>
-
-          {/* CVC */}
-          <div className="space-y-2">
-            <Label htmlFor="card-cvc" className="text-xs font-bold text-muted-foreground uppercase">
-              CVV / CVC / CSC
-            </Label>
-            <div className={cn(
-              "rounded-xl border-2 border-border bg-background px-4 py-3.5 transition-all duration-200",
-              "focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(16,185,129,0.1)]"
-            )}>
-              <CardCvcElement
-                id="card-cvc"
-                options={{
-                  ...elementOptions,
-                  placeholder: "123",
-                }}
-                onChange={(e) => setValidation(prev => ({ ...prev, cvc: e.complete }))}
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {error && (
@@ -247,10 +156,10 @@ export function StripePaymentForm({
           className={cn(
             "w-full h-14 font-black text-lg shadow-xl shadow-primary/20 transition-all duration-300",
             "hover:scale-[1.01] active:scale-[0.98] rounded-xl group",
-            (!isFormComplete || !agreedToTerms) && "opacity-60 grayscale-[0.5]"
+            (!isReady || !agreedToTerms) && "opacity-60 grayscale-[0.5]"
           )}
-          variant={(!isFormComplete || !agreedToTerms) ? "secondary" : "default"}
-          disabled={!stripe || !isFormComplete || isSubmitting || !agreedToTerms}
+          variant={(!isReady || !agreedToTerms) ? "secondary" : "default"}
+          disabled={!stripe || !isReady || isSubmitting || !agreedToTerms}
         >
           {isSubmitting ? (
             <div className="flex items-center gap-3">
@@ -283,13 +192,6 @@ export function StripePaymentForm({
           </div>
         </div>
       </div>
-
-      {/* Test Mode Tip */}
-      {!isFormComplete && (
-        <p className="text-[10px] text-center text-muted-foreground/60 italic">
-          Tip: Use <code className="bg-muted px-1 rounded">4242 4242...</code> for testing in Demo/Test mode.
-        </p>
-      )}
     </form>
   );
 }

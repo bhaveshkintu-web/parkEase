@@ -21,9 +21,6 @@ ADD COLUMN "bankName" TEXT,
 ADD COLUMN "routingNumber" TEXT,
 ALTER COLUMN "ownerId" DROP NOT NULL;
 
--- AlterTable (Booking)
-ALTER TABLE "Booking" ADD COLUMN "promoCode" TEXT,
-ADD COLUMN "promoDiscount" DOUBLE PRECISION;
 
 -- CreateIndex
 CREATE INDEX "Wallet_type_idx" ON "Wallet"("type");

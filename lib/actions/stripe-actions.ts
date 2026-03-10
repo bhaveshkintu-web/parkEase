@@ -35,9 +35,35 @@ export async function createPaymentIntentAction(data: {
     return result;
   } catch (error: any) {
     console.error("Server Action createPaymentIntentAction error:", error);
+
+    // Specifically handle database connection issues
+    if (error.code === 'P1001' || error.message?.includes("Can't reach database server")) {
+      return {
+        success: false,
+        error: "Database Connection Error: The server cannot reach the database. Please ensure your database is running."
+      };
+    }
+
     if (error.message === "UNAUTHORIZED") {
       return { success: false, error: "Please log in to continue" };
     }
     return { success: false, error: error.message || "Failed to initiate payment" };
+  }
+}
+
+export async function createSetupIntentAction() {
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return { success: false, error: "Please log in to continue" };
+    }
+
+    const { createSetupIntent } = await import("@/lib/stripe");
+    const result = await createSetupIntent(userId);
+
+    return result;
+  } catch (error: any) {
+    console.error("Server Action createSetupIntentAction error:", error);
+    return { success: false, error: error.message || "Failed to initiate setup intent" };
   }
 }
