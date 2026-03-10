@@ -146,7 +146,7 @@ export async function PATCH(
           });
 
           // 2. Credit earnings to owner
-          await FinanceService.creditEarnings(updatedSession.bookingId);
+          await FinanceService.creditEarnings(updatedSession.bookingId, tx);
         }
 
         // 3. Increment available spots (only if within bounds)
