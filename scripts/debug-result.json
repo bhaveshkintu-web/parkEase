@@ -1,0 +1,50 @@
+{
+  "location": {
+    "id": "cmmg4d4ew000au1j0l7watifz",
+    "name": "LAX Economy Parking",
+    "totalSpots": 2,
+    "availableSpots": 1
+  },
+  "spots": [
+    {
+      "id": "cmmg4d4f4000du1j0icu9k57m",
+      "locationId": "cmmg4d4ew000au1j0l7watifz",
+      "identifier": "A1",
+      "status": "ACTIVE",
+      "createdAt": "2026-03-07T09:26:51.040Z",
+      "updatedAt": "2026-03-07T09:26:51.040Z"
+    },
+    {
+      "id": "cmmg4d4f4000eu1j0668ctoog",
+      "locationId": "cmmg4d4ew000au1j0l7watifz",
+      "identifier": "A2",
+      "status": "INACTIVE",
+      "createdAt": "2026-03-07T09:26:51.040Z",
+      "updatedAt": "2026-03-11T05:57:38.734Z"
+    },
+    {
+      "id": "cmmg4d4f4000fu1j01repj7sd",
+      "locationId": "cmmg4d4ew000au1j0l7watifz",
+      "identifier": "A3",
+      "status": "INACTIVE",
+      "createdAt": "2026-03-07T09:26:51.040Z",
+      "updatedAt": "2026-03-11T05:57:38.738Z"
+    },
+    {
+      "id": "cmmg4d4f4000gu1j06c88zxft",
+      "locationId": "cmmg4d4ew000au1j0l7watifz",
+      "identifier": "A4",
+      "status": "INACTIVE",
+      "createdAt": "2026-03-07T09:26:51.040Z",
+      "updatedAt": "2026-03-11T05:57:38.731Z"
+    },
+    {
+      "id": "cmmg4d4f4000hu1j0u1wgx08t",
+      "locationId": "cmmg4d4ew000au1j0l7watifz",
+      "identifier": "A5",
+      "status": "INACTIVE",
+      "createdAt": "2026-03-07T09:26:51.040Z",
+      "updatedAt": "2026-03-11T05:57:38.727Z"
+    }
+  ]
+}

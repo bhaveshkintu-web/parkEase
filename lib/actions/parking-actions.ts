@@ -150,6 +150,13 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
         },
         pricingRules: true,
         analytics: true,
+        spots: {
+          include: {
+            _count: {
+              select: { bookings: true }
+            }
+          }
+        }
       },
     });
 
@@ -413,36 +420,80 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
 
     const updatedLocation = await prisma.$transaction(async (tx) => {
       // 1. Sync Spots
-      if (spotIdentifiers && spotIdentifiers.length > 0) {
-        const existingIdentifiers = ((current as any).spots || []).map((s: any) => s.identifier);
+      if (spotIdentifiers) {
+        const existingSpots = (current as any).spots || [];
+        const existingIdentifiers = existingSpots.map((s: any) => s.identifier);
 
-        // Spots to add
-        const toAdd = spotIdentifiers.filter((idStr: string) => !existingIdentifiers.includes(idStr));
-        if (toAdd.length > 0) {
-          await (tx as any).parkingSpot.createMany({
-            data: toAdd.map((idStr: string) => ({
-              locationId: id,
-              identifier: idStr,
-            }))
-          });
+        // Normalize provided spots to objects and filter out empty strings
+        const providedSpots = spotIdentifiers
+          .map((s: any) => typeof s === 'string' ? { identifier: s } : s)
+          .filter((s: any) => s.identifier && s.identifier.trim() !== "");
+
+        // Track seen IDs and identifiers to know what to remove or update
+        const providedIds = providedSpots
+          .filter((s: any) => s.id && !s.id.startsWith('temp-') && !s.id.startsWith('new-'))
+          .map((s: any) => s.id);
+        const providedIdentifiers = providedSpots.map((s: any) => s.identifier);
+
+        // a) Update existing spots or create missing ones
+        for (const spot of providedSpots) {
+          const isRealId = spot.id && !spot.id.startsWith('temp-') && !spot.id.startsWith('new-');
+          const existing = isRealId
+            ? existingSpots.find((es: any) => es.id === spot.id)
+            : existingSpots.find((es: any) => es.identifier === spot.identifier);
+
+          if (existing) {
+            // Found a match (by ID or Unique Identifier)
+            const targetStatus = spot.status || 'ACTIVE';
+            if (existing.identifier !== spot.identifier || existing.status !== targetStatus) {
+              await (tx as any).parkingSpot.update({
+                where: { id: existing.id },
+                data: { identifier: spot.identifier, status: targetStatus }
+              });
+            }
+          } else {
+            // New spot
+            await (tx as any).parkingSpot.create({
+              data: {
+                locationId: id,
+                identifier: spot.identifier,
+                status: spot.status || 'ACTIVE'
+              }
+            });
+          }
         }
 
-        // Spots to remove
-        const toRemove = ((current as any).spots || []).filter((s: any) => !spotIdentifiers.includes(s.identifier));
+        // b) Handle spots that were removed from the UI
+        const toRemove = existingSpots.filter((es: any) =>
+          !providedIds.includes(es.id) && !providedIdentifiers.includes(es.identifier)
+        );
+
         for (const spot of toRemove) {
           if (spot._count.bookings === 0) {
             await (tx as any).parkingSpot.delete({ where: { id: spot.id } });
-          } else {
-            // Keep it but maybe mark as INACTIVE if we had that logic active
+          } else if (spot.status !== 'INACTIVE') {
+            await (tx as any).parkingSpot.update({
+              where: { id: spot.id },
+              data: { status: 'INACTIVE' }
+            });
           }
         }
+
+        // Update total spots in rest data to match current identifier count for consistency
+        // Update total spots in rest data to match current identifier count for consistency
+        rest.totalSpots = providedSpots.length;
+
+        // Final sanity check on availability based on DB after transaction mutations
+        const spotCheck = await (tx as any).parkingSpot.findMany({ where: { locationId: id } });
+        const activeCount = spotCheck.filter((s: any) => s.status === 'ACTIVE').length;
+        const occupiedCount = Math.max(0, current.totalSpots - (current.availableSpots || 0));
+        (rest as any).availableSpots = Math.max(0, activeCount - occupiedCount);
       }
 
       return await tx.parkingLocation.update({
         where: { id },
         data: {
           ...rest,
-          availableSpots: newAvailableSpots,
           cancellationPolicy: {
             type: cancellationPolicy,
             hours: parseInt(cancellationDeadline) || 0,
