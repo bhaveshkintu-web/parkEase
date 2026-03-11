@@ -7,6 +7,7 @@ import { DataStoreProvider } from '@/lib/data-store'
 import { BookingProvider } from '@/lib/booking-context'
 import { SettingsProvider } from '@/lib/contexts/settings-context'
 import { Toaster } from '@/components/ui/toaster'
+import { BookingCleanupPoller } from '@/components/booking-cleanup-poller'
 import './globals.css'
 
 // const _geist = Geist({ subsets: ["latin"] });
@@ -56,6 +57,7 @@ export default function RootLayout({
               >
                 {children}
                 <Toaster />
+                <BookingCleanupPoller />
               </BookingProvider>
             </SettingsProvider>
           </DataStoreProvider>

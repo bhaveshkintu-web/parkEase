@@ -42,6 +42,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { StatCard } from "@/components/admin/stat-card";
 import { formatCurrency } from "@/lib/data";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 interface Owner {
   id: string;
@@ -71,10 +72,12 @@ interface Owner {
 export default function OwnersPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const ITEMS_PER_PAGE = 10;
   const [owners, setOwners] = useState<Owner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchOwners();
@@ -138,6 +141,15 @@ export default function OwnersPage() {
     if (activeTab === "all") return matchesSearch;
     return matchesSearch && normalizeStatus(owner.status) === activeTab;
   });
+
+  const totalPages = Math.ceil(filteredOwners.length / ITEMS_PER_PAGE);
+  const paginatedOwners = filteredOwners.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page on tab or search change
+  useEffect(() => { setCurrentPage(1); }, [activeTab, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     const normalized = normalizeStatus(status);
@@ -268,7 +280,7 @@ export default function OwnersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOwners.map((owner) => (
+                  paginatedOwners.map((owner) => (
                     <TableRow key={owner.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/admin/owners/${owner.id}`)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -330,6 +342,13 @@ export default function OwnersPage() {
               </TableBody>
             </Table>
           </div>
+          <PaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredOwners.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
     </div>

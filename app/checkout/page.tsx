@@ -867,20 +867,48 @@ function CheckoutContent() {
 
                       {/* Unified Submit Button ONLY for Saved Card */}
                       {selectedCardId && (
-                        <Button
-                          className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
-                          disabled={isSubmitting || !agreedToTerms}
-                          onClick={handleSavedCardPayment}
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            `Pay ${formatCurrency(finalPrice)} via Saved Card`
-                          )}
-                        </Button>
+                        <div className="space-y-4 pt-2">
+                          <div className={cn(
+                            "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+                            agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+                          )}>
+                            <div className="pt-0.5">
+                              <Checkbox
+                                id="saved-card-terms"
+                                checked={agreedToTerms}
+                                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                                className="w-5 h-5 rounded-md"
+                              />
+                            </div>
+                            <Label htmlFor="saved-card-terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                              <span>
+                                I agree to the{" "}
+                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
+                                  Terms
+                                </Link>{" "}
+                                and{" "}
+                                <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                                  Cancellation Policy
+                                </Link>
+                                . I understand my booking is subject to availability.
+                              </span>
+                            </Label>
+                          </div>
+                          <Button
+                            className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
+                            disabled={isSubmitting || !agreedToTerms}
+                            onClick={handleSavedCardPayment}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `Pay ${formatCurrency(finalPrice)} via Saved Card`
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </AccordionContent>

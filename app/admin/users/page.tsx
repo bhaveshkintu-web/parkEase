@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -364,31 +365,13 @@ export default function AdminUsersPage() {
           </div>
           
           {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4 px-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <div className="text-sm font-medium">
-                Page {pagination.page} of {pagination.totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-                disabled={page === pagination.totalPages || loading}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <PaginationFooter
+            currentPage={page}
+            totalPages={pagination?.totalPages || 1}
+            totalItems={pagination?.total || users.length}
+            itemsPerPage={pagination?.limit || 10}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

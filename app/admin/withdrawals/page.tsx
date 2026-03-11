@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 import {
   Table,
   TableBody,
@@ -341,29 +342,13 @@ export default function AdminWithdrawalsPage() {
             </Table>
           </div>
           
-          {totalPages > 1 && (
-             <div className="flex items-center justify-end gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  Previous
-                </Button>
-                <div className="text-sm font-medium">
-                  Page {page} of {totalPages}
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </Button>
-             </div>
-          )}
+          <PaginationFooter
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={stats?.total || withdrawals.length} // Fallback if stats.total is missing
+            itemsPerPage={10} // The API uses limit: 10 by default
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

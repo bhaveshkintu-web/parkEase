@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { redirect } from "next/navigation";
@@ -36,6 +37,7 @@ type BreakdownData = {
   summary: {
     totalTax: number;
     totalFees: number;
+    totalGross: number;
     netRevenue: number;
   }
 };
@@ -200,12 +202,17 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
 
   const dateFilter = buildDateFilter(startDate, endDate);
 
- // For monthly trend, we use Booking.createdAt
+  const dateRangeSql = startDate && endDate 
+    ? Prisma.sql`AND "createdAt" BETWEEN ${new Date(startDate)}::timestamp AND ${new Date(endDate)}::timestamp` 
+    : Prisma.empty;
+
+  // For monthly trend, we use Booking.createdAt
   const monthlyEarningsRaw = await prisma.$queryRaw<{ month: string; amount: number }[]>`
     SELECT TO_CHAR("createdAt", 'Mon YYYY') as month, SUM("totalPrice") as amount
     FROM "Booking"
     WHERE "locationId" IN (SELECT id FROM "ParkingLocation" WHERE "ownerId" = ${ownerId})
     AND "status" IN ('CONFIRMED', 'COMPLETED')
+    ${dateRangeSql}
     GROUP BY TO_CHAR("createdAt", 'Mon YYYY'), DATE_TRUNC('month', "createdAt")
     ORDER BY DATE_TRUNC('month', "createdAt") DESC
     LIMIT 12
@@ -255,6 +262,7 @@ export async function getEarningsBreakdown(startDate?: string, endDate?: string)
     summary: {
       totalTax: totals._sum.taxes || 0,
       totalFees: totals._sum.fees || 0,
+      totalGross: totals._sum.totalPrice || 0,
       netRevenue: (totals._sum.totalPrice || 0) - (totals._sum.taxes || 0) - (totals._sum.fees || 0),
     }
   };

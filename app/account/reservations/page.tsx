@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 import {
   Calendar,
   MapPin,
@@ -25,10 +26,12 @@ import { cn } from "@/lib/utils";
 type TabValue = "upcoming" | "past" | "cancelled" | "expired";
 
 export default function ReservationsPage() {
+  const ITEMS_PER_PAGE = 10;
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modificationGap, setModificationGap] = useState(2);
   const [activeTab, setActiveTab] = useState<TabValue>("upcoming");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function fetchData() {
@@ -82,6 +85,14 @@ export default function ReservationsPage() {
   };
 
   const filteredBookings = getFilteredBookings();
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page when tab changes
+  useEffect(() => { setCurrentPage(1); }, [activeTab]);
 
   // Calculate counts for each tab
   const upcomingCount = bookings.filter((b) => {
@@ -232,7 +243,7 @@ export default function ReservationsPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredBookings.map((booking) => (
+              {paginatedBookings.map((booking) => (
                 <Card key={booking.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
@@ -359,6 +370,13 @@ export default function ReservationsPage() {
                   </CardContent>
                 </Card>
               ))}
+              <PaginationFooter
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredBookings.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </TabsContent>

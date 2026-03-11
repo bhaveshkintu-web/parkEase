@@ -33,6 +33,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 interface OwnerLead {
   id: string;
@@ -53,6 +54,7 @@ interface OwnerLead {
 
 export default function OwnerApprovalsPage() {
   const { toast } = useToast();
+  const ITEMS_PER_PAGE = 10;
   const [leads, setLeads] = useState<OwnerLead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -60,6 +62,7 @@ export default function OwnerApprovalsPage() {
   const [activeTab, setActiveTab] = useState("pending");
   const [adminNotes, setAdminNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch owner leads
   useEffect(() => {
@@ -137,6 +140,18 @@ export default function OwnerApprovalsPage() {
       lead.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const derivedLeads = filteredLeads.filter(
+    (lead) => activeTab === "all" || lead.status === activeTab
+  );
+  const totalPages = Math.ceil(derivedLeads.length / ITEMS_PER_PAGE);
+  const paginatedLeads = derivedLeads.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page on tab or search change
+  useEffect(() => { setCurrentPage(1); }, [activeTab, search]);
+
   const pendingCount = leads.filter((l) => l.status === "pending").length;
   const approvedCount = leads.filter((l) => l.status === "approved").length;
   const rejectedCount = leads.filter((l) => l.status === "rejected").length;
@@ -211,9 +226,7 @@ export default function OwnerApprovalsPage() {
 
       {/* Leads List */}
       <div className="space-y-4">
-        {filteredLeads
-          .filter((lead) => activeTab === "all" || lead.status === activeTab)
-          .map((lead) => (
+        {paginatedLeads.map((lead) => (
             <Card key={lead.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -287,9 +300,17 @@ export default function OwnerApprovalsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+        ))}
 
-        {filteredLeads.filter((lead) => activeTab === "all" || lead.status === activeTab).length === 0 && (
+        <PaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={derivedLeads.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
+
+        {derivedLeads.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />

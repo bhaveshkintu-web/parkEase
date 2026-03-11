@@ -116,7 +116,7 @@ export default function OwnerEarningsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      exportToCSV(overview);
+      exportToCSV(period, displayEarnings, breakdown, locations, overview.availableBalance);
     } finally {
       setExporting(false);
     }
@@ -350,7 +350,7 @@ export default function OwnerEarningsPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Gross Revenue</span>
-                  <span className="font-bold">{formatCurrency(overview.totalEarnings)}</span>
+                  <span className="font-bold">{formatCurrency(breakdown?.summary.totalGross || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Taxes</span>
@@ -427,25 +427,50 @@ export default function OwnerEarningsPage() {
 
 // CSV Export Utility
 function exportToCSV(
-  overview: any | null,
+  period: string,
+  earnings: number,
+  breakdown: any | null,
+  locations: any[],
+  balance: number
 ) {
-  let csv = "Owner Earnings Report\n\n";
+  const periodLabel = period === "this-month" ? "This Month" :
+    period === "last-month" ? "Last Month" :
+    period === "this-year" ? "This Year" :
+    period === "custom" ? "Selected Range" : "All Time";
 
-  // Overview Section with Total Earnings
-  csv += "EARNINGS OVERVIEW\n";
-  if (overview) {
-    csv += `Total Earnings,${formatCurrency(overview.totalEarnings)}\n`;
-    csv += `This Month Earnings,${formatCurrency(overview.thisMonthEarnings)}\n`;
-    csv += `Pending Earnings,${formatCurrency(overview.pendingEarnings)}\n`;
-    csv += `Completed Bookings,${overview.completedBookings}\n`;
-    csv += `Total Bookings,${overview.totalBookings}\n`;
-    csv += `Wallet Balance,${formatCurrency(overview.availableBalance)}\n`;
+  let csv = `Owner Earnings Report (${periodLabel})\n\n`;
+
+  // Overview Section
+  csv += "EARNINGS SUMMARY\n";
+  csv += `Period,${periodLabel}\n`;
+  csv += `Gross Earnings,${formatCurrency(earnings)}\n`;
+  csv += `Net Income,${formatCurrency(breakdown?.summary.netRevenue || 0)}\n`;
+  csv += `Total Tax,${formatCurrency(breakdown?.summary.totalTax || 0)}\n`;
+  csv += `Total Fees,${formatCurrency(breakdown?.summary.totalFees || 0)}\n`;
+  csv += `Wallet Balance,${formatCurrency(balance)}\n\n`;
+
+  // Breakdown by Location
+  csv += "LOCATION PERFORMANCE\n";
+  csv += "Location,Bookings,Revenue,Occupancy,Avg Value\n";
+  locations.forEach(loc => {
+    csv += `"${loc.name}",${loc.totalBookings},${formatCurrency(loc.revenue)},${loc.occupancyRate}%,${formatCurrency(loc.avgBookingValue)}\n`;
+  });
+  csv += "\n";
+
+  // Monthly Trend
+  if (breakdown?.earningsByMonth) {
+    csv += "MONTHLY TREND\n";
+    csv += "Month,Amount\n";
+    breakdown.earningsByMonth.forEach((m: any) => {
+      csv += `${m.month},${formatCurrency(m.amount).replace(/,/g, '')}\n`;
+    });
   }
 
   // Download CSV
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `owner-earnings-${new Date().toISOString().split("T")[0]}.csv`;
+  const dateStr = new Date().toISOString().split("T")[0];
+  link.download = `owner-earnings-${period}-${dateStr}.csv`;
   link.click();
 }

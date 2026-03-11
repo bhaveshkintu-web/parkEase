@@ -32,6 +32,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 interface ParkingLocation {
   id: string;
@@ -53,6 +54,7 @@ interface ParkingLocation {
 
 export default function ParkingApprovalsPage() {
   const { toast } = useToast();
+  const ITEMS_PER_PAGE = 10;
   const [locations, setLocations] = useState<ParkingLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -60,6 +62,7 @@ export default function ParkingApprovalsPage() {
   const [activeTab, setActiveTab] = useState("pending");
   const [reviewNotes, setReviewNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch parking locations
   useEffect(() => {
@@ -156,6 +159,20 @@ export default function ParkingApprovalsPage() {
       loc.owner?.businessName?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const derivedLocations = filteredLocations.filter((loc) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
+    return loc.status?.toUpperCase() === activeTab.toUpperCase();
+  });
+  const totalPages = Math.ceil(derivedLocations.length / ITEMS_PER_PAGE);
+  const paginatedLocations = derivedLocations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page on tab or search change
+  useEffect(() => { setCurrentPage(1); }, [activeTab, search]);
+
   const pendingCount = locations.filter((l) => l.status?.toUpperCase() === "PENDING").length;
   const activeCount = locations.filter((l) => l.status?.toUpperCase() === "ACTIVE").length;
   const rejectedCount = locations.filter((l) => l.status?.toUpperCase() === "INACTIVE" || l.status?.toUpperCase() === "REJECTED").length;
@@ -226,13 +243,7 @@ export default function ParkingApprovalsPage() {
 
       {/* Locations List */}
       <div className="space-y-4">
-        {filteredLocations
-          .filter((loc) => {
-            if (activeTab === "all") return true;
-            if (activeTab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
-            return loc.status?.toUpperCase() === activeTab.toUpperCase();
-          })
-          .map((location) => (
+        {paginatedLocations.map((location) => (
             <Card key={location.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -294,13 +305,17 @@ export default function ParkingApprovalsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+        ))}
 
-        {filteredLocations.filter((loc) => {
-          if (activeTab === "all") return true;
-          if (activeTab === "rejected") return loc.status?.toUpperCase() === "INACTIVE" || loc.status?.toUpperCase() === "REJECTED";
-          return loc.status?.toUpperCase() === activeTab.toUpperCase();
-        }).length === 0 && (
+        <PaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={derivedLocations.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
+
+        {derivedLocations.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />

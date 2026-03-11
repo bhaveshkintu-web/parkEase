@@ -931,63 +931,100 @@ export async function cleanupExpiredBookings() {
     const gracePeriodMinutes = settings.gracePeriodMinutes || 30;
     const expirationThreshold = new Date(now.getTime() - gracePeriodMinutes * 60 * 1000);
 
-    // Find sessions that are RESERVED but their scheduled checkIn was > grace period ago
-    // AND they haven't actually checked in (status is still RESERVED in session)
+    let processedCount = 0;
+
+    // ── Pass 1: Expire sessions that are still RESERVED ──────────────────────
     const expiredSessions = await prisma.parkingSession.findMany({
       where: {
         status: "RESERVED",
         booking: {
           checkIn: { lt: expirationThreshold },
-          status: "CONFIRMED"
+          status: { in: ["CONFIRMED", "PENDING"] }
         }
       },
       include: {
         booking: true,
-        location: {
-          select: { id: true, availableSpots: true, totalSpots: true }
-        }
+        location: true
       }
     });
 
-    if (expiredSessions.length === 0) {
-      return { success: true, processed: 0 };
+    for (const session of expiredSessions) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // 1. Update Session status
+          await tx.parkingSession.update({
+            where: { id: session.id },
+            data: { status: "EXPIRED" }
+          });
+
+          // 2. Update Booking status
+          await tx.booking.update({
+            where: { id: session.bookingId },
+            data: { status: "EXPIRED" }
+          });
+
+          // 3. Release the spot
+          if (session.location && session.location.availableSpots < session.location.totalSpots) {
+            await tx.parkingLocation.update({
+              where: { id: session.locationId! },
+              data: { availableSpots: { increment: 1 } }
+            });
+          }
+
+          // 4. Credit earnings to owner wallet
+          await FinanceService.creditEarnings(session.bookingId, tx);
+        });
+        processedCount++;
+      } catch (sessionError) {
+        console.error(`[CLEANUP] Failed for session ${session.id}:`, sessionError);
+      }
     }
 
-    const results = await prisma.$transaction(async (tx) => {
-      let count = 0;
-      for (const session of expiredSessions) {
-        // 1. Update Session status
-        await tx.parkingSession.update({
-          where: { id: session.id },
-          data: { status: "NO_SHOW" }
-        });
-
-        // 2. Update Booking status
-        await tx.booking.update({
-          where: { id: session.bookingId },
-          data: { status: "NO_SHOW" as any }
-        });
-
-        // 3. Release the spot
-        if (session.location && session.location.availableSpots < session.location.totalSpots) {
-          await tx.parkingLocation.update({
-            where: { id: session.locationId },
-            data: { availableSpots: { increment: 1 } }
-          });
-        }
-
-        // 4. Release held earnings to owner (moving from totalBalance to available)
-        await FinanceService.creditEarnings(session.bookingId, tx);
-
-        count++;
+    // ── Pass 2: Expire PENDING/CONFIRMED bookings with NO ParkingSession ──────
+    // These are "orphaned" bookings: payment successful but the session was never created,
+    // or legacy bookings created before ParkingSession logic was added.
+    const orphanedBookings = await prisma.booking.findMany({
+      where: {
+        status: { in: ["CONFIRMED", "PENDING"] },
+        checkIn: { lt: expirationThreshold },
+        parkingSession: { is: null } // no session linked
+      },
+      include: {
+        location: true
       }
-      return count;
     });
+
+    for (const booking of orphanedBookings) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // 1. Expire the booking
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: { status: "EXPIRED" }
+          });
+
+          // 2. Free the spot
+          if (booking.location && booking.location.availableSpots < booking.location.totalSpots) {
+            await tx.parkingLocation.update({
+              where: { id: booking.locationId },
+              data: { availableSpots: { increment: 1 } }
+            });
+          }
+
+          // 3. Credit earnings to owner wallet
+          await FinanceService.creditEarnings(booking.id, tx);
+        });
+        processedCount++;
+      } catch (bookingError) {
+        console.error(`[CLEANUP] Failed for orphaned booking ${booking.id}:`, bookingError);
+      }
+    }
 
     revalidatePath("/owner/bookings");
     revalidatePath("/owner/dashboard");
+    revalidatePath("/account/reservations");
 
-    return { success: true, processed: results };
+    return { success: true, processed: processedCount };
   } catch (error) {
     console.error("CLEANUP_EXPIRED_BOOKINGS_ERROR:", error);
     return { success: false, error: "Failed to cleanup expired bookings" };
