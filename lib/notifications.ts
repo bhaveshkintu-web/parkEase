@@ -35,6 +35,7 @@ export enum NotificationType {
   WITHDRAWAL_REJECTED = "WITHDRAWAL_REJECTED",
   REFUND_DEDUCTION = "REFUND_DEDUCTION",
   NEW_BOOKING = "NEW_BOOKING",
+  SESSION_EXPIRY_WARNING = "SESSION_EXPIRY_WARNING",
 }
 
 export async function notifyAdminsOfBookingRequest(requestId: string) {
@@ -675,7 +676,7 @@ export class NotificationService {
       }));
 
       return await prisma.notification.createMany({
-        data: notifications,
+        data: notifications as any,
       });
     } catch (error) {
       console.error("Error notifying admins:", error);
@@ -719,5 +720,175 @@ export class NotificationService {
       ...params,
       userId,
     });
+  }
+}
+
+/**
+ * Sends a session expiry warning email to the customer.
+ */
+export async function sendSessionExpiryWarning(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        location: true,
+      },
+    });
+
+    if (!booking) throw new Error("Booking not found");
+
+    console.log(`Attempting to send expiry warning to ${booking.guestEmail} using SMTP: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT} (${process.env.SMTP_USER})`);
+
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const formatTimeStr = (date: Date) => {
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "UTC" // Force UTC to be safe, or omit for local
+      });
+    };
+
+    const extendLink = `${getAppUrl()}/extend-parking/${bookingId}`;
+
+    console.log(`Email content prepared for ${booking.guestEmail}. Sending...`);
+
+    const info = await transporter.sendMail({
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
+      to: booking.guestEmail,
+      subject: "Your parking session will expire soon",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #f59e0b; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">ParkZipply</h1>
+            <p style="margin: 5px 0 0; opacity: 0.9;">Session Fast Expiring</p>
+          </div>
+          
+          <div style="padding: 30px;">
+            <h2 style="margin-top: 0; color: #d97706;">Hello ${booking.guestFirstName},</h2>
+            <p>Your parking session at <strong>${booking.location.name}</strong> will expire soon.</p>
+            
+            <p>If you need more time, you can extend your parking before checkout to avoid overstay charges.</p>
+
+            <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+              <a href="${extendLink}" style="display: inline-block; background-color: #0d9488; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Extend Parking</a>
+            </div>
+
+            <p style="font-size: 14px; color: #666; font-style: italic;">
+              Note: Overstaying without extension may result in additional charges at double the normal rate.
+            </p>
+          </div>
+          
+          <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log(`Transporter sendMail result:`, info.response);
+
+    // Also create an in-app notification if the user is a registered user
+    if (booking.userId) {
+      await NotificationService.create({
+        userId: booking.userId,
+        title: "Parking session expires soon",
+        message: `Your session at ${booking.location.name} will expire at ${formatTimeStr(new Date(booking.checkOut))}.`,
+        type: NotificationType.SESSION_EXPIRY_WARNING as any,
+        metadata: { bookingId: booking.id, type: "SESSION_EXPIRY" },
+      });
+    }
+
+    console.log(`✅ Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Failed to send session expiry warning:", error);
+    return { success: false, error: "Failed to send email" };
+  }
+}
+
+/**
+ * Sends an overstay payment link email to the customer.
+ */
+export async function sendOverstayPaymentEmail(bookingId: string, overstayCharge: number) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        location: true,
+      },
+    });
+
+    if (!booking) throw new Error("Booking not found");
+
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const payLink = `${getAppUrl()}/pay-overstay/${bookingId}`;
+
+    await transporter.sendMail({
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
+      to: booking.guestEmail,
+      subject: "Action Required: Overstay Payment for Parking",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #ef4444; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">ParkZipply</h1>
+            <p style="margin: 5px 0 0; opacity: 0.9;">Overstay Detected</p>
+          </div>
+          
+          <div style="padding: 30px;">
+            <h2 style="margin-top: 0; color: #b91c1c;">Hello ${booking.guestFirstName},</h2>
+            <p>Your parking session at <strong>${booking.location.name}</strong> has exceeded the booked duration.</p>
+            
+            <div style="background-color: #fee2e2; border: 1px solid #fecaca; padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center;">
+              <p style="margin: 0; font-size: 14px; text-transform: uppercase; font-weight: bold; color: #991b1b;">Overstay Charge</p>
+              <p style="margin: 10px 0 0; font-size: 32px; font-weight: 900; color: #b91c1c;">$${overstayCharge.toFixed(2)}</p>
+            </div>
+
+            <p>To complete your check-out, please pay the overstay charge using the link below.</p>
+
+            <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+              <a href="${payLink}" style="display: inline-block; background-color: #000; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Pay Overstay Charge</a>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              If you have already paid in cash to the watchman, please disregard this email.
+            </p>
+          </div>
+          
+          <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log(`✅ Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Failed to send overstay payment email:", error);
+    return { success: false, error: "Failed to send email" };
   }
 }

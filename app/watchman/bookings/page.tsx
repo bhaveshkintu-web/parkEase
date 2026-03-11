@@ -51,6 +51,7 @@ import {
   Eye,
   Timer,
   FileText,
+  Loader2,
 } from "lucide-react";
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
@@ -93,6 +94,7 @@ export default function WatchmanBookingsPage() {
       }
     } catch (error) {
       console.error("Error fetching bookings:", error);
+      setBookings([]);
     }
   }, [dateFilter]);
 
@@ -120,15 +122,20 @@ export default function WatchmanBookingsPage() {
   useEffect(() => {
     loadAllData();
 
-    // Polling every 30 seconds for live updates (Way.com Style)
-
+    // Polling every 60 seconds (adjusted from 30 for better performance)
     const interval = setInterval(() => {
       fetchBookings();
       fetchBookingRequests();
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, [loadAllData, fetchBookings, fetchBookingRequests]);
+  }, [dateFilter, fetchBookingRequests]); // Re-fetch when dateFilter changes
+
+  // Fetch data when dateFilter changes explicitly
+  useEffect(() => {
+    setIsLoading(true);
+    fetchBookings().finally(() => setIsLoading(false));
+  }, [dateFilter, fetchBookings]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -138,36 +145,25 @@ export default function WatchmanBookingsPage() {
   }, [searchParams]);
 
   // Filter today's bookings
-  const today = useMemo(() => new Date(), []);
-  const todayBookings = useMemo(() => {
-    // If we have actual bookings from API, use them
-    if (bookings.length > 0) return bookings;
+  // All bookings for the selected date range
+  const baseBookings = useMemo(() => {
+    return bookings;
+  }, [bookings]);
 
-    // Fallback/Legacy filter for data-store reservations
-    return reservations.filter((r) => {
-      const checkInDate = new Date(r.checkIn);
-      const checkOutDate = new Date(r.checkOut);
-      const isToday =
-        checkInDate.toDateString() === today.toDateString() ||
-        checkOutDate.toDateString() === today.toDateString();
+  // For stats: only today's bookings
+  const actualTodayBookings = useMemo(() => {
+    if (dateFilter === "today") return bookings;
 
-      if (dateFilter === "today") return isToday;
-      if (dateFilter === "tomorrow") {
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return checkInDate.toDateString() === tomorrow.toDateString();
-      }
-      if (dateFilter === "week") {
-        const weekFromNow = new Date(today);
-        weekFromNow.setDate(weekFromNow.getDate() + 7);
-        return checkInDate >= today && checkInDate <= weekFromNow;
-      }
-      return true;
+    const todayStr = new Date().toDateString();
+    return bookings.filter(b => {
+      const checkIn = new Date(b.checkIn).toDateString();
+      const checkOut = new Date(b.checkOut).toDateString();
+      return checkIn === todayStr || checkOut === todayStr;
     });
-  }, [reservations, bookings, dateFilter, today]);
+  }, [bookings, dateFilter]);
 
   const filteredBookings = useMemo(() => {
-    let filtered = todayBookings;
+    let filtered = baseBookings;
 
     if (statusFilter !== "all") {
       filtered = filtered.filter((b) => b.status === statusFilter);
@@ -179,13 +175,19 @@ export default function WatchmanBookingsPage() {
         (b) => {
           const plate = b.vehicleInfo?.licensePlate || b.vehiclePlate || "";
           const id = b.id || "";
-          return plate.toLowerCase().includes(searchLower) || id.toLowerCase().includes(searchLower);
+          const name = `${b.guestInfo?.firstName || ""} ${b.guestInfo?.lastName || ""}`.toLowerCase();
+          const code = (b.confirmationCode || "").toLowerCase();
+
+          return plate.toLowerCase().includes(searchLower) ||
+            id.toLowerCase().includes(searchLower) ||
+            name.includes(searchLower) ||
+            code.includes(searchLower);
         }
       );
     }
 
     return filtered;
-  }, [todayBookings, statusFilter, search]);
+  }, [baseBookings, statusFilter, search]);
 
   const filteredRequests = useMemo(() => {
     if (requestTab === "all") return bookingRequests;
@@ -252,7 +254,9 @@ export default function WatchmanBookingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Today&apos;s Bookings</p>
-                  <p className="text-2xl font-bold text-foreground">{todayBookings.length}</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {dateFilter === "today" ? bookings.length : actualTodayBookings.length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -290,9 +294,9 @@ export default function WatchmanBookingsPage() {
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Confirmed</p>
+                  <p className="text-sm text-muted-foreground">Today Confirmed</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {todayBookings.filter((b) => b.status === "confirmed" || b.status === "CONFIRMED").length}
+                    {(dateFilter === "today" ? bookings : actualTodayBookings).filter((b) => b.status === "confirmed" || b.status === "CONFIRMED").length}
                   </p>
                 </div>
               </div>
@@ -364,7 +368,12 @@ export default function WatchmanBookingsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {filteredBookings.length === 0 ? (
+                  {isLoading ? (
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+                      <p className="text-muted-foreground">Fetching bookings...</p>
+                    </div>
+                  ) : filteredBookings.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No bookings found for the selected filters</p>
@@ -373,6 +382,7 @@ export default function WatchmanBookingsPage() {
                     filteredBookings.map((booking) => {
                       const checkInDate = new Date(booking.checkIn);
                       const checkOutDate = new Date(booking.checkOut);
+                      const today = new Date();
                       const isCheckIn = checkInDate.toDateString() === today.toDateString();
                       // Graceful handling of vehicle info if missing
                       const plate = booking.vehicleInfo?.licensePlate || booking.vehiclePlate || "N/A";
@@ -420,7 +430,7 @@ export default function WatchmanBookingsPage() {
                               <p className="text-xs text-muted-foreground">{formatDate(checkInDate)}</p>
                             </div>
                             {booking.status?.toLowerCase() !== "completed" && booking.sessionStatus !== "checked_out" && (
-                              <Link href="/watchman/scan">
+                              <Link href={`/watchman/scan?code=${encodeURIComponent(booking.confirmationCode || plate)}`}>
                                 <Button size="sm" variant={booking.sessionStatus === "checked_in" ? "secondary" : "default"}>
                                   {booking.sessionStatus === "checked_in" ? (
                                     <>

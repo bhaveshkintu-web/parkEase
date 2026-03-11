@@ -132,6 +132,43 @@ const initialFormData: FormData = {
   spotIdentifiers: [],
 };
 
+// Utility to sync list with target total
+const syncSpotList = (total: number, currentList: any[]) => {
+  const normalizedTotal = Math.max(0, total);
+  if (normalizedTotal === currentList.length) return currentList;
+
+  if (normalizedTotal < currentList.length) {
+    return currentList.slice(0, normalizedTotal);
+  }
+
+  // Expand logic
+  const newList = [...currentList];
+  let lastId = "A0";
+  if (currentList.length > 0) {
+    const last = currentList[currentList.length - 1];
+    lastId = typeof last === "string" ? last : (last as any).identifier;
+  }
+
+  // Basic alpha-numeric incrementer
+  const match = lastId.match(/^(.*?)(\d+)$/);
+  let prefix = "A";
+  let startNum = 1;
+
+  if (match) {
+    prefix = match[1] || "";
+    startNum = (parseInt(match[2]) || 0) + 1;
+  }
+
+  while (newList.length < normalizedTotal) {
+    newList.push({
+      id: `new-${Date.now()}-${newList.length}`,
+      identifier: `${prefix}${startNum++}`,
+      status: "ACTIVE"
+    });
+  }
+  return newList;
+};
+
 export default function OwnerEditLocationPage() {
   const router = useRouter();
   const params = useParams();
@@ -169,7 +206,9 @@ export default function OwnerEditLocationPage() {
 
       if (result.success && result.data) {
         const data = result.data;
-        // Map API data to form state
+        const loadedTotalSpots = data.totalSpots || 0;
+        const loadedSpots = (data as any).spots || [];
+
         setFormData({
           name: data.name,
           address: data.address,
@@ -182,23 +221,24 @@ export default function OwnerEditLocationPage() {
           originalPrice: data.originalPrice ? String(data.originalPrice) : "",
           amenities: data.amenities || [],
           shuttle: data.shuttle,
-          shuttleHours: "24/7", // TODO: Add to schema
-          shuttleFrequency: "Every 10-15 minutes", // TODO: Add to schema
-          shuttlePhone: "", // TODO: Add to schema
-          totalSpots: String(data.totalSpots),
+          shuttleHours: "24/7",
+          shuttleFrequency: "Every 10-15 minutes",
+          shuttlePhone: "",
+          totalSpots: String(loadedTotalSpots),
           heightLimit: (data as any).heightLimit || "",
           selfPark: data.selfPark,
           valetPark: data.valet,
           covered: data.covered,
           open24Hours: data.open24Hours,
-          cancellationPolicy: "free", // TODO: Add to schema
-          cancellationDeadline: "24", // TODO: Add to schema
+          cancellationPolicy: "free",
+          cancellationDeadline: "24",
           securityFeatures: (data as any).securityFeatures || [],
-          specialInstructions: "", // TODO: Add to schema
+          specialInstructions: "",
           latitude: data.latitude || 0,
           longitude: data.longitude || 0,
           images: data.images || [],
-          spotIdentifiers: (data as any).spots || [],
+          // Ensure identifiers match the total count immediately
+          spotIdentifiers: syncSpotList(loadedTotalSpots, loadedSpots),
         });
       } else {
         toast({
@@ -214,12 +254,40 @@ export default function OwnerEditLocationPage() {
     fetchLocation();
   }, [locationId, router, toast]);
 
+
   const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const newState = { ...prev, [field]: value };
+
+      // Bi-directional sync
+      if (field === "totalSpots") {
+        const total = parseInt(value as string);
+        if (!isNaN(total)) {
+          newState.spotIdentifiers = syncSpotList(total, prev.spotIdentifiers);
+        }
+      } else if (field === "spotIdentifiers") {
+        newState.totalSpots = String((value as any[]).length);
+      }
+
+      return newState;
+    });
+
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   }, [errors]);
+
+  // Safety fallback to ensure UI state doesn\'t drift
+  useEffect(() => {
+    if (isLoading) return;
+    const total = parseInt(formData.totalSpots);
+    if (!isNaN(total) && total !== formData.spotIdentifiers.length) {
+      setFormData(prev => ({
+        ...prev,
+        spotIdentifiers: syncSpotList(total, prev.spotIdentifiers)
+      }));
+    }
+  }, [formData.totalSpots, isLoading, formData.spotIdentifiers.length]);
 
 
   // Fetch address suggestions from LocationIQ API
@@ -319,7 +387,7 @@ export default function OwnerEditLocationPage() {
         open24Hours: formData.open24Hours,
         cancellationPolicy: formData.cancellationPolicy as any,
         cancellationDeadline: formData.cancellationDeadline,
-        spotIdentifiers: formData.spotIdentifiers.map((s: any) => typeof s === 'string' ? s : s.identifier),
+        spotIdentifiers: formData.spotIdentifiers,
       };
 
       const result = await updateParkingLocation(locationId, locationData);
@@ -329,7 +397,7 @@ export default function OwnerEditLocationPage() {
           title: "Success",
           description: "Location updated successfully",
         });
-        router.push("/owner/locations");
+        router.push(`/owner/locations/${locationId}`);
       } else {
         const errorDetails = (result as any).details ? JSON.stringify((result as any).details) : result.error;
         console.error("Update failed details:", errorDetails);
@@ -574,7 +642,9 @@ export default function OwnerEditLocationPage() {
               <SpotIdentifierGrid
                 identifiers={formData.spotIdentifiers}
                 onChange={(ids) => handleInputChange("spotIdentifiers", ids)}
-                lockedIdentifiers={[]}
+                lockedIdentifiers={formData.spotIdentifiers
+                  .filter((s: any) => s._count?.bookings > 0)
+                  .map((s: any) => s.identifier)}
                 maxSpots={parseInt(formData.totalSpots) || 500}
                 locationId={locationId}
               />

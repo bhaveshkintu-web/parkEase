@@ -64,7 +64,20 @@ export async function createSpotsForLocation(locationId: string, identifiers: st
 export async function getSpotsForLocation(locationId: string, date: Date = new Date()) {
   try {
     const spots = await (prisma as any).parkingSpot.findMany({
-      where: { locationId },
+      where: {
+        locationId,
+        OR: [
+          { status: "ACTIVE" },
+          {
+            bookings: {
+              some: {
+                status: { in: ["CONFIRMED", "PENDING"] as any },
+                checkOut: { gt: date },
+              }
+            }
+          }
+        ]
+      },
       include: {
         bookings: {
           where: {

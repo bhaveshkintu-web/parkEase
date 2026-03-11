@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
+import { markOverstayAsPaidAction, sendOverstayLinkAction } from "@/lib/actions/overstay-actions";
 import { StatusBadge } from "@/components/admin/data-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useSearchParams } from "next/navigation";
 import Loading from "./loading";
+import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Car,
   Clock,
@@ -34,6 +44,8 @@ export default function WatchmanSessionsPage() {
 
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [overstayInfo, setOverstayInfo] = useState<any | null>(null);
+  const router = useRouter();
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
@@ -51,6 +63,15 @@ export default function WatchmanSessionsPage() {
       setIsLoading(false);
     }
   }, []);
+
+  const formatDuration = (minutes: number) => {
+    if (!minutes) return "0 Minutes";
+    if (minutes < 60) return `${minutes} Minutes`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (mins === 0) return `${hours} ${hours === 1 ? 'Hour' : 'Hours'}`;
+    return `${hours} ${hours === 1 ? 'Hour' : 'Hours'} ${mins} ${mins === 1 ? 'Min' : 'Mins'}`;
+  };
 
   useEffect(() => {
     fetchSessions();
@@ -72,6 +93,15 @@ export default function WatchmanSessionsPage() {
         fetchSessions();
       } else {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 402 && errData.error === "OVERSTAY_DETECTED") {
+          // Find the session to get booking info
+          const session = sessions.find(s => s.id === sessionId);
+          setOverstayInfo({
+            bookingId: session.bookingId,
+            ...errData.details
+          });
+          return;
+        }
         throw new Error(errData.details || errData.error || "Failed to update session");
       }
     } catch (error: any) {
@@ -270,11 +300,11 @@ export default function WatchmanSessionsPage() {
                               <span className="font-medium">{formatTime(session.checkOutTime)}</span>
                             </div>
                           )}
-                          {booking.checkIn && !session.checkInTime && (
+                          {session.expectedCheckIn && !session.checkInTime && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4 text-amber-600" />
                               <span className="text-muted-foreground">Expected:</span>
-                              <span className="font-medium">{formatTime(booking.checkIn)}</span>
+                              <span className="font-medium">{formatTime(session.expectedCheckIn)}</span>
                             </div>
                           )}
                         </div>
@@ -287,7 +317,11 @@ export default function WatchmanSessionsPage() {
                             <Button
                               size="sm"
                               className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                              onClick={() => handleAction(session.id, "check-in")}
+                              onClick={() => {
+                                // Redirect to scan page with confirmation code or plate
+                                const code = session.confirmationCode || session.vehiclePlate;
+                                router.push(`/watchman/scan?code=${encodeURIComponent(code)}`);
+                              }}
                             >
                               <CheckCircle className="w-4 h-4 mr-2" />
                               Check In
@@ -352,6 +386,64 @@ export default function WatchmanSessionsPage() {
             }}
           />
         )}
+
+        {/* Overstay Dialog */}
+        <Dialog open={!!overstayInfo} onOpenChange={() => setOverstayInfo(null)}>
+          <DialogContent className="max-w-md border-2 border-red-500 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600 text-2xl font-black">
+                <AlertTriangle className="w-8 h-8" />
+                Overstay Detected
+              </DialogTitle>
+              <DialogDescription className="text-red-700 font-medium">
+                This vehicle has exceeded the booked duration. Payment is required before check-out.
+              </DialogDescription>
+            </DialogHeader>
+
+            {overstayInfo && (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-muted rounded-xl space-y-1">
+                    <span className="text-[10px] uppercase font-black text-muted-foreground">Original Checkout</span>
+                    <p className="font-bold text-sm">{formatTime(overstayInfo.checkOutLimit)}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-xl space-y-1 text-red-700">
+                    <span className="text-[10px] uppercase font-black">Overstay Time</span>
+                    <p className="font-bold text-lg">{formatDuration(overstayInfo.overstayMinutes)}</p>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-red-600 text-white rounded-2xl shadow-xl space-y-2 text-center">
+                  <p className="text-sm font-bold uppercase tracking-widest opacity-80">Overstay Charge</p>
+                  <p className="text-4xl font-black tracking-tighter">
+                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(overstayInfo.overstayCharge)}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-center text-muted-foreground px-4">
+                    Please ask the customer to pay using the link below or by scanning the QR code on their phone.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      className="w-full h-12 bg-black text-white hover:bg-zinc-800 font-bold"
+                      onClick={async () => {
+                        const res = await sendOverstayLinkAction(overstayInfo.bookingId, overstayInfo.overstayCharge);
+                        if (res.success) {
+                          toast({ title: "Payment Link Sent", description: "The customer has received the payment link." });
+                        } else {
+                          toast({ title: "Failed", description: (res as any).error, variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Send Payment Link to Email
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Suspense>
   );
