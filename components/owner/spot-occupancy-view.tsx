@@ -225,8 +225,11 @@ export function SpotOccupancyView({ locationId }: SpotOccupancyViewProps) {
                     </div>
                   ) : (
                     <div className="w-full mt-2 pt-3 border-t flex flex-col items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-[10px] font-black text-green-700 rounded-full uppercase tracking-tighter">
-                        Available
+                      <div className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-black rounded-full uppercase tracking-tighter",
+                        spot.status === 'ACTIVE' ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+                      )}>
+                        {spot.status === 'ACTIVE' ? 'Available' : 'Retired'}
                       </div>
 
                       {spot.upcomingBooking ? (
@@ -282,8 +285,14 @@ export function SpotOccupancyView({ locationId }: SpotOccupancyViewProps) {
                         Occupied
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-bold px-2 py-0 h-6 text-[10px] uppercase">
-                        Available
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-bold px-2 py-0 h-6 text-[10px] uppercase",
+                          spot.status === 'ACTIVE' ? "bg-green-50 text-green-700 border-green-200" : "bg-slate-50 text-slate-500 border-slate-200"
+                        )}
+                      >
+                        {spot.status === 'ACTIVE' ? 'Available' : 'Retired'}
                       </Badge>
                     )}
                   </td>

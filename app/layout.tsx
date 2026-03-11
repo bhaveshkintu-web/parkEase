@@ -1,6 +1,6 @@
 import React from "react"
 import type { Metadata } from 'next'
-// import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/lib/auth-context'
 import { DataStoreProvider } from '@/lib/data-store'
@@ -10,8 +10,15 @@ import { Toaster } from '@/components/ui/toaster'
 import { BookingCleanupPoller } from '@/components/booking-cleanup-poller'
 import './globals.css'
 
-// const _geist = Geist({ subsets: ["latin"] });
-// const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: '--font-inter',
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: '--font-jakarta',
+});
 
 export const metadata: Metadata = {
   title: 'ParkZipply | Find & Reserve Parking Near Airports, Events & More',
@@ -47,7 +54,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`${inter.variable} ${jakarta.variable} font-sans antialiased`}>
         <AuthProvider>
           <DataStoreProvider>
             <SettingsProvider>

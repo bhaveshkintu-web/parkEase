@@ -74,11 +74,57 @@ export async function PATCH(
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
       const result = await prisma.$transaction(async (tx) => {
-        const updatedSession = await tx.parkingSession.update({
+        const currentSession = await tx.parkingSession.findUnique({
+          where: { id: sessionId },
+          include: { booking: true }
+        });
+
+        if (!currentSession) throw new Error("Session not found");
+        if (currentSession.status === "checked_out") throw new Error("This vehicle has already been checked out");
+        if (currentSession.booking.status === "COMPLETED") throw new Error("This booking is already completed");
+
+        const now = new Date();
+        const checkOutLimit = new Date(currentSession.booking.checkOut);
+
+        // Calculate overstay if any
+        if (now > checkOutLimit && (currentSession as any).paymentStatus !== "PAID") {
+          const diffMs = now.getTime() - checkOutLimit.getTime();
+          const diffMins = Math.ceil(diffMs / 60000);
+
+          // Find location to get rates
+          const location = await tx.parkingLocation.findUnique({
+            where: { id: currentSession.locationId }
+          });
+
+          const ratePer15Min = (location?.pricePerDay || 20) / (24 * 4);
+          const overstayRateUnit = Math.ceil(diffMins / 15);
+          const overstayCharge = overstayRateUnit * (ratePer15Min * 2);
+
+          // Mark as waiting for payment
+          const updatedSession = await (tx.parkingSession as any).update({
+            where: { id: sessionId },
+            data: {
+              overstayMinutes: diffMins,
+              overstayCharge: overstayCharge,
+              paymentStatus: "PENDING",
+              actualCheckOutTime: now,
+            }
+          });
+
+          await tx.booking.update({
+            where: { id: currentSession.bookingId },
+            data: { status: "WAITING_OVERSTAY_PAYMENT" as any }
+          });
+
+          return { overstay: true, details: { overstayMinutes: diffMins, overstayCharge, checkOutLimit: checkOutLimit.toISOString() } };
+        }
+
+        const updatedSession = await (tx.parkingSession as any).update({
           where: { id: sessionId },
           data: {
             status: "checked_out",
-            checkOutTime: new Date(),
+            checkOutTime: now,
+            actualCheckOutTime: now,
           },
           include: {
             booking: {
@@ -119,7 +165,14 @@ export async function PATCH(
         return updatedSession;
       });
 
-      const updatedSession = result;
+      if ((result as any).overstay) {
+        return NextResponse.json({
+          error: "OVERSTAY_DETECTED",
+          details: (result as any).details
+        }, { status: 402 });
+      }
+
+      const updatedSession = result as any;
 
       // Log activity
       await prisma.watchmanActivityLog.create({
@@ -154,13 +207,6 @@ export async function PATCH(
 
   } catch (error: any) {
     console.error("Session Update Error:", error);
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const logPath = path.join(process.cwd(), 'api-session-error.log');
-      fs.appendFileSync(logPath, `[${new Date().toISOString()}] ERROR: ${error.message}\n${error.stack}\n`);
-    } catch (e) { }
-
     return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }

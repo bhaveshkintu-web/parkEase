@@ -12,9 +12,11 @@ export async function createPaymentIntentAction(data: {
   guestEmail?: string;
 }) {
   try {
-    const userId = await getAuthUserId();
-    if (!userId) {
-      return { success: false, error: "Please log in to continue" };
+    let userId = null;
+    try {
+      userId = await getAuthUserId();
+    } catch (e) {
+      // allow unauthenticated 
     }
 
     if (!data.amount || !data.locationId) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import {
   getGeneralSettings,
   getNotificationSettings,
@@ -24,6 +24,10 @@ const defaultGeneralSettings: PlatformSettingsData = {
   allowRegistrations: true,
   requireEmailVerification: true,
   minBookingDuration: 120,
+  modificationGapMinutes: 60,
+  gracePeriodMinutes: 30,
+  taxRate: 0.1,
+  serviceFee: 5.99,
 };
 
 const defaultNotificationSettings: NotificationSettingsData = {
@@ -68,15 +72,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, [loadSettings]);
 
+  const contextValue = useMemo(() => ({
+    generalSettings,
+    notificationSettings,
+    isLoading,
+    refreshSettings,
+  }), [generalSettings, notificationSettings, isLoading, refreshSettings]);
+
   return (
-    <SettingsContext.Provider
-      value={{
-        generalSettings,
-        notificationSettings,
-        isLoading,
-        refreshSettings,
-      }}
-    >
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

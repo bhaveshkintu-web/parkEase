@@ -18,7 +18,7 @@ export function HeroSection() {
         <div className="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
       </div>
 
-      <div className="container relative px-4 py-12 md:py-24 lg:py-32">
+      <div className="container relative py-12 md:py-24 lg:py-32">
         <div className="w-full flex flex-col items-center text-center">
           <div className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs md:text-sm font-medium text-primary">
             <span>Trusted by 2M+ travelers</span>

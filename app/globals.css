@@ -77,8 +77,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-jakarta: var(--font-jakarta), ui-sans-serif, system-ui;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,17 +121,32 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
-    font-family: Arial, Helvetica, sans-serif;
+    @apply bg-background text-foreground font-sans;
+    font-weight: 400;
+    line-height: 1.6;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-jakarta font-bold;
+    letter-spacing: -0.02em;
+  }
+
   h1 {
-    @apply text-3xl font-bold tracking-tight md:text-5xl lg:text-6xl;
+    @apply text-3xl md:text-5xl lg:text-6xl;
   }
+
   h2 {
-    @apply text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl;
+    @apply text-2xl md:text-3xl lg:text-4xl;
   }
+
   .container {
-    @apply px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[100%] px-4 sm:px-8 lg:px-12;
   }
 }
