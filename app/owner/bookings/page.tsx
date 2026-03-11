@@ -70,6 +70,7 @@ import Loading from "./loading";
 import { useToast } from "@/hooks/use-toast";
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { approveBooking, rejectBooking } from "@/lib/actions/booking-actions";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 export default function OwnerBookingsPage() {
   const { user } = useAuth();
@@ -77,6 +78,7 @@ export default function OwnerBookingsPage() {
   const searchParams = useSearchParams(); // Use search params
 
   // State
+  const ITEMS_PER_PAGE = 10;
   const [activeTab, setActiveTab] = useState("bookings");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
@@ -95,6 +97,9 @@ export default function OwnerBookingsPage() {
   const [isBookingRejectOpen, setIsBookingRejectOpen] = useState(false);
   const [selectedBookingForAction, setSelectedBookingForAction] = useState<Reservation | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [reviewsPage, setReviewsPage] = useState(1);
   const { toast } = useToast();
 
   // Fetch booking requests
@@ -190,6 +195,19 @@ export default function OwnerBookingsPage() {
 
     return result;
   }, [safeReservations, statusFilter, locationFilter, sortBy, searchQuery]);
+
+  // Pagination derived state
+  const totalBookingPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = filteredBookings.slice((bookingsPage - 1) * ITEMS_PER_PAGE, bookingsPage * ITEMS_PER_PAGE);
+  const totalRequestPages = Math.ceil(bookingRequests.length / ITEMS_PER_PAGE);
+  const paginatedRequests = bookingRequests.slice((requestsPage - 1) * ITEMS_PER_PAGE, requestsPage * ITEMS_PER_PAGE);
+  const totalReviewPages = Math.ceil(safeReviews.length / ITEMS_PER_PAGE);
+  const paginatedReviews = safeReviews.slice((reviewsPage - 1) * ITEMS_PER_PAGE, reviewsPage * ITEMS_PER_PAGE);
+
+  // Reset pages when filters change
+  useEffect(() => { setBookingsPage(1); }, [statusFilter, locationFilter, sortBy, searchQuery]);
+  useEffect(() => { setRequestsPage(1); }, [activeTab]);
+  useEffect(() => { setReviewsPage(1); }, [activeTab]);
 
   // Stats
   const stats = useMemo(() => {
@@ -656,7 +674,7 @@ export default function OwnerBookingsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredBookings.map((booking) => (
+                        paginatedBookings.map((booking) => (
                           <TableRow key={booking.id} className="group">
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -770,6 +788,13 @@ export default function OwnerBookingsPage() {
                     </TableBody>
                   </Table>
                 </div>
+                <PaginationFooter
+                  currentPage={bookingsPage}
+                  totalPages={totalBookingPages}
+                  totalItems={filteredBookings.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setBookingsPage}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -821,7 +846,7 @@ export default function OwnerBookingsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        bookingRequests.map((request) => (
+                        paginatedRequests.map((request) => (
                           <TableRow key={request.id}>
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -913,7 +938,14 @@ export default function OwnerBookingsPage() {
                       )}
                     </TableBody>
                   </Table>
-                </div>
+                  </div>
+                  <PaginationFooter
+                    currentPage={requestsPage}
+                    totalPages={totalRequestPages}
+                    totalItems={bookingRequests.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={setRequestsPage}
+                  />
               </CardContent>
             </Card>
           </TabsContent>
@@ -935,7 +967,7 @@ export default function OwnerBookingsPage() {
                     <p className="text-sm">Customer reviews will appear here</p>
                   </div>
                 ) : (
-                  safeReviews.map((review) => (
+                  paginatedReviews.map((review) => (
                     <Card key={review.id} className="border">
                       <CardContent className="pt-4">
                         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
@@ -997,6 +1029,13 @@ export default function OwnerBookingsPage() {
                     </Card>
                   ))
                 )}
+                <PaginationFooter
+                  currentPage={reviewsPage}
+                  totalPages={totalReviewPages}
+                  totalItems={safeReviews.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setReviewsPage}
+                />
               </CardContent>
             </Card>
           </TabsContent>

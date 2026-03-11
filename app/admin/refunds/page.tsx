@@ -35,8 +35,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 export default function RefundsPage() {
+  const ITEMS_PER_PAGE = 10;
   const [refunds, setRefunds] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -44,6 +46,7 @@ export default function RefundsPage() {
   const [selectedRefund, setSelectedRefund] = useState<any>(null);
   const [partialAmount, setPartialAmount] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [stats, setStats] = useState({
     pending: 0,
     totalPendingAmount: 0,
@@ -53,8 +56,15 @@ export default function RefundsPage() {
     totalPendingApprovals: 0
   });
 
+  const totalPages = Math.ceil(refunds.length / ITEMS_PER_PAGE);
+  const paginatedRefunds = refunds.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   useEffect(() => {
     fetchRefunds();
+    setCurrentPage(1);
   }, [search, statusTab]);
 
   const fetchRefunds = async () => {
@@ -269,7 +279,7 @@ export default function RefundsPage() {
             </CardContent>
           </Card>
         ) : (
-          refunds.map((refund) => (
+          paginatedRefunds.map((refund) => (
             <Card key={refund.id} className="border-none shadow-sm bg-white hover:ring-1 hover:ring-primary/20 transition-all">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -339,6 +349,13 @@ export default function RefundsPage() {
             </Card>
           ))
         )}
+        <PaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={refunds.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Process Refund Dialog */}

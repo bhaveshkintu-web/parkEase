@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role?.toUpperCase() !== "OWNER") {
+    if (!session || !session.user || session.user.role?.toUpperCase() !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -18,17 +18,16 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get("endDate");
     const search = searchParams.get("search");
 
-    const userId = session.user.id;
-    const ownerProfile = await prisma.ownerProfile.findUnique({
-      where: { userId },
-      select: { id: true, wallet: { select: { id: true } } }
+    const systemWallet = await (prisma.wallet as any).findFirst({
+      where: { type: "SYSTEM" },
+      select: { id: true }
     });
 
-    if (!ownerProfile || !ownerProfile.wallet) {
-      return NextResponse.json({ transactions: [], total: 0 });
+    if (!systemWallet) {
+      return NextResponse.json({ transactions: [], meta: { total: 0, page, limit, totalPages: 0 } });
     }
 
-    const walletId = ownerProfile.wallet.id;
+    const walletId = systemWallet.id;
 
     // Build where clause
     const where: any = { walletId };
@@ -70,7 +69,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[OWNER_TRANSACTIONS_GET]", error);
+    console.error("[ADMIN_TRANSACTIONS_GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

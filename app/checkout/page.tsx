@@ -4,9 +4,9 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import { Navbar } from "@/components/navbar";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
+import { MockCardForm } from "@/components/mock-card-form";
 import { useBooking } from "@/lib/booking-context";
 import { formatCurrency, formatDate, formatTime, calculateQuote, CAR_MAKES } from "@/lib/data";
 import { createBooking } from "@/lib/actions/booking-actions";
@@ -59,42 +59,12 @@ import {
   Plus,
 } from "lucide-react";
 
-// Load Stripe outside of component to avoid recreating on every render
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const isStripeConfigured = stripePublishableKey && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
-const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : null;
+import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
 
-const BrandIcon = ({ brand }: { brand: string }) => {
-  const content = () => {
-    switch (brand) {
-      case "visa":
-        return <div className="text-[#1A1F71] font-black italic text-base select-none">VISA</div>;
-      case "mastercard":
-        return (
-          <div className="flex -space-x-1.5 select-none">
-            <div className="w-4 h-4 rounded-full bg-[#EB001B] opacity-90" />
-            <div className="w-4 h-4 rounded-full bg-[#FF5F00] opacity-90" />
-          </div>
-        );
-      case "amex":
-        return (
-          <div className="bg-[#0070D1] text-white px-1 rounded-sm text-[9px] font-black tracking-tighter select-none leading-tight">
-            AMEX
-          </div>
-        );
-      case "discover":
-        return <div className="text-[#FF6600] font-black italic text-[10px] select-none">DISCOVER</div>;
-      default:
-        return <CreditCard className="w-5 h-5 text-muted-foreground/40" />;
-    }
-  };
+import { isStripeConfigured } from "@/lib/stripe";
+const isStripeActive = isStripeConfigured();
 
-  return (
-    <div className="w-12 flex items-center justify-center">
-      {content()}
-    </div>
-  );
-};
+// Using reusable MockCardForm instead of local implementation
 
 function CheckoutContent() {
   const router = useRouter();
@@ -170,36 +140,6 @@ function CheckoutContent() {
   const isGuestInfoComplete = firstName && lastName && email && phone;
   const isVehicleInfoComplete = make && model && licensePlate;
   const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
-
-  // Mock Card Info for Demo Mode
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryMonth, setExpiryMonth] = useState("");
-  const [expiryYear, setExpiryYear] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
-  const [cardTouched, setCardTouched] = useState<Record<string, boolean>>({});
-  const cardBrand = detectCardBrand(cardNumber);
-
-  const validateCardForm = () => {
-    const newErrors: Record<string, string> = {};
-    const cleanedNumber = cardNumber.replace(/\D/g, "");
-
-    if (!cleanedNumber) newErrors.cardNumber = "Card number is required";
-    else if (cleanedNumber.length < 13 || cleanedNumber.length > 19) newErrors.cardNumber = "Invalid length";
-    else if (!validateLuhn(cleanedNumber)) newErrors.cardNumber = "Invalid card number";
-
-    if (!expiryMonth || !expiryYear) newErrors.expiry = "Expiry date is required";
-    else if (!validateExpiry(expiryMonth, expiryYear)) newErrors.expiry = "Card has expired";
-
-    if (!cvv) newErrors.cvv = "CVV is required";
-    else if (cardBrand === 'amex' ? cvv.length !== 4 : cvv.length !== 3) newErrors.cvv = "Invalid CVV";
-
-    if (!cardName.trim()) newErrors.cardName = "Cardholder name is required";
-
-    setCardErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   useEffect(() => {
     if (!contextLocation) {
@@ -882,7 +822,10 @@ function CheckoutContent() {
                               <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
                                 <Plus className="w-4 h-4 text-muted-foreground" />
                               </div>
-                              <p className="font-bold text-sm">Use a new card</p>
+                              <div className="flex-1">
+                                <p className="font-bold text-sm">Use a new card / another payment method</p>
+                                <p className="text-[10px] text-muted-foreground font-medium uppercase">Select your preferred payment option below</p>
+                              </div>
                               {useNewCard && <CheckCircle className="ml-auto w-5 h-5 text-primary" />}
                             </div>
                           </div>
@@ -891,109 +834,17 @@ function CheckoutContent() {
 
                       {(useNewCard || !isAuthenticated || savedCards.length === 0) && (
                         <div className="pt-2 animate-in fade-in slide-in-from-top-2">
-                          {!isStripeConfigured ? (
-                            <div className="space-y-4 pt-2">
-                              <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200 mb-4">
-                                <p className="font-bold flex items-center gap-2">
-                                  <AlertCircle className="h-4 w-4" />
-                                  Stripe Demo Mode
-                                </p>
-                                <p className="mt-1 opacity-80">
-                                  Simulation active. Please enter any valid-format card details to continue.
-                                </p>
-                              </div>
-
-                              <div className="grid gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="mockCardName" className="text-xs font-bold uppercase text-muted-foreground">Cardholder Name</Label>
-                                  <Input
-                                    id="mockCardName"
-                                    placeholder="John Doe"
-                                    value={cardName}
-                                    onChange={(e) => setCardName(e.target.value)}
-                                    onBlur={() => setCardTouched({ ...cardTouched, cardName: true })}
-                                    className={cn("h-12 rounded-xl border-2", (cardErrors.cardName && cardTouched.cardName) && "border-destructive")}
-                                  />
-                                  {cardErrors.cardName && cardTouched.cardName && <p className="text-[10px] font-bold text-destructive">{cardErrors.cardName}</p>}
-                                </div>
-
-                                <div className="space-y-2">
-                                  <Label htmlFor="mockCardNumber" className="text-xs font-bold uppercase text-muted-foreground">Card Number</Label>
-                                  <div className="relative">
-                                    <Input
-                                      id="mockCardNumber"
-                                      placeholder="0000 0000 0000 0000"
-                                      value={cardNumber}
-                                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                      onBlur={() => setCardTouched({ ...cardTouched, cardNumber: true })}
-                                      maxLength={cardBrand === 'amex' ? 17 : 19}
-                                      className={cn("h-12 rounded-xl border-2 pl-20 font-mono", (cardErrors.cardNumber && cardTouched.cardNumber) && "border-destructive")}
-                                    />
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                                      <BrandIcon brand={cardBrand} />
-                                    </div>
-                                  </div>
-                                  {cardErrors.cardNumber && cardTouched.cardNumber && <p className="text-[10px] font-bold text-destructive">{cardErrors.cardNumber}</p>}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase text-muted-foreground">Expiry Date</Label>
-                                    <div className="flex gap-2">
-                                      <select
-                                        value={expiryMonth}
-                                        onChange={(e) => setExpiryMonth(e.target.value)}
-                                        onBlur={() => setCardTouched({ ...cardTouched, expiry: true })}
-                                        className={cn("flex h-12 w-full rounded-xl border-2 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary", (cardErrors.expiry && cardTouched.expiry) && "border-destructive")}
-                                      >
-                                        <option value="">Month</option>
-                                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                                          <option key={m} value={m}>{m}</option>
-                                        ))}
-                                      </select>
-                                      <select
-                                        value={expiryYear}
-                                        onChange={(e) => setExpiryYear(e.target.value)}
-                                        onBlur={() => setCardTouched({ ...cardTouched, expiry: true })}
-                                        className={cn("flex h-12 w-full rounded-xl border-2 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary", (cardErrors.expiry && cardTouched.expiry) && "border-destructive")}
-                                      >
-                                        <option value="">Year</option>
-                                        {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() + i)).map(y => (
-                                          <option key={y} value={y}>{y}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    {cardErrors.expiry && cardTouched.expiry && <p className="text-[10px] font-bold text-destructive">{cardErrors.expiry}</p>}
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor="mockCvv" className="text-xs font-bold uppercase text-muted-foreground">CVV</Label>
-                                    <Input
-                                      id="mockCvv"
-                                      placeholder="123"
-                                      value={cvv}
-                                      onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").substring(0, cardBrand === 'amex' ? 4 : 3))}
-                                      onBlur={() => setCardTouched({ ...cardTouched, cvv: true })}
-                                      className={cn("h-12 rounded-xl border-2", (cardErrors.cvv && cardTouched.cvv) && "border-destructive")}
-                                    />
-                                    {cardErrors.cvv && cardTouched.cvv && <p className="text-[10px] font-bold text-destructive">{cardErrors.cvv}</p>}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                          {!isStripeActive && useNewCard ? (
+                            <MockCardForm
+                              onSuccess={(pi) => handlePaymentSuccess(pi)}
+                              amount={finalPrice}
+                              isSubmitting={isSubmitting}
+                              setIsSubmitting={setIsSubmitting}
+                              agreedToTerms={agreedToTerms}
+                              setAgreedToTerms={setAgreedToTerms}
+                            />
                           ) : clientSecret ? (
-                            <Elements
-                              stripe={stripePromise}
-                              options={{
-                                clientSecret,
-                                appearance: {
-                                  theme: 'stripe',
-                                  variables: {
-                                    colorPrimary: '#10b981',
-                                  },
-                                },
-                              }}
-                            >
+                            <StripeElementsWrapper clientSecret={clientSecret}>
                               <StripePaymentForm
                                 clientSecret={clientSecret}
                                 amount={finalPrice}
@@ -1004,7 +855,7 @@ function CheckoutContent() {
                                 agreedToTerms={agreedToTerms}
                                 setAgreedToTerms={setAgreedToTerms}
                               />
-                            </Elements>
+                            </StripeElementsWrapper>
                           ) : (
                             <div className="flex items-center justify-center py-12 bg-muted/20 rounded-xl border-2 border-dashed">
                               <Loader2 className="h-6 w-6 animate-spin text-primary mr-3" />
@@ -1014,74 +865,50 @@ function CheckoutContent() {
                         </div>
                       )}
 
-                      {/* Agreement Checkbox */}
-                      {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
-                        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-                          <Checkbox
-                            id="terms"
-                            checked={agreedToTerms}
-                            onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                          />
-                          <Label htmlFor="terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                            <span>
-                              I agree to the{" "}
-                              <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
-                                Terms of Service
-                              </Link>{" "}
-                              and{" "}
-                              <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                                Cancellation Policy
-                              </Link>
-                              . I understand that my reservation is subject to availability.
-                            </span>
-                          </Label>
+                      {/* Unified Submit Button ONLY for Saved Card */}
+                      {selectedCardId && (
+                        <div className="space-y-4 pt-2">
+                          <div className={cn(
+                            "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+                            agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+                          )}>
+                            <div className="pt-0.5">
+                              <Checkbox
+                                id="saved-card-terms"
+                                checked={agreedToTerms}
+                                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                                className="w-5 h-5 rounded-md"
+                              />
+                            </div>
+                            <Label htmlFor="saved-card-terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                              <span>
+                                I agree to the{" "}
+                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
+                                  Terms
+                                </Link>{" "}
+                                and{" "}
+                                <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                                  Cancellation Policy
+                                </Link>
+                                . I understand my booking is subject to availability.
+                              </span>
+                            </Label>
+                          </div>
+                          <Button
+                            className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
+                            disabled={isSubmitting || !agreedToTerms}
+                            onClick={handleSavedCardPayment}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `Pay ${formatCurrency(finalPrice)} via Saved Card`
+                            )}
+                          </Button>
                         </div>
-                      )}
-
-                      {/* Unified Submit Button for Saved Card or Demo */}
-                      {(selectedCardId || (!isStripeConfigured && useNewCard)) && (
-                        <Button
-                          className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
-                          disabled={isSubmitting || !agreedToTerms}
-                          onClick={() => {
-                            if (selectedCardId) {
-                              handleSavedCardPayment();
-                            } else if (!isStripeConfigured && useNewCard) {
-                              if (!validateCardForm()) {
-                                setCardTouched({
-                                  cardName: true,
-                                  cardNumber: true,
-                                  expiry: true,
-                                  cvv: true
-                                });
-                                toast({
-                                  title: "Validation Error",
-                                  description: "Please focus on correcting the card entry errors.",
-                                  variant: "destructive"
-                                });
-                                return;
-                              }
-                              setIsSubmitting(true);
-                              setTimeout(() => {
-                                handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
-                              }, 1500);
-                            } else {
-                              setIsSubmitting(true);
-                              setTimeout(() => {
-                                handlePaymentSuccess("pi_demo_" + Math.random().toString(36).substring(7));
-                              }, 1500);
-                            }
-                          }}
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            `Pay ${formatCurrency(finalPrice)} & Book Now`
-                          )}
-                        </Button>
                       )}
                     </div>
                   </AccordionContent>

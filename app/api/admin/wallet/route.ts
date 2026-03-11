@@ -23,13 +23,6 @@ export async function GET(req: NextRequest) {
 
     let wallet = await (prisma.wallet as any).findFirst({
       where: { type: "SYSTEM" },
-      include: {
-        transactions: {
-          where: dateFilter,
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        }
-      }
     });
 
     if (!wallet) {

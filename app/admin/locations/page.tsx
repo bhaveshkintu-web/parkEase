@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 import {
   Table,
   TableBody,
@@ -58,6 +59,8 @@ export default function AdminLocationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     fetchLocations();
@@ -91,6 +94,17 @@ export default function AdminLocationsPage() {
     const matchesStatus = statusFilter === "all" || location.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredLocations.length / ITEMS_PER_PAGE);
+  const paginatedLocations = filteredLocations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   if (isLoading) {
     return (
@@ -167,7 +181,7 @@ export default function AdminLocationsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLocations.map((location) => (
+                paginatedLocations.map((location) => (
                   <TableRow key={location.id}>
                     <TableCell>
                       <div>
@@ -217,6 +231,13 @@ export default function AdminLocationsPage() {
               )}
             </TableBody>
           </Table>
+          <PaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredLocations.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
     </div>

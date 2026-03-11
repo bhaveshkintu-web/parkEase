@@ -44,7 +44,9 @@ import {
   AlertCircle,
   Search,
   Calendar as CalendarIcon,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,7 @@ import { cn } from "@/lib/utils";
 export default function OwnerWalletPage() {
   const [wallet, setWallet] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [txMeta, setTxMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,16 +94,20 @@ export default function OwnerWalletPage() {
     switch (value) {
       case "all":
         setDateRange({ from: undefined, to: undefined });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "this-month":
         setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "last-month":
         const lastMonth = subMonths(now, 1);
         setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       case "this-year":
         setDateRange({ from: startOfYear(now), to: endOfYear(now) });
+        setTxFilters(prev => ({ ...prev, page: 1 }));
         break;
       default:
         break;
@@ -116,9 +123,13 @@ export default function OwnerWalletPage() {
       if (dateRange.from) walletUrl += `&from=${dateRange.from.toISOString()}`;
       if (dateRange.to) walletUrl += `&to=${dateRange.to.toISOString()}`;
 
+      let txUrl = `/api/owner/wallet/transactions?page=${txFilters.page}&limit=${txFilters.limit}&search=${txFilters.search}&type=${txFilters.type}&t=${timestamp}`;
+      if (dateRange.from) txUrl += `&startDate=${dateRange.from.toISOString()}`;
+      if (dateRange.to) txUrl += `&endDate=${dateRange.to.toISOString()}`;
+
       const [walletRes, txRes, withdrawalRes] = await Promise.all([
         fetch(walletUrl),
-        fetch(`/api/owner/wallet/transactions?page=${txFilters.page}&limit=500&search=${txFilters.search}&type=${txFilters.type}&t=${timestamp}`),
+        fetch(txUrl),
         fetch(`/api/owner/wallet/withdraw?t=${timestamp}`),
       ]);
 
@@ -132,6 +143,7 @@ export default function OwnerWalletPage() {
 
       setWallet(walletData);
       setTransactions(txData.transactions || []);
+      setTxMeta(txData.meta || { total: 0, page: 1, totalPages: 1 });
       setWithdrawals(withdrawalData.withdrawals || []);
       setError(null);
     } catch (err: any) {
@@ -667,6 +679,61 @@ export default function OwnerWalletPage() {
                   </div>
                 ))
               )}
+            </div>
+          )}
+
+          {activeTab === "transactions" && txMeta.totalPages > 1 && (
+            <div className="flex items-center justify-between gap-4 flex-wrap p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {(txMeta.page - 1) * txFilters.limit + 1} to{" "}
+                {Math.min(txMeta.page * txFilters.limit, txMeta.total)} of{" "}
+                {txMeta.total} results
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxFilters(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  disabled={txMeta.page === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">Previous</span>
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, txMeta.totalPages) }, (_, i) => {
+                    let page: number;
+                    if (txMeta.totalPages <= 5) {
+                      page = i + 1;
+                    } else if (txMeta.page <= 3) {
+                      page = i + 1;
+                    } else if (txMeta.page >= txMeta.totalPages - 2) {
+                      page = txMeta.totalPages - 4 + i;
+                    } else {
+                      page = txMeta.page - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={txMeta.page === page ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setTxFilters(prev => ({ ...prev, page }))}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxFilters(prev => ({ ...prev, page: Math.min(txMeta.totalPages, prev.page + 1) }))}
+                  disabled={txMeta.page === txMeta.totalPages}
+                >
+                  <span className="hidden sm:inline mr-1">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
 

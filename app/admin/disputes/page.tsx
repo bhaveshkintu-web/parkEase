@@ -47,8 +47,10 @@ import { StatCard } from "@/components/admin/stat-card";
 import { formatCurrency } from "@/lib/data";
 import { toast } from "sonner";
 import { DisputeDetails } from "@/components/admin/dispute-details";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 export default function DisputesPage() {
+  const ITEMS_PER_PAGE = 10;
   const [disputes, setDisputes] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -62,9 +64,17 @@ export default function DisputesPage() {
   const [priority, setPriority] = useState("all");
   const [selectedDispute, setSelectedDispute] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(disputes.length / ITEMS_PER_PAGE);
+  const paginatedDisputes = disputes.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
     fetchDisputes();
+    setCurrentPage(1);
   }, [search, status, priority]);
 
   const fetchDisputes = async () => {
@@ -243,7 +253,7 @@ export default function DisputesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {disputes.map((dispute) => (
+                {paginatedDisputes.map((dispute) => (
                   <TableRow key={dispute.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -283,6 +293,13 @@ export default function DisputesPage() {
               </TableBody>
             </Table>
           )}
+          <PaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={disputes.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
 

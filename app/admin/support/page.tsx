@@ -39,8 +39,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { StatCard } from "@/components/admin/stat-card";
 import { TicketDetails } from "@/components/admin/ticket-details";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 export default function AdminSupportPage() {
+  const ITEMS_PER_PAGE = 10;
   const [tickets, setTickets] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -53,9 +55,17 @@ export default function AdminSupportPage() {
   const [status, setStatus] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(tickets.length / ITEMS_PER_PAGE);
+  const paginatedTickets = tickets.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   useEffect(() => {
     fetchTickets();
+    setCurrentPage(1);
   }, [search, status]);
 
   const fetchTickets = async () => {
@@ -213,7 +223,7 @@ export default function AdminSupportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => (
+              {paginatedTickets.map((ticket) => (
                 <TableRow key={ticket.id} className="hover:bg-slate-50/80 transition-colors border-slate-100">
                   <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                   <TableCell>
@@ -240,6 +250,13 @@ export default function AdminSupportPage() {
             </TableBody>
           </Table>
         )}
+        <PaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={tickets.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
       </Card>
 
       {/* Ticket Details Slide-over */}

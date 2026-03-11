@@ -33,10 +33,37 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { cardToken, brand, last4, expiryMonth, expiryYear, cardholderName, setAsDefault } = body;
+    const {
+      cardToken,
+      brand,
+      last4,
+      expiryMonth,
+      expiryYear,
+      cardholderName,
+      setAsDefault,
+      paymentMethodId,
+      isStripeSetup
+    } = body;
+
+    let finalBrand = brand;
+    let finalLast4 = last4;
+    let finalExpMonth = expiryMonth;
+    let finalExpYear = expiryYear;
+    let finalMethodId = paymentMethodId;
+
+    if (isStripeSetup && paymentMethodId) {
+      const { getPaymentMethod } = await import("@/lib/stripe");
+      const stripeMethod = await getPaymentMethod(paymentMethodId);
+      if (stripeMethod.success) {
+        finalBrand = stripeMethod.brand;
+        finalLast4 = stripeMethod.last4;
+        finalExpMonth = stripeMethod.expMonth;
+        finalExpYear = stripeMethod.expYear;
+      }
+    }
 
     // Basic validation
-    if (!brand || !last4 || !expiryMonth || !expiryYear) {
+    if (!finalBrand || !finalLast4 || !finalExpMonth || !finalExpYear) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -44,10 +71,10 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.paymentMethod.findFirst({
       where: {
         userId: session.user.id,
-        last4,
-        expiryMonth,
-        expiryYear,
-        brand,
+        last4: finalLast4,
+        expiryMonth: finalExpMonth,
+        expiryYear: finalExpYear,
+        brand: finalBrand,
       },
     });
 
@@ -73,11 +100,11 @@ export async function POST(req: NextRequest) {
     const newPaymentMethod = await prisma.paymentMethod.create({
       data: {
         userId: session.user.id,
-        brand,
-        last4,
-        expiryMonth,
-        expiryYear,
-        cardholderName,
+        brand: finalBrand,
+        last4: finalLast4,
+        expiryMonth: finalExpMonth,
+        expiryYear: finalExpYear,
+        cardholderName: cardholderName || "Card Holder",
         isDefault: shouldBeDefault,
       },
     });
