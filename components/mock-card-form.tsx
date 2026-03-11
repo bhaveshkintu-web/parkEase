@@ -245,42 +245,43 @@ export function MockCardForm({
         </div>
       )}
 
-      <div className={cn(
-        "flex flex-col gap-8 items-center",
-        (activeTab === "card" && !previewPortalId) ? "md:flex-row" : "items-start"
-      )}>
-        {activeTab === "card" && !previewPortalId && (
-          <div className="w-full md:w-[340px] shrink-0 md:sticky md:top-8 animate-in fade-in slide-in-from-left-4 duration-500">
-            <CardPreview
-              name={cardName}
-              number={cardNumber}
-              month={expiryMonth}
-              year={expiryYear}
-              brand={cardBrand}
-              cvv={cvv}
-              focused={focused}
-            />
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="flex-1 w-full space-y-6">
+          <div className={cn(
+            "flex flex-col gap-8 items-center",
+            (activeTab === "card" && !previewPortalId) ? "md:flex-row" : "items-start"
+          )}>
+            {activeTab === "card" && !previewPortalId && (
+              <div className="w-full md:w-[340px] shrink-0 md:sticky md:top-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                <CardPreview
+                  name={cardName}
+                  number={cardNumber}
+                  month={expiryMonth}
+                  year={expiryYear}
+                  brand={cardBrand}
+                  cvv={cvv}
+                  focused={focused}
+                />
+              </div>
+            )}
 
-        {activeTab === "card" && previewPortalId && typeof document !== "undefined" && document.getElementById(previewPortalId) && (
-          createPortal(
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <CardPreview
-                name={cardName}
-                number={cardNumber}
-                month={expiryMonth}
-                year={expiryYear}
-                brand={cardBrand}
-                cvv={cvv}
-                focused={focused}
-              />
-            </div>,
-            document.getElementById(previewPortalId)!
-          )
-        )}
+            {activeTab === "card" && previewPortalId && typeof document !== "undefined" && document.getElementById(previewPortalId) && (
+              createPortal(
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <CardPreview
+                    name={cardName}
+                    number={cardNumber}
+                    month={expiryMonth}
+                    year={expiryYear}
+                    brand={cardBrand}
+                    cvv={cvv}
+                    focused={focused}
+                  />
+                </div>,
+                document.getElementById(previewPortalId)!
+              )
+            )}
 
-        <form onSubmit={handleSubmit} className="flex-1 w-full space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex-1 w-full space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
           {activeTab === "card" && (
             <div className="grid gap-5">
               <div className="space-y-2">
@@ -405,10 +406,10 @@ export function MockCardForm({
               </p>
             </div>
           )}
-        </form>
-      </div>
+            </div>
+          </div>
 
-      {/* Shared Actions (Full Width) */}
+          {/* Shared Actions (Full Width) */}
       <div className="space-y-5 pt-4">
         {/* Agreement Checkbox */}
         {setAgreedToTerms && (
@@ -477,7 +478,8 @@ export function MockCardForm({
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">USA Secure Layer</span>
           </div>
         </div>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
