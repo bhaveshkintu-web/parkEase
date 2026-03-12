@@ -5,13 +5,6 @@ import { Car, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { usePlatformName } from "@/hooks/use-settings";
 
 const footerLinks = {
-  Services: [
-    { label: "Airport Parking", href: "/parking" },
-    // { label: "Monthly Parking", href: "#" },
-    // { label: "Event Parking", href: "#" },
-    // { label: "Car Wash", href: "#" },
-    // { label: "Auto Insurance", href: "#" },
-  ],
   Company: [
     { label: "About Us", href: "/about" },
     { label: "Careers", href: "/careers" },
@@ -30,6 +23,13 @@ const footerLinks = {
   //   { label: "Privacy Policy", href: "/privacy-policy" },
   //   { label: "Cookie Policy", href: "/cookie-policy" },
   // ],
+  Services: [
+    { label: "Airport Parking", href: "/parking" },
+    // { label: "Monthly Parking", href: "#" },
+    // { label: "Event Parking", href: "#" },
+    // { label: "Car Wash", href: "#" },
+    // { label: "Auto Insurance", href: "#" },
+  ],
 };
 
 const socialLinks = [
@@ -96,7 +96,7 @@ export function Footer() {
           <p className="text-sm text-muted-foreground" suppressHydrationWarning>
             © {new Date().getFullYear()} {platformName}. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
+          {/* <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">
               Trusted by 2M+ travelers
             </span>
@@ -112,7 +112,7 @@ export function Footer() {
               ))}
               <span className="ml-1 text-xs font-medium text-foreground">4.9</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>

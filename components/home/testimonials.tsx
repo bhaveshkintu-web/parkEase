@@ -77,7 +77,7 @@ export function Testimonials() {
           ))}
         </div>
 
-        {/* Trust Badges */}
+        {/* Trust Badges 
         <div className="mt-12 flex flex-wrap items-center justify-center gap-8">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
@@ -113,6 +113,7 @@ export function Testimonials() {
             </div>
           </div>
         </div>
+        */}
       </div>
     </section>
   );

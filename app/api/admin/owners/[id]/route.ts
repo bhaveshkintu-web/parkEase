@@ -134,6 +134,12 @@ export async function PATCH(
             verificationStatus: "verified",
           },
         });
+        
+        await prisma.user.update({
+          where: { id: updatedProfile.userId },
+          data: { status: "ACTIVE" }
+        });
+
         return NextResponse.json({ message: "Owner profile approved successfully", profile: updatedProfile });
       } else if (action === "reject") {
         const updatedProfile = await prisma.ownerProfile.update({
@@ -151,6 +157,12 @@ export async function PATCH(
             status: "suspended",
           },
         });
+        
+        await prisma.user.update({
+          where: { id: updatedProfile.userId },
+          data: { status: "SUSPENDED" }
+        });
+
         return NextResponse.json({ message: "Owner profile suspended", profile: updatedProfile });
       }
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
