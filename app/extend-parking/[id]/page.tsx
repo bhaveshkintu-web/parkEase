@@ -12,7 +12,11 @@ import { formatCurrency, formatTime, formatDate } from "@/lib/data";
 import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { MockCardForm } from "@/components/mock-card-form";
+import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
+import { StripePaymentForm } from "@/components/stripe-payment-form";
+import { isStripeConfigured as isStripeActive } from "@/lib/stripe";
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const isStripeConfigured = stripePublishableKey && stripePublishableKey.length > 0 && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
@@ -23,29 +27,15 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
     const [isCustomMode, setIsCustomMode] = useState(false);
     const [customHours, setCustomHours] = useState(0.5); // in 0.5-hr steps
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false);
     const { toast } = useToast();
-    const stripe = useStripe();
-    const elements = useElements();
     const [taxRate, setTaxRate] = useState(12);
     const [serviceFee, setServiceFee] = useState(5.99);
 
-    // Mock payment form state
-    const [mockCardName, setMockCardName] = useState("");
-    const [mockCardNumber, setMockCardNumber] = useState("");
-    const [mockExpiryMonth, setMockExpiryMonth] = useState("");
-    const [mockExpiryYear, setMockExpiryYear] = useState("");
-    const [mockCvv, setMockCvv] = useState("");
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [overlapInfo, setOverlapInfo] = useState<{ hasOverlap: boolean; maxAllowedMinutes: number | null; nextBookingCheckIn?: Date } | null>(null);
-
-    const formatCardNumber = (val: string) => {
-        return val.replace(/\D/g, "").replace(/(\d{4})/g, "$1 ").trim().substring(0, 19);
-    };
-
-    const isMockFormValid = mockCardName.trim().length > 0 &&
-        mockCardNumber.replace(/\s/g, "").length >= 15 &&
-        mockExpiryMonth !== "" && mockExpiryYear !== "" &&
-        mockCvv.length >= 3 && agreedToTerms;
 
     useEffect(() => {
         import("@/lib/actions/settings-actions").then(mod => {
@@ -106,7 +96,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
         };
     });
 
-    const handleExtend = async () => {
+    const handlePaymentIntentCreated = async () => {
         if (!selectedDuration) return;
 
         const option = enrichedOptions.find(o => o.minutes === selectedDuration);
@@ -114,7 +104,6 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
         setIsProcessing(true);
         try {
-            // 1. Create Payment Intent
             const result = await createPaymentIntentAction({
                 amount: option.price,
                 locationId: booking.locationId,
@@ -124,50 +113,41 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
             if (!result.success) throw new Error(result.error);
 
-            // 2. Confirm Payment (using mock mode if necessary)
-            if (result.isMock || !isStripeConfigured) {
-                // Handle mock payment
-                const extResult = await extendBookingAction(
-                    booking.id,
-                    selectedDuration,
-                    option.price,
-                    result.paymentIntentId || "mock_intent"
-                );
-                if (extResult.success) {
-                    toast({ title: "Extension Successful", description: `Your checkout time is now ${formatTime(new Date(extResult.data.checkOut))}` });
-                    onComplete(extResult.data.checkOut);
-                } else {
-                    throw new Error(extResult.error);
-                }
+            if (result.clientSecret) {
+                setClientSecret(result.clientSecret);
+                setShowPaymentForm(true);
+            }
+        } catch (err: any) {
+            toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleExtensionSuccess = async (paymentIntentId: string) => {
+        if (!selectedDuration) return;
+        const option = enrichedOptions.find(o => o.minutes === selectedDuration);
+        if (!option) return;
+
+        setIsPaymentSubmitting(true);
+        try {
+            const extResult = await extendBookingAction(
+                booking.id,
+                selectedDuration,
+                option.price,
+                paymentIntentId
+            );
+
+            if (extResult.success) {
+                toast({ title: "Extension Successful", description: `Your checkout time is now ${formatTime(new Date(extResult.data.checkOut))}` });
+                onComplete(extResult.data.checkOut);
             } else {
-                // Real Stripe payment
-                if (!stripe || !elements) throw new Error("Stripe has not loaded yet.");
-                const { error, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret!, {
-                    payment_method: {
-                        card: elements.getElement(CardElement)!,
-                    },
-                });
-
-                if (error) throw new Error(error.message);
-
-                const extResult = await extendBookingAction(
-                    booking.id,
-                    selectedDuration,
-                    option.price,
-                    paymentIntent.id
-                );
-
-                if (extResult.success) {
-                    toast({ title: "Extension Successful", description: "Your parking session has been extended." });
-                    onComplete(extResult.data.checkOut);
-                } else {
-                    throw new Error(extResult.error);
-                }
+                throw new Error(extResult.error);
             }
         } catch (err: any) {
             toast({ title: "Extension Failed", description: err.message, variant: "destructive" });
         } finally {
-            setIsProcessing(false);
+            setIsPaymentSubmitting(false);
         }
     };
 
@@ -190,12 +170,12 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                     <div
                         key={opt.minutes}
                         onClick={() => { setIsCustomMode(false); setSelectedDuration(opt.minutes); }}
-                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-center text-center h-20 ${selectedDuration === opt.minutes && !isCustomMode
+                        className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-center text-center h-14 ${selectedDuration === opt.minutes && !isCustomMode
                             ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                             : "border-border hover:border-primary/40"
                             }`}
                     >
-                        <p className="font-bold text-lg">{opt.label}</p>
+                        <p className="font-bold text-sm">{opt.label}</p>
                     </div>
                 ))}
 
@@ -204,12 +184,12 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                         setIsCustomMode(true);
                         setSelectedDuration(customHours * 60);
                     }}
-                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center h-20 ${isCustomMode
+                    className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center h-14 ${isCustomMode
                         ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                         : "border-border hover:border-primary/40"
                         }`}
                 >
-                    <p className="font-bold text-lg">Custom</p>
+                    <p className="font-bold text-sm">Custom</p>
                 </div>
             </div>
 
@@ -285,116 +265,45 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
                     <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Details</label>
-                        {isStripeConfigured ? (
-                            <div className="p-3 bg-card border border-border rounded-lg">
-                                <CardElement options={{
-                                    style: {
-                                        base: {
-                                            fontSize: '16px',
-                                            color: '#424770',
-                                            '::placeholder': { color: '#aab7c4' },
-                                        },
-                                    },
-                                }} />
+                        {showPaymentForm && clientSecret ? (
+                            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                                {!isStripeActive() ? (
+                                    <MockCardForm
+                                        onSuccess={handleExtensionSuccess}
+                                        amount={enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0}
+                                        isSubmitting={isPaymentSubmitting}
+                                        setIsSubmitting={setIsPaymentSubmitting}
+                                        agreedToTerms={agreedToTerms}
+                                        setAgreedToTerms={setAgreedToTerms}
+                                    />
+                                ) : (
+                                    <StripeElementsWrapper clientSecret={clientSecret}>
+                                        <StripePaymentForm
+                                            clientSecret={clientSecret}
+                                            amount={enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0}
+                                            onPaymentSuccess={handleExtensionSuccess}
+                                            onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
+                                            isSubmitting={isPaymentSubmitting}
+                                            setIsSubmitting={setIsPaymentSubmitting}
+                                            agreedToTerms={agreedToTerms}
+                                            setAgreedToTerms={setAgreedToTerms}
+                                        />
+                                    </StripeElementsWrapper>
+                                )}
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
-                                    <AlertCircle className="w-4 h-4 shrink-0" />
-                                    <span>Simulation active. Please enter any valid-format card details to continue.</span>
-                                </div>
-
-                                {/* Cardholder Name */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground">Cardholder Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="John Doe"
-                                        value={mockCardName}
-                                        onChange={(e) => setMockCardName(e.target.value)}
-                                        className="w-full h-11 px-3 rounded-xl border-2 border-border bg-background text-sm focus:outline-none focus:border-primary"
-                                    />
-                                </div>
-
-                                {/* Card Number */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground">Card Number</label>
-                                    <input
-                                        type="text"
-                                        placeholder="0000 0000 0000 0000"
-                                        value={mockCardNumber}
-                                        onChange={(e) => setMockCardNumber(formatCardNumber(e.target.value))}
-                                        maxLength={19}
-                                        className="w-full h-11 px-3 rounded-xl border-2 border-border bg-background text-sm font-mono focus:outline-none focus:border-primary"
-                                    />
-                                </div>
-
-                                {/* Expiry + CVV */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground">Expiry Date</label>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={mockExpiryMonth}
-                                                onChange={(e) => setMockExpiryMonth(e.target.value)}
-                                                className="flex-1 h-11 rounded-xl border-2 border-border bg-background px-2 text-sm focus:outline-none focus:border-primary"
-                                            >
-                                                <option value="">Month</option>
-                                                {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                                                    <option key={m} value={m}>{m}</option>
-                                                ))}
-                                            </select>
-                                            <select
-                                                value={mockExpiryYear}
-                                                onChange={(e) => setMockExpiryYear(e.target.value)}
-                                                className="flex-1 h-11 rounded-xl border-2 border-border bg-background px-2 text-sm focus:outline-none focus:border-primary"
-                                            >
-                                                <option value="">Year</option>
-                                                {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() + i)).map(y => (
-                                                    <option key={y} value={y}>{y}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground">CVV</label>
-                                        <input
-                                            type="text"
-                                            placeholder="123"
-                                            value={mockCvv}
-                                            onChange={(e) => setMockCvv(e.target.value.replace(/\D/g, "").substring(0, 4))}
-                                            className="w-full h-11 px-3 rounded-xl border-2 border-border bg-background text-sm focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Agree to terms */}
-                                <div className="flex items-start gap-2 p-3 rounded-xl border-2 border-border bg-muted/30">
-                                    <input
-                                        type="checkbox"
-                                        id="ext-agree"
-                                        checked={agreedToTerms}
-                                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                                        className="mt-0.5 cursor-pointer"
-                                    />
-                                    <label htmlFor="ext-agree" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-                                        I agree to the Terms of Service and Cancellation Policy. I understand that my reservation is subject to availability.
-                                    </label>
-                                </div>
-                            </div>
+                            <Button
+                                className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
+                                onClick={handlePaymentIntentCreated}
+                                disabled={isProcessing || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
+                            >
+                                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                                {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes
+                                    ? "Time Slot Unavailable"
+                                    : "Pay & Extend Session"}
+                            </Button>
                         )}
                     </div>
-
-                    <Button
-                        className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-                        onClick={handleExtend}
-                        disabled={isProcessing || (!isStripeConfigured && !isMockFormValid) || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
-                    >
-                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                        {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes
-                            ? "Time Slot Unavailable"
-                            : "Pay & Extend Session"}
-                    </Button>
                 </div>
             )}
         </div>
@@ -472,9 +381,9 @@ export default function ExtendParkingPage() {
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
-            <main className="container max-w-4xl mx-auto px-4 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                    <div className="lg:col-span-3 space-y-6">
+            <main className="container max-w-6xl mx-auto px-4 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
+                    <div className="lg:col-span-4 space-y-6">
                         <div className="space-y-2">
                             <h1 className="text-4xl font-black tracking-tight">Extend Parking</h1>
                             <p className="text-lg text-muted-foreground">Need more time? Extend your session in a few clicks.</p>

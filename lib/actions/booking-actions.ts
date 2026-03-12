@@ -946,7 +946,7 @@ export async function cleanupExpiredBookings() {
       where: {
         status: "RESERVED",
         booking: {
-          checkIn: { lt: expirationThreshold },
+          checkOut: { lt: expirationThreshold },
           status: { in: ["CONFIRMED", "PENDING"] }
         }
       },
@@ -994,7 +994,7 @@ export async function cleanupExpiredBookings() {
     const orphanedBookings = await prisma.booking.findMany({
       where: {
         status: { in: ["CONFIRMED", "PENDING"] },
-        checkIn: { lt: expirationThreshold },
+        checkOut: { lt: expirationThreshold },
         parkingSession: { is: null } // no session linked
       },
       include: {

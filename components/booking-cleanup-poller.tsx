@@ -25,7 +25,10 @@ export function BookingCleanupPoller() {
         localStorage.setItem(STORAGE_KEY, String(now));
 
         // No auth token needed — the route whitelists localhost automatically
-        await fetch("/api/cron/cleanup");
+        await Promise.all([
+          fetch("/api/cron/cleanup"),
+          fetch("/api/cron/check-expiry")
+        ]);
       } catch {
         // Silent fail — this is a background task, never impacts the user's UI
       }

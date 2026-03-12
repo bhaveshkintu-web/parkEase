@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X, CreditCard } from "lucide-react";
+import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X, CreditCard, Calendar, Settings2, PlusCircle, Info, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";

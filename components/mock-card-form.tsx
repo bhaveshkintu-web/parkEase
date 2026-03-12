@@ -245,13 +245,28 @@ export function MockCardForm({
         </div>
       )}
 
-        <form onSubmit={handleSubmit} className="flex-1 w-full space-y-6">
-          <div className={cn(
-            "flex flex-col gap-8 items-center",
-            (activeTab === "card" && !previewPortalId) ? "md:flex-row" : "items-start"
-          )}>
-            {activeTab === "card" && !previewPortalId && (
-              <div className="w-full md:w-[340px] shrink-0 md:sticky md:top-8 animate-in fade-in slide-in-from-left-4 duration-500">
+      <form onSubmit={handleSubmit} className="flex-1 w-full space-y-6">
+        <div className={cn(
+          "flex flex-col gap-8 items-center",
+          (activeTab === "card" && !previewPortalId) ? "md:flex-row" : "items-start"
+        )}>
+          {activeTab === "card" && !previewPortalId && (
+            <div className="w-full md:w-[340px] shrink-0 md:sticky md:top-8 animate-in fade-in slide-in-from-left-4 duration-500">
+              <CardPreview
+                name={cardName}
+                number={cardNumber}
+                month={expiryMonth}
+                year={expiryYear}
+                brand={cardBrand}
+                cvv={cvv}
+                focused={focused}
+              />
+            </div>
+          )}
+
+          {activeTab === "card" && previewPortalId && typeof document !== "undefined" && document.getElementById(previewPortalId) && (
+            createPortal(
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <CardPreview
                   name={cardName}
                   number={cardNumber}
@@ -261,223 +276,208 @@ export function MockCardForm({
                   cvv={cvv}
                   focused={focused}
                 />
-              </div>
-            )}
+              </div>,
+              document.getElementById(previewPortalId)!
+            )
+          )}
 
-            {activeTab === "card" && previewPortalId && typeof document !== "undefined" && document.getElementById(previewPortalId) && (
-              createPortal(
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <CardPreview
-                    name={cardName}
-                    number={cardNumber}
-                    month={expiryMonth}
-                    year={expiryYear}
-                    brand={cardBrand}
-                    cvv={cvv}
-                    focused={focused}
-                  />
-                </div>,
-                document.getElementById(previewPortalId)!
-              )
-            )}
-
-            <div className="flex-1 w-full space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-          {activeTab === "card" && (
-            <div className="grid gap-5">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                  <span>Cardholder Name</span>
-                  {errors.cardName && touched.cardName && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cardName}</span>}
-                </Label>
-                <Input
-                  placeholder="John Doe"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
-                  onFocus={() => setFocused("name")}
-                  onBlur={() => setFocused(null)}
-                  className={cn("h-14 rounded-xl border-2 transition-all focus:ring-0 focus:border-primary", (errors.cardName && touched.cardName) ? "border-destructive bg-destructive/5" : "border-border/50")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                  <span>Card Number</span>
-                  {errors.cardNumber && touched.cardNumber && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cardNumber}</span>}
-                </Label>
-                <div className="relative group">
-                  <Input
-                    placeholder="0000 0000 0000 0000"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                    onFocus={() => setFocused("number")}
-                    onBlur={() => setFocused(null)}
-                    maxLength={19}
-                    className={cn("h-14 rounded-xl border-2 pl-14 font-mono transition-all focus:ring-0 focus:border-primary", (errors.cardNumber && touched.cardNumber) ? "border-destructive bg-destructive/5" : "border-border/50")}
-                  />
-                  <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-80 group-focus-within:opacity-100 transition-opacity">
-                    <BrandIcon brand={cardBrand} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expiry Date</Label>
-                  <div className="flex gap-2">
-                    <select
-                      value={expiryMonth}
-                      onChange={(e) => setExpiryMonth(e.target.value)}
-                      onFocus={() => setFocused("expiry")}
-                      onBlur={() => setFocused(null)}
-                      className={cn("flex h-14 w-full rounded-xl border-2 bg-background px-3 transition-all cursor-pointer focus:border-primary outline-none", (errors.expiry && touched.expiry) ? "border-destructive bg-destructive/5" : "border-border/50")}
-                    >
-                      <option value="">MM</option>
-                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select
-                      value={expiryYear}
-                      onChange={(e) => setExpiryYear(e.target.value)}
-                      onFocus={() => setFocused("expiry")}
-                      onBlur={() => setFocused(null)}
-                      className={cn("flex h-14 w-full rounded-xl border-2 bg-background px-3 transition-all cursor-pointer focus:border-primary outline-none", (errors.expiry && touched.expiry) ? "border-destructive bg-destructive/5" : "border-border/50")}
-                    >
-                      <option value="">YYYY</option>
-                      {Array.from({ length: 11 }, (_, i) => String(new Date().getFullYear() + i)).map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                </div>
+          <div className="flex-1 w-full space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            {activeTab === "card" && (
+              <div className="grid gap-5">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                    <span>CVV</span>
-                    {errors.cvv && touched.cvv && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cvv}</span>}
+                    <span>Cardholder Name</span>
+                    {errors.cardName && touched.cardName && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cardName}</span>}
                   </Label>
                   <Input
-                    placeholder="123"
-                    value={cvv}
-                    onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").substring(0, 3))}
-                    onFocus={() => setFocused("cvv")}
+                    placeholder="John Doe"
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    onFocus={() => setFocused("name")}
                     onBlur={() => setFocused(null)}
-                    className={cn("h-14 rounded-xl border-2 text-center font-mono transition-all focus:ring-0 focus:border-primary", (errors.cvv && touched.cvv) ? "border-destructive bg-destructive/5" : "border-border/50")}
+                    className={cn("h-14 rounded-xl border-2 transition-all focus:ring-0 focus:border-primary", (errors.cardName && touched.cardName) ? "border-destructive bg-destructive/5" : "border-border/50")}
                   />
                 </div>
-              </div>
-            </div>
-          )}
 
-          {activeTab === "wallet" && showWallet && (
-            <div className="py-12 space-y-8 text-center animate-in zoom-in-95 duration-500 bg-slate-50/50 rounded-2xl border-2 border-dashed border-border/50">
-              <div className="flex flex-col items-center gap-5 px-8">
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !agreedToTerms}
-                  className={cn(
-                    "h-14 w-full max-w-[280px] bg-black rounded-xl flex items-center justify-center text-white font-bold hover:bg-black/90 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg",
-                    !agreedToTerms && "grayscale opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : "Pay with Apple Pay"}
-                </Button>
-                <div className="flex items-center gap-4 w-full max-w-[280px]">
-                  <div className="h-px bg-border/50 flex-1" />
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">OR</span>
-                  <div className="h-px bg-border/50 flex-1" />
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !agreedToTerms}
-                  className={cn(
-                    "h-14 w-full max-w-[280px] bg-white border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-[0.98] disabled:opacity-50 shadow-md",
-                    !agreedToTerms && "grayscale opacity-40 cursor-not-allowed"
-                  )}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-lg">
-                      <span className="text-blue-600">G</span>Pay
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                    <span>Card Number</span>
+                    {errors.cardNumber && touched.cardNumber && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cardNumber}</span>}
+                  </Label>
+                  <div className="relative group">
+                    <Input
+                      placeholder="0000 0000 0000 0000"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                      onFocus={() => setFocused("number")}
+                      onBlur={() => setFocused(null)}
+                      maxLength={19}
+                      className={cn("h-14 rounded-xl border-2 pl-14 font-mono transition-all focus:ring-0 focus:border-primary", (errors.cardNumber && touched.cardNumber) ? "border-destructive bg-destructive/5" : "border-border/50")}
+                    />
+                    <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-80 group-focus-within:opacity-100 transition-opacity">
+                      <BrandIcon brand={cardBrand} />
                     </div>
-                  )}
-                </Button>
-              </div>
-              <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground px-8 leading-relaxed">
-                Click above to simulate a native <br /> digital wallet secure checkout.
-              </p>
-            </div>
-          )}
-            </div>
-          </div>
+                  </div>
+                </div>
 
-          {/* Shared Actions (Full Width) */}
-      <div className="space-y-5 pt-4">
-        {/* Agreement Checkbox */}
-        {setAgreedToTerms && (
-          <div className={cn(
-            "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
-            agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
-          )}>
-            <div className="pt-0.5">
-              <Checkbox
-                id="mock-terms"
-                checked={agreedToTerms}
-                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                className="w-5 h-5 rounded-md"
-              />
-            </div>
-            <Label htmlFor="mock-terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
-              <span>
-                I agree to the{" "}
-                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
-                  Terms
-                </Link>{" "}
-                and{" "}
-                <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
-                  Cancellation Policy
-                </Link>
-                . I understand my booking is subject to availability.
-              </span>
-            </Label>
-          </div>
-        )}
-
-        {activeTab === "card" && (
-          <Button
-            type="submit"
-            disabled={isSubmitting || !agreedToTerms}
-            className={cn(
-              "w-full h-16 font-black text-xl shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-2xl group uppercase tracking-[0.2em]",
-              agreedToTerms
-                ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
-                : "opacity-40 grayscale"
-            )}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center gap-4">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="animate-pulse">Processing Payment...</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center w-full relative">
-                <span className="drop-shadow-sm truncate px-8">
-                  {amount ? `Pay ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)}` : "Confirm & Pay"}
-                </span>
-                <Lock className="absolute right-4 h-6 w-6 opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all scale-90 group-hover:scale-100" />
+                <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expiry Date</Label>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={expiryMonth}
+                        onChange={(e) => setExpiryMonth(e.target.value)}
+                        onFocus={() => setFocused("expiry")}
+                        onBlur={() => setFocused(null)}
+                        className={cn("flex h-14 w-full rounded-xl border-2 bg-transparent px-1 text-[11px] font-medium transition-all cursor-pointer focus:border-primary outline-none min-w-[50px] text-foreground", (errors.expiry && touched.expiry) ? "border-destructive bg-destructive/5" : "border-border/50")}
+                      >
+                        <option value="">MM</option>
+                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select
+                        value={expiryYear}
+                        onChange={(e) => setExpiryYear(e.target.value)}
+                        onFocus={() => setFocused("expiry")}
+                        onBlur={() => setFocused(null)}
+                        className={cn("flex h-14 w-full rounded-xl border-2 bg-transparent px-1 text-[11px] font-medium transition-all cursor-pointer focus:border-primary outline-none min-w-[70px] text-foreground", (errors.expiry && touched.expiry) ? "border-destructive bg-destructive/5" : "border-border/50")}
+                      >
+                        <option value="">YYYY</option>
+                        {Array.from({ length: 11 }, (_, i) => String(new Date().getFullYear() + i)).map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                      <span>CVV</span>
+                      {errors.cvv && touched.cvv && <span className="text-[10px] text-destructive lowercase italic normal-case tracking-normal">{errors.cvv}</span>}
+                    </Label>
+                    <Input
+                      placeholder="123"
+                      value={cvv}
+                      onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").substring(0, 3))}
+                      onFocus={() => setFocused("cvv")}
+                      onBlur={() => setFocused(null)}
+                      className={cn("h-14 rounded-xl border-2 text-center font-mono transition-all focus:ring-0 focus:border-primary", (errors.cvv && touched.cvv) ? "border-destructive bg-destructive/5" : "border-border/50")}
+                    />
+                  </div>
+                </div>
               </div>
             )}
-          </Button>
-        )}
 
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 pt-2">
-          <div className="flex items-center gap-2 group cursor-help transition-opacity hover:opacity-100 opacity-60">
-            <ShieldCheck className="h-4 w-4 text-primary group-hover:animate-bounce" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">PCI Compliant</span>
-          </div>
-          <div className="flex items-center gap-2 group cursor-help transition-opacity hover:opacity-100 opacity-60">
-            <Check className="h-4 w-4 text-primary group-hover:scale-125 transition-transform" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">USA Secure Layer</span>
+            {activeTab === "wallet" && showWallet && (
+              <div className="py-12 space-y-8 text-center animate-in zoom-in-95 duration-500 bg-slate-50/50 rounded-2xl border-2 border-dashed border-border/50">
+                <div className="flex flex-col items-center gap-5 px-8">
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !agreedToTerms}
+                    className={cn(
+                      "h-14 w-full max-w-[280px] bg-black rounded-xl flex items-center justify-center text-white font-bold hover:bg-black/90 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg",
+                      !agreedToTerms && "grayscale opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : "Pay with Apple Pay"}
+                  </Button>
+                  <div className="flex items-center gap-4 w-full max-w-[280px]">
+                    <div className="h-px bg-border/50 flex-1" />
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">OR</span>
+                    <div className="h-px bg-border/50 flex-1" />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !agreedToTerms}
+                    className={cn(
+                      "h-14 w-full max-w-[280px] bg-white border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-[0.98] disabled:opacity-50 shadow-md",
+                      !agreedToTerms && "grayscale opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-lg">
+                        <span className="text-blue-600">G</span>Pay
+                      </div>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground px-8 leading-relaxed">
+                  Click above to simulate a native <br /> digital wallet secure checkout.
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Shared Actions (Full Width) */}
+        <div className="space-y-5 pt-4">
+          {/* Agreement Checkbox */}
+          {setAgreedToTerms && (
+            <div className={cn(
+              "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+              agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+            )}>
+              <div className="pt-0.5">
+                <Checkbox
+                  id="mock-terms"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                  className="w-5 h-5 rounded-md"
+                />
+              </div>
+              <Label htmlFor="mock-terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                <span>
+                  I agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                    Cancellation Policy
+                  </Link>
+                  . I understand my booking is subject to availability.
+                </span>
+              </Label>
+            </div>
+          )}
+
+          {activeTab === "card" && (
+            <Button
+              type="submit"
+              disabled={isSubmitting || !agreedToTerms}
+              className={cn(
+                "w-full h-16 font-black text-xl shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-2xl group uppercase tracking-[0.2em]",
+                agreedToTerms
+                  ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
+                  : "opacity-40 grayscale"
+              )}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center gap-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="animate-pulse">Processing Payment...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center w-full relative">
+                  <span className="drop-shadow-sm truncate px-8">
+                    {amount ? `Pay ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)}` : "Confirm & Pay"}
+                  </span>
+                  <Lock className="absolute right-4 h-6 w-6 opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all scale-90 group-hover:scale-100" />
+                </div>
+              )}
+            </Button>
+          )}
+
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 pt-2">
+            <div className="flex items-center gap-2 group cursor-help transition-opacity hover:opacity-100 opacity-60">
+              <ShieldCheck className="h-4 w-4 text-primary group-hover:animate-bounce" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">PCI Compliant</span>
+            </div>
+            <div className="flex items-center gap-2 group cursor-help transition-opacity hover:opacity-100 opacity-60">
+              <Check className="h-4 w-4 text-primary group-hover:scale-125 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">USA Secure Layer</span>
+            </div>
+          </div>
         </div>
       </form>
     </div>

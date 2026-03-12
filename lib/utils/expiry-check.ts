@@ -31,7 +31,8 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         sessions.forEach(s => {
             const co = new Date(s.booking.checkOut);
             const inWindow = co > warningWindowStart && co < warningWindowEnd;
-            const statusMatch = ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT"].includes(s.booking.status);
+            // Robust check: Include EXPIRED if it was accidentally marked by cleanup during a late check-in
+            const statusMatch = ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT", "EXPIRED"].includes(s.booking.status);
             const unsent = s.expiryWarningSentAt === null;
 
             if (inWindow || s.booking.guestEmail.includes("gmail.com")) {
@@ -43,7 +44,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         const expiringBookings = await prisma.booking.findMany({
             where: {
                 status: {
-                    in: ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT"]
+                    in: ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT", "EXPIRED"]
                 },
                 checkOut: {
                     gt: warningWindowStart,
