@@ -4,6 +4,8 @@ import Link from "next/link";
 import { airports } from "@/lib/data";
 import { Plane, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image"; // Add this line
+
 
 export function PopularAirports() {
   return (
@@ -34,14 +36,37 @@ export function PopularAirports() {
               className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-lg"
             >
               {/* Image Placeholder with Gradient */}
-              <div className="relative h-32 bg-gradient-to-br from-primary/20 to-primary/5">
+              {/* <div className="relative h-32 bg-gradient-to-br from-primary/20 to-primary/5">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Plane className="h-12 w-12 text-primary/40" />
                 </div>
                 <div className="absolute left-3 top-3 rounded-md bg-card/90 px-2 py-1 text-xs font-bold text-foreground backdrop-blur-sm">
                   {airport.code}
                 </div>
+              </div> */}
+              {/* Image Section */}
+              <div className="relative h-40 w-full overflow-hidden bg-muted">
+                {airport.image ? (
+                  <Image
+                    src={airport.image}
+                    alt={airport.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                  />
+                ) : (
+                  /* Fallback if image is missing */
+                  <div className="flex h-full w-full items-center justify-center bg-primary/5">
+                    <Plane className="h-12 w-12 text-primary/20" />
+                  </div>
+                )}
+
+                {/* Airport Code Label (stays on top) */}
+                <div className="absolute left-3 top-3 z-10 rounded-md bg-card/90 px-2 py-1 text-xs font-bold text-foreground backdrop-blur-sm">
+                  {airport.code}
+                </div>
               </div>
+
 
               <div className="p-4">
                 <h3 className="mb-1 font-semibold text-foreground group-hover:text-primary">

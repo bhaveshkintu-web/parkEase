@@ -90,7 +90,6 @@ export async function getParkingLocations(searchParams?: {
     });
 
     const locationsWithStats: ParkingLocationSearchResult[] = locations
-      .filter((loc) => loc.spots.length > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
         const rating = reviewCount > 0
