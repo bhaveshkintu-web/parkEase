@@ -352,4 +352,125 @@ export class FinanceService {
       throw error;
     }
   }
+
+  /**
+   * Records extra earnings from extensions or overstays and credits owner immediately
+   */
+  static async recordExtraEarnings(bookingId: string, amount: number, type: 'EXTENSION' | 'OVERSTAY', txClient?: any) {
+    const prismaClient = txClient || prisma;
+
+    try {
+      const booking = await prismaClient.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          location: {
+            include: { owner: true }
+          }
+        },
+      });
+
+      if (!booking) throw new Error("Booking not found");
+      const ownerId = booking.location.owner.id;
+      const userId = booking.location.owner.userId;
+
+      // Calculate platform commission for this specific extra amount
+      // We'll use the platform commission rate directly for simplicity on extra charges
+      const commissionRate = await getPlatformCommissionRate();
+      const platformCommission = parseFloat((amount * (commissionRate / 100)).toFixed(2));
+      const netEarnings = parseFloat((amount - platformCommission).toFixed(2));
+
+      const executeExtraEarnings = async (tx: any) => {
+        // 1. Get or create owner wallet
+        let wallet = await tx.wallet.findUnique({
+          where: { ownerId }
+        });
+
+        if (!wallet) {
+          wallet = await tx.wallet.create({
+            data: {
+              ownerId,
+              balance: 0,
+              totalBalance: 0,
+              currency: "USD"
+            }
+          });
+        }
+
+        // 2. Credit owner available balance immediately for extra charges
+        await (tx.wallet as any).update({
+          where: { id: wallet.id },
+          data: {
+            balance: { increment: netEarnings }
+          }
+        });
+
+        // 3. Create EARNED transaction for owner
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: "EARNED" as any,
+            amount: netEarnings,
+            description: `${type === 'EXTENSION' ? 'Extension' : 'Overstay'} payment received for booking ${booking.confirmationCode}`,
+            status: "COMPLETED",
+            reference: bookingId
+          }
+        });
+
+        // 4. Create COMMISSION deduction record for owner
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: WalletTransactionType.COMMISSION,
+            amount: -platformCommission,
+            description: `Platform fee for booking ${booking.confirmationCode} ${type.toLowerCase()} (${commissionRate}%)`,
+            status: "COMPLETED",
+            reference: bookingId
+          }
+        });
+
+        // 5. Credit System Wallet
+        const systemWallet = await this.getSystemWallet(tx);
+        await (tx.wallet as any).update({
+          where: { id: systemWallet.id },
+          data: {
+            balance: { increment: platformCommission }
+          }
+        });
+
+        // 6. Create System Transaction
+        await tx.walletTransaction.create({
+          data: {
+            walletId: systemWallet.id,
+            type: WalletTransactionType.COMMISSION,
+            amount: platformCommission,
+            description: `Commission from ${type.toLowerCase()} of booking ${booking.confirmationCode} (${booking.location.name})`,
+            status: "COMPLETED",
+            reference: bookingId
+          }
+        });
+
+        // 7. Notify Owner
+        await NotificationService.create({
+          userId,
+          title: `${type === 'EXTENSION' ? 'Extension' : 'Overstay'} Earnings Received`,
+          message: `You earned $${netEarnings.toFixed(2)} from a booking ${type.toLowerCase()} (${booking.confirmationCode}).`,
+          type: NotificationType.EARNINGS_CREDITED,
+          metadata: { bookingId, netEarnings, type }
+        });
+
+        return { netEarnings, platformCommission };
+      };
+
+      if (txClient) {
+        return await executeExtraEarnings(txClient);
+      } else {
+        return await prisma.$transaction(async (tx) => {
+          return await executeExtraEarnings(tx);
+        });
+      }
+    } catch (error) {
+      console.error("[RECORD_EXTRA_EARNINGS_ERROR]", error);
+      throw error;
+    }
+  }
 }

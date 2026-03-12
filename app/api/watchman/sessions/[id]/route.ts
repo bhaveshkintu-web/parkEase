@@ -30,6 +30,23 @@ export async function PATCH(
     }
 
     if (action === "check-in") {
+      const currentSession = await prisma.parkingSession.findUnique({
+        where: { id: sessionId },
+        include: { booking: true }
+      });
+
+      if (!currentSession) {
+        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      }
+
+      const now = new Date();
+      if (now > new Date(currentSession.booking.checkOut)) {
+        return NextResponse.json({
+          error: "CHECK_IN_FORBIDDEN",
+          message: "Check-in is not allowed after the scheduled checkout time. This reservation has expired."
+        }, { status: 400 });
+      }
+
       const updatedSession = await prisma.parkingSession.update({
         where: { id: sessionId },
         data: {
@@ -86,10 +103,18 @@ export async function PATCH(
         const now = new Date();
         const checkOutLimit = new Date(currentSession.booking.checkOut);
 
-        // Calculate overstay if any
-        if (now > checkOutLimit && (currentSession as any).paymentStatus !== "PAID") {
-          const diffMs = now.getTime() - checkOutLimit.getTime();
-          const diffMins = Math.ceil(diffMs / 60000);
+        // Fetch grace period from settings
+        const { getGeneralSettings } = await import("@/lib/actions/settings-actions");
+        const settings = await getGeneralSettings();
+        const gracePeriodMinutes = settings.gracePeriodMinutes ?? 30;
+        const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+        const checkOutWithGrace = new Date(checkOutLimit.getTime() + gracePeriodMs);
+
+        // Calculate overstay only if past grace period
+        if (now > checkOutWithGrace && (currentSession as any).paymentStatus !== "PAID") {
+            // Calculate overstay duration AFTER the grace period
+            const diffMs = now.getTime() - checkOutWithGrace.getTime();
+            const diffMins = Math.ceil(diffMs / 60000);
 
           // Find location to get rates
           const location = await tx.parkingLocation.findUnique({

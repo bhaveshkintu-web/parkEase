@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { FinanceService } from "@/lib/finance-service";
 
 export async function markOverstayAsPaidAction(bookingId: string, paymentMethod: string = "CASH") {
     try {
@@ -45,6 +46,9 @@ export async function markOverstayAsPaidAction(bookingId: string, paymentMethod:
                     type: "OVERSTAY" as any,
                 }
             });
+
+            // NEW: Record extra earnings for overstay
+            await FinanceService.recordExtraEarnings(bookingId, overstayCharge, 'OVERSTAY', tx);
 
             return { success: true };
         });
@@ -111,6 +115,9 @@ export async function payOverstayAction(bookingId: string, amount: number, payme
                     type: "OVERSTAY" as any,
                 }
             });
+
+            // NEW: Record extra earnings for overstay
+            await FinanceService.recordExtraEarnings(bookingId, amount, 'OVERSTAY', tx);
 
             return { success: true };
         });

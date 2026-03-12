@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthUserId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { FinanceService } from "@/lib/finance-service";
 
 /**
  * Pre-flight check: Returns how many minutes max the customer can extend before
@@ -130,6 +131,9 @@ export async function extendBookingAction(bookingId: string, additionalMinutes: 
                     type: "EXTENSION" as any,
                 }
             });
+
+            // NEW: Record extra earnings for extension
+            await FinanceService.recordExtraEarnings(bookingId, amount, 'EXTENSION', tx);
 
             // 3. Update analytics
             await tx.locationAnalytics.update({
