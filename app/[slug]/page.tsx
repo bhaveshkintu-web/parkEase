@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { IconRenderer } from "@/lib/icon-renderer";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -75,10 +76,9 @@ export default async function CMSPage({ params }: PageProps) {
               )}
             </header>
 
-            <div
-              className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl [&_img]:inline-block prose-p:leading-relaxed prose-p:text-lg text-foreground/90"
-              dangerouslySetInnerHTML={{ __html: page.content }}
-            />
+            <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl [&_img]:inline-block prose-p:leading-relaxed prose-p:text-lg text-foreground/90">
+              <IconRenderer html={page.content} />
+            </div>
           </article>
         </div>
       </main>

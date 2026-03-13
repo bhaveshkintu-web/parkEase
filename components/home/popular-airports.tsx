@@ -75,10 +75,10 @@ export function PopularAirports() {
                 <p className="text-sm text-muted-foreground line-clamp-1">
                   {airport.name}
                 </p>
-                <div className="mt-3 flex items-center justify-between">
+                {/* <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">From</span>
                   <span className="font-semibold text-primary">$8.99/day</span>
-                </div>
+                </div> */}
               </div>
             </Link>
           ))}

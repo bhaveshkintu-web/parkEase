@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendSessionExpiryWarning } from "@/lib/notifications";
+import { getGeneralSettings } from "../actions/settings-actions";
 
 export async function runExpiryCheck(logger: (msg: string) => void = console.log) {
     const now = new Date();
@@ -31,7 +32,8 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         sessions.forEach(s => {
             const co = new Date(s.booking.checkOut);
             const inWindow = co > warningWindowStart && co < warningWindowEnd;
-            const statusMatch = ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT"].includes(s.booking.status);
+            // Robust check: Include EXPIRED if it was accidentally marked by cleanup during a late check-in
+            const statusMatch = ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT", "EXPIRED"].includes(s.booking.status);
             const unsent = s.expiryWarningSentAt === null;
 
             if (inWindow || s.booking.guestEmail.includes("gmail.com")) {
@@ -43,7 +45,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         const expiringBookings = await prisma.booking.findMany({
             where: {
                 status: {
-                    in: ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT"]
+                    in: ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT", "EXPIRED"]
                 },
                 checkOut: {
                     gt: warningWindowStart,
@@ -83,12 +85,18 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         }
 
         // Overstay Check
+        const settings = await getGeneralSettings();
+        const gracePeriodMinutes = settings.gracePeriodMinutes ?? 30;
+        const nowMinusGrace = new Date(now.getTime() - gracePeriodMinutes * 60 * 1000);
+
+        logger(`Applying grace period of ${gracePeriodMinutes} mins for overstay check. (Before ${nowMinusGrace.toISOString()})`);
+
         const overstayingBookings = await prisma.booking.findMany({
             where: {
                 status: {
                     in: ["CONFIRMED", "PENDING", "WAITING_OVERSTAY_PAYMENT"]
                 },
-                checkOut: { lt: now },
+                checkOut: { lt: nowMinusGrace },
                 parkingSession: {
                     status: "checked_in"
                 }
@@ -96,7 +104,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         });
 
         if (overstayingBookings.length > 0) {
-            logger(`Found ${overstayingBookings.length} new overstaying bookings.`);
+            logger(`Found ${overstayingBookings.length} new overstaying bookings past grace period.`);
         }
 
         for (const booking of overstayingBookings) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/admin/data-table";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
+import { IconRenderer } from "@/lib/icon-renderer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -644,10 +645,9 @@ export default function ContentManagementPage() {
           <div className="flex-1 overflow-y-auto p-8 sm:p-12 bg-background">
             <article className="max-w-3xl mx-auto">
               <h1 className="text-4xl font-extrabold mb-8 text-foreground tracking-tight">{previewPage?.title}</h1>
-              <div
-                className="prose prose-slate dark:prose-invert max-w-none prose-p:text-lg prose-p:leading-relaxed text-foreground/80"
-                dangerouslySetInnerHTML={{ __html: previewPage?.content || "" }}
-              />
+              <div className="prose prose-slate dark:prose-invert max-w-none prose-p:text-lg prose-p:leading-relaxed text-foreground/80">
+                <IconRenderer html={previewPage?.content || ""} />
+              </div>
             </article>
           </div>
           <div className="p-4 bg-muted/30 border-t flex justify-between items-center px-8">

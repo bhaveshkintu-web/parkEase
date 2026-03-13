@@ -467,10 +467,10 @@ export default function ReservationDetailPage({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint}>
+            {/* <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-2" />
               Print
-            </Button>
+            </Button> */}
             <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
               <Share2 className="w-4 h-4 mr-2" />
               Share

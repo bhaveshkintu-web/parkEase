@@ -290,6 +290,11 @@ export async function updateSetting(
     const description = existing?.description || defaultSetting?.description;
 
     const stringValue = stringifyValue(value, type);
+    
+    // Check if value actually changed
+    if (existing && existing.value === stringValue) {
+      return { success: true };
+    }
 
     // Audit log
     await prisma.settingsAuditLog.create({

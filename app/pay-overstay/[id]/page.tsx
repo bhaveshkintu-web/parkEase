@@ -10,40 +10,8 @@ import { formatCurrency, formatTime, formatDate } from "@/lib/data";
 import { Loader2, Clock, Calendar, MapPin, AlertTriangle, CheckCircle2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { validateLuhn, formatCardNumber, detectCardBrand, validateExpiry } from "@/lib/card-utils";
-import { Input } from "@/components/ui/input";
+import { MockCardForm } from "@/components/mock-card-form";
 
-const BrandIcon = ({ brand }: { brand: string }) => {
-    const content = () => {
-        switch (brand) {
-            case "visa":
-                return <div className="text-[#1A1F71] font-black italic text-base select-none">VISA</div>;
-            case "mastercard":
-                return (
-                    <div className="flex -space-x-1.5 select-none">
-                        <div className="w-4 h-4 rounded-full bg-[#EB001B] opacity-90" />
-                        <div className="w-4 h-4 rounded-full bg-[#FF5F00] opacity-90" />
-                    </div>
-                );
-            case "amex":
-                return (
-                    <div className="bg-[#0070D1] text-white px-1 rounded-sm text-[9px] font-black tracking-tighter select-none leading-tight">
-                        AMEX
-                    </div>
-                );
-            case "discover":
-                return <div className="text-[#FF6600] font-black italic text-[10px] select-none">DISCOVER</div>;
-            default:
-                return <CreditCard className="w-5 h-5 text-muted-foreground/40" />;
-        }
-    };
-
-    return (
-        <div className="w-12 flex items-center justify-center">
-            {content()}
-        </div>
-    );
-};
 
 import { useAuth } from "@/lib/auth-context";
 
@@ -57,17 +25,7 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
     const [useNewCard, setUseNewCard] = useState(true);
 
-    // Form States
-    const [cardNumber, setCardNumber] = useState("");
-    const [expiryMonth, setExpiryMonth] = useState("");
-    const [expiryYear, setExpiryYear] = useState("");
-    const [cvv, setCvv] = useState("");
-    const [cardName, setCardName] = useState("");
     const [agreedToTerms, setAgreedToTerms] = useState(false);
-
-    const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
-    const [cardTouched, setCardTouched] = useState<Record<string, boolean>>({});
-    const cardBrand = detectCardBrand(cardNumber);
 
     const overstayCharge = (booking as any).parkingSession?.overstayCharge || 0;
 
@@ -93,61 +51,15 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
         }
     }, [isAuthenticated, user]);
 
-    const validateCardForm = () => {
-        if (!useNewCard && selectedCardId) return true;
-
-        const newErrors: Record<string, string> = {};
-        const cleanedNumber = cardNumber.replace(/\D/g, "");
-
-        if (!cleanedNumber) newErrors.cardNumber = "Card number is required";
-        else if (cleanedNumber.length < 13 || cleanedNumber.length > 19) newErrors.cardNumber = "Invalid length";
-        else if (!validateLuhn(cleanedNumber)) newErrors.cardNumber = "Invalid card number";
-
-        if (!expiryMonth || !expiryYear) newErrors.expiry = "Expiry date is required";
-        else if (!validateExpiry(expiryMonth, expiryYear)) newErrors.expiry = "Card has expired";
-
-        if (!cvv) newErrors.cvv = "CVV is required";
-        else if (cardBrand === 'amex' ? cvv.length !== 4 : cvv.length !== 3) newErrors.cvv = "Invalid CVV";
-
-        if (!cardName.trim()) newErrors.cardName = "Cardholder name is required";
-
-        setCardErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handlePay = async () => {
+    const handlePaymentSuccess = async (paymentIntentId: string) => {
         if (overstayCharge <= 0) return;
-
-        if (!agreedToTerms) {
-            toast({ title: "Agreement Required", description: "Please agree to the terms before paying.", variant: "destructive" });
-            return;
-        }
-
-        if (useNewCard) {
-            setCardTouched({
-                cardName: true,
-                cardNumber: true,
-                expiry: true,
-                cvv: true
-            });
-
-            if (!validateCardForm()) {
-                toast({
-                    title: "Validation Error",
-                    description: "Please correct the errors in the payment form.",
-                    variant: "destructive"
-                });
-                return;
-            }
-        }
 
         setIsProcessing(true);
         try {
-            // Call action directly with mock intent
             const payResult = await payOverstayAction(
                 booking.id,
                 overstayCharge,
-                useNewCard ? "pi_demo_" + Math.random().toString(36).substring(7) : `saved_${selectedCardId}`
+                paymentIntentId
             );
 
             if (payResult.success) {
@@ -161,6 +73,11 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    const handleSavedCardSubmit = async () => {
+        if (!agreedToTerms || !selectedCardId) return;
+        await handlePaymentSuccess(`saved_${selectedCardId}`);
     };
 
     return (
@@ -226,119 +143,43 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                     </div>
                 )}
 
-                {useNewCard && (
-                    <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2">
-                        <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
-                            <p className="font-bold flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" />
-                                Payment Mode
-                            </p>
-                            <p className="mt-1 opacity-80 italic">
-                                Simulation active. Please enter any valid-format card details to continue.
-                            </p>
+                {useNewCard ? (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <MockCardForm
+                            onSuccess={handlePaymentSuccess}
+                            amount={overstayCharge}
+                            isSubmitting={isProcessing}
+                            setIsSubmitting={setIsProcessing}
+                            agreedToTerms={agreedToTerms}
+                            setAgreedToTerms={setAgreedToTerms}
+                            showWallet={true}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                            />
+                            <label htmlFor="terms" className="flex-1 block text-[11px] font-medium text-muted-foreground leading-tight cursor-pointer">
+                                I agree to the <span className="text-primary underline font-bold">Terms of Service</span> and <span className="text-primary underline font-bold">Cancellation Policy</span>.
+                            </label>
                         </div>
 
-                        <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <label htmlFor="cardName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Cardholder Name</label>
-                                <Input
-                                    id="cardName"
-                                    placeholder="John Doe"
-                                    value={cardName}
-                                    onChange={(e) => setCardName(e.target.value)}
-                                    onBlur={() => setCardTouched({ ...cardTouched, cardName: true })}
-                                    className={cn("h-12 rounded-xl border-2", (cardErrors.cardName && cardTouched.cardName) && "border-destructive")}
-                                />
-                                {cardErrors.cardName && cardTouched.cardName && <p className="text-[10px] font-bold text-destructive ml-1">{cardErrors.cardName}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <label htmlFor="cardNumber" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Card Number</label>
-                                <div className="relative">
-                                    <Input
-                                        id="cardNumber"
-                                        placeholder="0000 0000 0000 0000"
-                                        value={cardNumber}
-                                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                        onBlur={() => setCardTouched({ ...cardTouched, cardNumber: true })}
-                                        maxLength={cardBrand === 'amex' ? 17 : 19}
-                                        className={cn("h-12 rounded-xl border-2 pl-14 font-mono", (cardErrors.cardNumber && cardTouched.cardNumber) && "border-destructive")}
-                                    />
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                        <BrandIcon brand={cardBrand} />
-                                    </div>
-                                </div>
-                                {cardErrors.cardNumber && cardTouched.cardNumber && <p className="text-[10px] font-bold text-destructive ml-1">{cardErrors.cardNumber}</p>}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Expiry Date</label>
-                                    <div className="flex gap-2">
-                                        <select
-                                            value={expiryMonth}
-                                            onChange={(e) => setExpiryMonth(e.target.value)}
-                                            onBlur={() => setCardTouched({ ...cardTouched, expiry: true })}
-                                            className={cn("flex h-12 w-full rounded-xl border-2 border-border bg-card px-3 py-2 text-sm focus:outline-none focus:border-primary", (cardErrors.expiry && cardTouched.expiry) && "border-destructive")}
-                                        >
-                                            <option value="">Month</option>
-                                            {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                                                <option key={m} value={m}>{m}</option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            value={expiryYear}
-                                            onChange={(e) => setExpiryYear(e.target.value)}
-                                            onBlur={() => setCardTouched({ ...cardTouched, expiry: true })}
-                                            className={cn("flex h-12 w-full rounded-xl border-2 border-border bg-card px-3 py-2 text-sm focus:outline-none focus:border-primary", (cardErrors.expiry && cardTouched.expiry) && "border-destructive")}
-                                        >
-                                            <option value="">Year</option>
-                                            {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() + i)).map(y => (
-                                                <option key={y} value={y}>{y}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    {cardErrors.expiry && cardTouched.expiry && <p className="text-[10px] font-bold text-destructive ml-1">{cardErrors.expiry}</p>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label htmlFor="cvv" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">CVV</label>
-                                    <Input
-                                        id="cvv"
-                                        placeholder="123"
-                                        value={cvv}
-                                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").substring(0, cardBrand === 'amex' ? 4 : 3))}
-                                        onBlur={() => setCardTouched({ ...cardTouched, cvv: true })}
-                                        className={cn("h-12 rounded-xl border-2", (cardErrors.cvv && cardTouched.cvv) && "border-destructive")}
-                                    />
-                                    {cardErrors.cvv && cardTouched.cvv && <p className="text-[10px] font-bold text-destructive ml-1">{cardErrors.cvv}</p>}
-                                </div>
-                            </div>
-                        </div>
+                        <Button
+                            className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-black hover:bg-zinc-900 rounded-2xl transition-all active:scale-[0.98]"
+                            onClick={handleSavedCardSubmit}
+                            disabled={isProcessing || !agreedToTerms}
+                        >
+                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
+                            Pay {formatCurrency(overstayCharge)}
+                        </Button>
                     </div>
                 )}
-
-                <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-                    <input
-                        type="checkbox"
-                        id="terms"
-                        className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    />
-                    <label htmlFor="terms" className="flex-1 block text-[11px] font-medium text-muted-foreground leading-tight cursor-pointer">
-                        I agree to the <span className="text-primary underline">Terms of Service</span> and <span className="text-primary underline">Cancellation Policy</span>. I understand that my reservation is subject to availability.
-                    </label>
-                </div>
-
-                <Button
-                    className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-black hover:bg-zinc-900 rounded-2xl transition-all active:scale-[0.98]"
-                    onClick={handlePay}
-                    disabled={isProcessing}
-                >
-                    {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
-                    Pay {formatCurrency(overstayCharge)}
-                </Button>
             </div>
 
             <p className="text-[10px] text-center text-muted-foreground font-medium italic">
@@ -424,9 +265,9 @@ export default function OverstayPaymentPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Navbar />
-            <main className="container max-w-4xl mx-auto px-4 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                    <div className="lg:col-span-3 space-y-6">
+            <main className="container max-w-6xl mx-auto px-4 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
+                    <div className="lg:col-span-4 space-y-6">
                         <div className="space-y-2">
                             <h1 className="text-4xl font-black tracking-tight text-red-600 flex items-center gap-3">
                                 <AlertTriangle className="w-10 h-10" />
@@ -450,41 +291,43 @@ export default function OverstayPaymentPage() {
                         </Card>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card className="border-border shadow-lg sticky top-24 overflow-hidden">
-                            <CardHeader className="bg-muted/30">
-                                <CardTitle className="text-lg font-bold">Booking Reference</CardTitle>
-                                <CardDescription className="font-medium opacity-80 italic">#{booking.id.slice(-8).toUpperCase()}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="p-6 space-y-4">
-                                    <div className="flex items-start gap-3">
-                                        <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="font-bold leading-tight">{booking.location.name}</p>
-                                            <p className="text-sm text-muted-foreground mt-1">{booking.location.address}</p>
+                    <div className="lg:col-span-2">
+                        <div className="sticky top-24 space-y-6">
+                            <Card className="border-border shadow-lg overflow-hidden">
+                                <CardHeader className="bg-muted/30">
+                                    <CardTitle className="text-lg font-bold">Booking Reference</CardTitle>
+                                    <CardDescription className="font-medium opacity-80 italic">#{booking.id.slice(-8).toUpperCase()}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="p-6 space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <MapPin className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="font-bold leading-tight">{booking.location.name}</p>
+                                                <p className="text-sm text-muted-foreground mt-1">{booking.location.address}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Original Checkout</p>
+                                                <p className="font-bold text-sm">{formatTime(booking.checkOut)}</p>
+                                                <p className="text-[10px] text-muted-foreground">{formatDate(booking.checkOut)}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] uppercase font-black tracking-widest text-red-600">Current Time</p>
+                                                <p className="font-bold text-sm">{formatTime(new Date())}</p>
+                                                <p className="text-[10px] text-muted-foreground italic text-red-500 font-medium">LATE</p>
+                                            </div>
                                         </div>
                                     </div>
+                                </CardContent>
+                            </Card>
 
-                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Original Checkout</p>
-                                            <p className="font-bold text-sm">{formatTime(booking.checkOut)}</p>
-                                            <p className="text-[10px] text-muted-foreground">{formatDate(booking.checkOut)}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] uppercase font-black tracking-widest text-red-600">Current Time</p>
-                                            <p className="font-bold text-sm">{formatTime(new Date())}</p>
-                                            <p className="text-[10px] text-muted-foreground italic text-red-500 font-medium">LATE</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3 text-amber-800 text-sm italic font-medium">
-                            <AlertTriangle className="w-5 h-5 shrink-0" />
-                            <p>Once paid, the watchman's scanner will automatically update and allow you to exit immediately.</p>
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3 text-amber-800 text-sm italic font-medium shadow-lg shadow-amber-500/5">
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <p>Once paid, the watchman's scanner will automatically update and allow you to exit immediately.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

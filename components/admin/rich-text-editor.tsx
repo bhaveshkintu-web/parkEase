@@ -4,9 +4,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
+import TiptapImage from "@tiptap/extension-image";
+import TiptapLink from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
+import TiptapItalic from "@tiptap/extension-italic";
 import { Button } from "@/components/ui/button";
 import {
   Bold,
@@ -27,7 +28,7 @@ import {
   AlignRight,
   AlignJustify,
 } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
@@ -42,7 +43,52 @@ import { Slider } from "@/components/ui/slider";
 import { Crop as CropIcon, RefreshCw, FileCode, Monitor } from "lucide-react";
 import {TextStyle} from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
-import { Extension } from "@tiptap/core";
+import { Extension, Node, mergeAttributes } from "@tiptap/core";
+import { Icon } from "@/lib/tiptap-extensions/icon-extension";
+import { IconPicker } from "./icon-picker";
+import { Smile } from "lucide-react";
+
+// Extension to support div tags with styles
+const Div = Node.create({
+  name: "div",
+  group: "block",
+  content: "block+",
+  defining: true,
+  parseHTML() {
+    return [{ tag: "div" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+// Extension to support main tags with styles
+const Main = Node.create({
+  name: "main",
+  group: "block",
+  content: "block+",
+  defining: true,
+  parseHTML() {
+    return [{ tag: "main" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["main", mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+// Extension to support section tags with styles
+const Section = Node.create({
+  name: "section",
+  group: "block",
+  content: "block+",
+  defining: true,
+  parseHTML() {
+    return [{ tag: "section" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["section", mergeAttributes(HTMLAttributes), 0];
+  },
+});
 
 interface RichTextEditorProps {
   content: string;
@@ -61,6 +107,9 @@ const GlobalStyle = Extension.create({
           "textStyle",
           "blockquote",
           "listItem",
+          "div",
+          "main",
+          "section",
         ],
         attributes: {
           style: {
@@ -82,7 +131,7 @@ const GlobalStyle = Extension.create({
   },
 });
 
-const CustomImage = Image.extend({
+const CustomImage = TiptapImage.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -106,11 +155,23 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const [aspect, setAspect] = useState<number | undefined>(undefined);
   const [isCodeView, setIsCodeView] = useState(false);
   const [htmlContent, setHtmlContent] = useState(content);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const onUpdateTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      Icon,
+      StarterKit.configure({
+        italic: false,
+        code: false,
+      }),
+      TiptapItalic.extend({
+        priority: 10,
+      }),
+      Div,
+      Main,
+      Section,
       CustomImage.configure({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg inline-block",
@@ -119,7 +180,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
       TextStyle,
       Color,
       GlobalStyle,
-      Link.configure({
+      TiptapLink.configure({
         openOnClick: false,
         HTMLAttributes: {
           class: "text-primary underline",
@@ -132,8 +193,17 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     content,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      setHtmlContent(html);
-      onChange(html);
+      
+      // Clear existing timeout
+      if (onUpdateTimeoutRef.current) {
+        clearTimeout(onUpdateTimeoutRef.current);
+      }
+
+      // Debounce state updates to prevent flushSync errors and redundant parent renders
+      onUpdateTimeoutRef.current = setTimeout(() => {
+        setHtmlContent(html);
+        onChange(html);
+      }, 50);
     },
     editorProps: {
       attributes: {
@@ -143,6 +213,9 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     },
     immediatelyRender: false,
   });
+
+  // No forcing useEffect here to avoid infinite loops during content normalization.
+  // TipTap handles the initial 'content' passed to useEditor.
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     if (aspect) {
@@ -347,10 +420,14 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const toggleCodeView = () => {
     if (isCodeView) {
       // Switching from Code to Visual
-      editor.commands.setContent(htmlContent);
+      if (editor && editor.getHTML() !== htmlContent) {
+        editor.commands.setContent(htmlContent);
+      }
     } else {
-            // Switching from Visual to Code
-      setHtmlContent(editor.getHTML());
+      // Switching from Visual to Code
+      if (editor) {
+        setHtmlContent(editor.getHTML());
+      }
     }
     setIsCodeView(!isCodeView);
   };
@@ -506,8 +583,18 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           onClick={handleImageUpload}
           disabled={isUploading}
           className={editor.isActive("image") ? "text-primary" : ""}
+          title="Upload Image"
         >
           <ImageIcon className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setIconPickerOpen(true)}
+          title="Insert Icon"
+        >
+          <Smile className="w-4 h-4" />
         </Button>
         {editor.isActive("image") && (
           <div className="flex items-center gap-1 border-l pl-1 ml-1">
@@ -620,16 +707,18 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 
       {/* Editor Content */}
       <div className="relative">
-        {isCodeView ? (
+        <div className={cn(!isCodeView && "hidden")}>
           <textarea
             value={htmlContent}
             onChange={handleHtmlChange}
             className="w-full min-h-[400px] p-4 font-mono text-sm bg-slate-950 text-slate-200 border-none focus:ring-1 focus:ring-primary/50 outline-none rounded-b-lg resize-y scrollbar-thin scrollbar-thumb-slate-800"
             spellCheck={false}
           />
-        ) : (
+        </div>
+        
+        <div className={cn(isCodeView && "hidden")}>
           <EditorContent editor={editor} />
-        )}
+        </div>
 
         {isCodeView && (
           <div className="absolute top-2 right-4 pointer-events-none">
@@ -724,6 +813,21 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
               {isUploading ? "Applying..." : "Apply Crop"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Icon Picker Dialog */}
+      <Dialog open={iconPickerOpen} onOpenChange={setIconPickerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Insert Icon</DialogTitle>
+          </DialogHeader>
+          <IconPicker 
+            onSelect={(name) => {
+              editor.chain().focus().setIcon(name).run();
+              setIconPickerOpen(false);
+            }} 
+          />
         </DialogContent>
       </Dialog>
     </div>

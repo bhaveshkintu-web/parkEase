@@ -61,9 +61,11 @@ export async function createPaymentIntent(
   }
 ) {
   try {
-    const isMock = checkIsMockMode();
+    const stripeConfigured = isStripeConfigured();
+    const isMock = !stripeConfigured || amount < 50; // Stripe minimum is 50 cents ($0.50)
+
     if (isMock) {
-      console.log("Stripe Mock Mode: Simulating PaymentIntent creation");
+      console.log(`Stripe Mock Mode: Simulating PaymentIntent creation for amount ${amount} cents`);
       return {
         success: true,
         clientSecret: "mock_client_secret_" + Math.random().toString(36).substring(7),
