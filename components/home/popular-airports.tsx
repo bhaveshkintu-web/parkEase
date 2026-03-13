@@ -35,7 +35,7 @@ export function PopularAirports() {
               href={`/parking?q=${encodeURIComponent(airport.code)}`}
               className="group relative overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-lg"
             >
-              {/* Image Placeholder with Gradient */}
+              {/* Image Placeholder with Gradient */} 
               {/* <div className="relative h-32 bg-gradient-to-br from-primary/20 to-primary/5">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Plane className="h-12 w-12 text-primary/40" />
@@ -43,7 +43,7 @@ export function PopularAirports() {
                 <div className="absolute left-3 top-3 rounded-md bg-card/90 px-2 py-1 text-xs font-bold text-foreground backdrop-blur-sm">
                   {airport.code}
                 </div>
-              </div> */}
+              </div>
               {/* Image Section */}
               <div className="relative h-40 w-full overflow-hidden bg-muted">
                 {airport.image ? (

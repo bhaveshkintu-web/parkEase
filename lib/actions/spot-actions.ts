@@ -200,7 +200,14 @@ export async function allocateSpotForBooking(
     return emptySpots[0];
   }
 
-  // Preference 2: Maximize the tightest gap (bidirectional margin)
+  // If it's a FUTURE booking (not today), we strictly require an empty spot.
+  // We do not use "gap logic" for future reservations to keep the calendar clean.
+  const isToday = isSameDay(checkIn, now);
+  if (!isToday) {
+    return null;
+  }
+
+  // Preference 2: Maximize the tightest gap (Fallback for TODAY's bookings only)
   // We calculate the gap before check-in and the gap after check-out.
   // We rank spots by `Math.min(gapBefore, gapAfter)` to ensure maximum "free space".
 
@@ -236,6 +243,103 @@ export async function allocateSpotForBooking(
   spotsWithGaps.sort((a: any, b: any) => b.minGap - a.minGap);
 
   return spotsWithGaps[0].spot;
+}
+
+/**
+ * DRY RUN: Checks if a spot can be allocated for a booking window.
+ * Used by the frontend to provide early feedback.
+ */
+export async function checkSpotAvailability(
+  locationId: string, 
+  checkIn: Date, 
+  checkOut: Date
+) {
+  try {
+    const gracePeriodMinutes = await getGracePeriod();
+    const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+    const now = new Date();
+
+    // Fetch all active spots and their future/current bookings
+    const spots = await (prisma as any).parkingSpot.findMany({
+      where: {
+        locationId,
+        status: "ACTIVE",
+      },
+      include: {
+        bookings: {
+          where: {
+            OR: [
+              { parkingSession: { status: "checked_in" } },
+              {
+                status: { in: ["CONFIRMED", "PENDING"] },
+                checkOut: { gt: new Date(now.getTime() - gracePeriodMs) }
+              }
+            ]
+          },
+          orderBy: { checkIn: "asc" }
+        }
+      },
+      orderBy: { identifier: "asc" },
+    });
+
+    // Filter out spots that conflict with the requested window
+    const validSpots = spots.filter((spot: any) => {
+      const hasConflict = spot.bookings.some((booking: any) => {
+        const bCheckIn = new Date(booking.checkIn);
+        const bCheckOut = new Date(booking.checkOut);
+        const isCheckedIn = booking.parkingSession?.status === "checked_in";
+
+        if (isCheckedIn) {
+          return checkIn < bCheckOut;
+        }
+
+        const overlaps = bCheckOut > checkIn &&
+          bCheckIn < checkOut &&
+          bCheckIn > new Date(now.getTime() - gracePeriodMs);
+        return overlaps;
+      });
+      return !hasConflict;
+    });
+
+    if (validSpots.length === 0) {
+      return { 
+        isAvailable: false, 
+        message: "No spots available for these times.",
+        availableCount: 0 
+      };
+    }
+
+    // 1. Pristine Check (Empty spots)
+    const emptySpots = validSpots.filter((s: any) => s.bookings.length === 0);
+    if (emptySpots.length > 0) {
+      return { 
+        isAvailable: true, 
+        message: `${emptySpots.length} spots available`,
+        availableCount: emptySpots.length 
+      };
+    }
+
+    // 2. Future vs Today check
+    const isToday = isSameDay(checkIn, now);
+    if (!isToday) {
+      return { 
+        isAvailable: false, 
+        message: "Future bookings require a completely empty spot. All spots have upcoming reservations.",
+        availableCount: 0
+      };
+    }
+
+    // 3. Today's Gap Fallback
+    return { 
+      isAvailable: true, 
+      message: `${validSpots.length} spots available`,
+      availableCount: validSpots.length 
+    };
+
+  } catch (error) {
+    console.error("Availability check failed:", error);
+    return { isAvailable: false, message: "Failed to check availability.", availableCount: 0 };
+  }
 }
 
 /**

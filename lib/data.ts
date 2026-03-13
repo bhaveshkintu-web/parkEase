@@ -12,12 +12,12 @@ export const destinations: Destination[] = [
 ];
 
 export const airports: Airport[] = [
-  { code: "LAX", name: "Los Angeles International Airport", city: "Los Angeles", state: "CA", image: "/airports/lax.jpg" },
+  { code: "LAX", name: "Los Angeles International Airport", city: "Los Angeles", state: "CA", image: "/airports/lax.png" },
   { code: "JFK", name: "John F. Kennedy International Airport", city: "New York", state: "NY", image: "/airports/jfk.jpg" },
   { code: "ORD", name: "O'Hare International Airport", city: "Chicago", state: "IL", image: "/airports/ord.jpg" },
   { code: "DFW", name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX", image: "/airports/dfw.jpg" },
   { code: "SFO", name: "San Francisco International Airport", city: "San Francisco", state: "CA", image: "/airports/sfo.jpg" },
-  { code: "MIA", name: "Miami International Airport", city: "Miami", state: "FL", image: "/airports/mia.jpg" },
+  { code: "MIA", name: "Miami International Airport", city: "Miami", state: "FL", image: "/airports/mia.png" },
   { code: "SEA", name: "Seattle-Tacomo International Airport", city: "Seattle", state: "WA", image: "/airports/sea.jpg" },
   { code: "ATL", name: "Hartsfield-Jackson Atlanta International Airport", city: "Atlanta", state: "GA", image: "/airports/atl.jpg" },
   { code: "PHL", name: "Philadelphia International Airport", city: "Philadelphia", state: "PA", image: "/airports/phl.jpg" },
@@ -202,16 +202,29 @@ export function generateConfirmationCode(): string {
   return code;
 }
 
-export function getAvailabilityStatus(location: ParkingLocation): { status: "available" | "limited" | "soldout"; message: string } {
-  const percentAvailable = (location.availableSpots / location.totalSpots) * 100;
+export function getAvailabilityStatus(
+  location: ParkingLocation,
+  liveAvailableSpots?: number
+): { status: "available" | "limited" | "soldout"; message: string } {
+  // Use the live count if provided (from the spot-actions check), else fallback to the location counter
+  const spots = liveAvailableSpots !== undefined ? liveAvailableSpots : location.availableSpots;
+  const percentAvailable = (spots / location.totalSpots) * 100;
 
-  if (location.availableSpots === 0) {
+  if (spots === 0) {
     return { status: "soldout", message: "Sold Out" };
   }
-  if (percentAvailable < 10 || location.availableSpots < 20) {
-    return { status: "limited", message: `Only ${location.availableSpots} spots left` };
+  
+  // For small locations (like 5 spots), use a more sensitive threshold to show "Only X left"
+  // If it's 4/5 (80%), we want to show it as limited to create urgency/clarity.
+  const isLimited = location.totalSpots <= 10 
+    ? (spots < location.totalSpots) // Any spot taken in a small lot shows as limited
+    : (percentAvailable < 30 || spots < 20);
+
+  if (isLimited) {
+    return { status: "limited", message: `Only ${spots} spots left for these dates` };
   }
-  return { status: "available", message: `${location.availableSpots} spots available` };
+  
+  return { status: "available", message: `${spots} spots available` };
 }
 
 export function searchDestinations(query: string): Destination[] {
