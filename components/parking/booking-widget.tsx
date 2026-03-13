@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +10,7 @@ import { useBooking } from "@/lib/booking-context";
 import type { ParkingLocation } from "@/lib/types";
 import { formatCurrency, formatDate, formatTime, calculateQuote, getAvailabilityStatus } from "@/lib/data";
 import { getGeneralSettings } from "@/lib/actions/settings-actions";
+import { checkSpotAvailability } from "@/lib/actions/spot-actions";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
   CheckCircle,
   Shield,
   Clock,
+  AlertTriangle,
   AlertCircle,
   Loader2,
 } from "lucide-react";
@@ -41,6 +43,14 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
   const [taxRate, setTaxRate] = useState(12);
   const [serviceFee, setServiceFee] = useState(5.99);
 
+  // Live availability state (from server action checkSpotAvailability)
+  const [liveAvailabilityResults, setLiveAvailabilityResults] = useState<{
+    isAvailable: boolean;
+    message: string;
+    availableCount: number;
+  } | null>(null);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
   // Fetch fresh pricing settings on mount
   useEffect(() => {
     getGeneralSettings().then((s) => {
@@ -49,8 +59,31 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
     }).catch(console.error);
   }, []);
 
+  // Re-check live spot availability whenever location or dates change
+  const performAvailabilityCheck = useCallback(async () => {
+    if (!location?.id) return;
+    setIsCheckingAvailability(true);
+    try {
+      const result = await checkSpotAvailability(location.id, checkIn, checkOut);
+      setLiveAvailabilityResults(result);
+    } catch (err) {
+      console.error("[BookingWidget] automated spot check failed", err);
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  }, [location?.id, checkIn, checkOut]);
+
+  useEffect(() => {
+    performAvailabilityCheck();
+  }, [performAvailabilityCheck]);
+
   const quote = calculateQuote(location, checkIn, checkOut, taxRate, serviceFee);
-  const availability = getAvailabilityStatus(location);
+  
+  // Use the live count from our dry-run check if available
+  const availability = getAvailabilityStatus(
+    location, 
+    liveAvailabilityResults !== null ? liveAvailabilityResults.availableCount : undefined
+  );
 
   const handleReserve = async () => {
     setIsLoading(true);
@@ -79,16 +112,22 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
 
   return (
     <div className={cn("rounded-xl border border-border bg-card p-6 shadow-lg", className)}>
-      {/* Availability Status */}
-      {availability.status !== "available" && (
+      {/* Availability Status Banner */}
+      {(availability.status !== "available" || (liveAvailabilityResults && !liveAvailabilityResults.isAvailable)) && (
         <div className={cn(
           "mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
-          availability.status === "soldout"
+          (availability.status === "soldout" || (liveAvailabilityResults && !liveAvailabilityResults.isAvailable))
             ? "bg-destructive/10 text-destructive"
             : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
         )}>
-          <AlertCircle className="h-4 w-4" />
-          {availability.message}
+          {availability.status === "soldout" ? (
+            <AlertCircle className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+          )}
+          <p className="flex-1">
+            {liveAvailabilityResults?.message || availability.message}
+          </p>
         </div>
       )}
 
@@ -276,12 +315,17 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
         onClick={handleReserve}
         className="mb-4 w-full"
         size="lg"
-        disabled={availability.status === "soldout" || isLoading || isDurationTooShort}
+        disabled={availability.status === "soldout" || isLoading || isCheckingAvailability || isDurationTooShort}
       >
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Reserving...
+          </>
+        ) : isCheckingAvailability ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Checking...
           </>
         ) : availability.status === "soldout" ? (
           "Sold Out"
