@@ -44,9 +44,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
   return (
     <div className={cn(
       "group overflow-hidden rounded-xl border bg-card transition-all hover:shadow-lg",
-      availability.status === "soldout"
-        ? "border-border opacity-60"
-        : "border-border"
+      "border-border"
     )}>
       <div className="flex flex-col sm:flex-row">
         {/* Image Section */}
@@ -96,12 +94,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
             )}
           </div>
 
-          {/* Sold out overlay */}
-          {availability.status === "soldout" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <Badge variant="secondary" className="text-sm">Sold Out</Badge>
-            </div>
-          )}
+          {/* Sold out overlay removed to keep card fully visible */}
         </div>
 
         {/* Content Section */}
@@ -165,14 +158,12 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
                     ? "text-amber-600 dark:text-amber-400"
                     : "text-primary"
               )}>
-                {availability.status === "soldout" ? (
+                {availability.status === "limited" ? (
                   <AlertCircle className="h-4 w-4" />
-                ) : availability.status === "limited" ? (
-                  <AlertCircle className="h-4 w-4" />
-                ) : (
+                ) : availability.status === "available" ? (
                   <CheckCircle className="h-4 w-4" />
-                )}
-                {availability.message}
+                ) : null}
+                {availability.status !== "soldout" && availability.message}
               </div>
 
               {availability.status !== "soldout" && (
@@ -203,11 +194,20 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/parking/${location.id}`}>
-                <Button disabled={availability.status === "soldout"}>
-                  {availability.status === "soldout" ? "Sold Out" : "Select"}
+              {availability.status === "soldout" && (
+                <span className="text-sm font-semibold text-destructive">
+                  All slots are reserved
+                </span>
+              )}
+              {availability.status === "soldout" ? (
+                <Button disabled>
+                  Select
                 </Button>
-              </Link>
+              ) : (
+                <Link href={`/parking/${location.id}`}>
+                  <Button>Select</Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

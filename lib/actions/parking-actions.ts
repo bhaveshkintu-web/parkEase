@@ -58,6 +58,9 @@ export async function getParkingLocations(searchParams?: {
     const locations = await prisma.parkingLocation.findMany({
       where: {
         status: "ACTIVE",
+        owner: {
+          status: "approved",
+        },
         OR: city || airportCode ? [
           city ? { city: { contains: city, mode: "insensitive" } } : {},
           airportCode ? { airportCode: { equals: airportCode, mode: "insensitive" } } : {},
@@ -90,7 +93,6 @@ export async function getParkingLocations(searchParams?: {
     });
 
     const locationsWithStats: ParkingLocationSearchResult[] = locations
-      .filter((loc) => loc.spots.length > 0)
       .map((loc) => {
         const reviewCount = loc.reviews.length;
         const rating = reviewCount > 0
