@@ -50,6 +50,9 @@ export async function markOverstayAsPaidAction(bookingId: string, paymentMethod:
             // NEW: Record extra earnings for overstay
             await FinanceService.recordExtraEarnings(bookingId, overstayCharge, 'OVERSTAY', tx);
 
+            // NEW: Settle remaining earnings (the original booking amount)
+            await FinanceService.creditEarnings(bookingId, tx);
+
             return { success: true };
         });
 
@@ -118,6 +121,9 @@ export async function payOverstayAction(bookingId: string, amount: number, payme
 
             // NEW: Record extra earnings for overstay
             await FinanceService.recordExtraEarnings(bookingId, amount, 'OVERSTAY', tx);
+
+            // NEW: Settle remaining earnings (the original booking amount)
+            await FinanceService.creditEarnings(bookingId, tx);
 
             return { success: true };
         });

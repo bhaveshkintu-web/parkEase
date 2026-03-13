@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { NotificationService, NotificationType } from "./notifications";
-import { WalletTransactionType } from "@prisma/client";
+import { WalletTransactionType, NotificationType as PrismaNotificationType } from "@prisma/client";
 import { getPlatformCommissionRate } from "./actions/settings-actions";
 
 export class FinanceService {
@@ -24,7 +24,8 @@ export class FinanceService {
   }
 
   /**
-   * Calculates platform commission for a booking
+   * Calculates platform commission for a booking.
+   * Includes both the fixed Service Fee and the percentage-based commission.
    */
   static async calculateCommission(bookingId: string) {
     const booking = await prisma.booking.findUnique({
@@ -41,10 +42,11 @@ export class FinanceService {
     });
 
     const subtotal = booking.totalPrice - booking.taxes - booking.fees;
+    const baseFee = booking.fees || 0;
     let commissionAmount = 0;
     const defaultRate = await getPlatformCommissionRate();
     let appliedRate = defaultRate;
-    let ruleDetails = `Platform Commission ${defaultRate}%`;
+    let ruleDetails = `Service Fee ($${baseFee.toFixed(2)}) + Commission (${defaultRate}%)`;
 
     if (rules.length > 0) {
       // Apply the highest priority rule that meets the criteria
@@ -54,18 +56,18 @@ export class FinanceService {
         if (rule.type === "PERCENTAGE") {
           commissionAmount = subtotal * (rule.value / 100);
           appliedRate = rule.value;
-          ruleDetails = `Platform Commission ${rule.value}%`;
+          ruleDetails = `Service Fee ($${baseFee.toFixed(2)}) + Commission (${rule.value}%)`;
         } else if (rule.type === "FIXED") {
           commissionAmount = rule.value;
           // Calculate effective percentage for display purposes
-          appliedRate = parseFloat(((rule.value / subtotal) * 100).toFixed(1));
-          ruleDetails = `Platform Commission $${rule.value.toFixed(2)} Fixed (${appliedRate}%)`;
+          appliedRate = subtotal > 0 ? parseFloat(((rule.value / subtotal) * 100).toFixed(1)) : 0;
+          ruleDetails = `Service Fee ($${baseFee.toFixed(2)}) + Fixed Fee ($${rule.value.toFixed(2)})`;
         }
 
-        // Apply max commission cap if exists
+        // Apply max commission cap if exists (on the commissionAmount part only)
         if (rule.maxCommission && commissionAmount > rule.maxCommission) {
           commissionAmount = rule.maxCommission;
-          appliedRate = parseFloat(((rule.maxCommission / subtotal) * 100).toFixed(1));
+          appliedRate = subtotal > 0 ? parseFloat(((rule.maxCommission / subtotal) * 100).toFixed(1)) : 0;
           ruleDetails += ` (Capped at $${rule.maxCommission.toFixed(2)})`;
         }
       } else {
@@ -75,8 +77,10 @@ export class FinanceService {
       commissionAmount = subtotal * (defaultRate / 100);
     }
 
+    const totalPlatformEarnings = commissionAmount + baseFee;
+
     return {
-      amount: parseFloat(commissionAmount.toFixed(2)),
+      amount: parseFloat(totalPlatformEarnings.toFixed(2)),
       details: ruleDetails,
       rate: appliedRate
     };
@@ -121,7 +125,7 @@ export class FinanceService {
       await prismaClient.walletTransaction.create({
         data: {
           walletId: wallet.id,
-          type: "DEPOSITED" as any,
+          type: WalletTransactionType.DEPOSITED,
           amount: booking.totalPrice,
           description: `Payment received for booking ${booking.confirmationCode} (Held in total balance)`,
           status: "COMPLETED",
@@ -146,17 +150,19 @@ export class FinanceService {
 
   /**
    * Credits earnings to owner's available balance and system wallet after booking completion
+   * This now releases the ENTIRE amount (Base + Extensions + Overstays) held in totalBalance.
    */
   static async creditEarnings(bookingId: string, txClient?: any) {
     const prismaClient = txClient || prisma;
 
     try {
-      const booking = await prismaClient.booking.findUnique({
+      const booking = await (prismaClient.booking as any).findUnique({
         where: { id: bookingId },
         include: {
           location: {
             include: { owner: true }
-          }
+          },
+          parkingSession: true
         },
       });
 
@@ -165,13 +171,27 @@ export class FinanceService {
       const ownerId = booking.location.owner.id;
       const userId = booking.location.owner.userId;
 
-      // Check if already credited to available balance (idempotency)
+      // 1. Check if already fully credited (idempotency)
       const existingTx = await prismaClient.walletTransaction.findFirst({
-        where: { reference: bookingId, type: "EARNED" as any }
+        where: { reference: bookingId, type: "EARNED" as any, status: "COMPLETED" }
       });
 
       if (existingTx) {
-        console.warn(`Booking ${bookingId} already credited to available balance`);
+          // If already has an EARNED transaction, check if it covers the current total price
+          const txSum = await prismaClient.walletTransaction.aggregate({
+            where: { walletId: ownerId, reference: bookingId, type: "EARNED" as any, status: "COMPLETED" },
+            _sum: { amount: true }
+          });
+          
+          if (txSum._sum.amount && Math.abs(txSum._sum.amount - booking.totalPrice) < 1) {
+              console.log(`Booking ${bookingId} already fully settled.`);
+              return;
+          }
+      }
+
+      // Safety: Only release if vehicle has actually checked out OR it's a manual cleanup
+      if (!booking.parkingSession?.actualCheckOutTime && booking.status !== "COMPLETED") {
+        console.warn(`Booking ${bookingId} has not checked out yet. Settlement postponed.`);
         return;
       }
 
@@ -183,49 +203,41 @@ export class FinanceService {
 
         if (!wallet) throw new Error("Owner wallet not found");
 
-        // 2. Calculate platform commission
-        // Use pre-calculated ownerEarnings from booking if available, otherwise calculate from rules
-        const ownerEarningsFromBooking = booking.ownerEarnings;
+        // 2. Calculate platform commission on the FULL total
+        const totalGross = booking.totalPrice;
+        
+        // Use pre-calculated ownerEarnings from booking if available, otherwise calculate
         let netEarnings: number;
         let platformCommission: number;
         let commissionDetails = "Platform Commission";
 
-        if (ownerEarningsFromBooking !== null && ownerEarningsFromBooking !== undefined) {
-          netEarnings = ownerEarningsFromBooking;
-          platformCommission = parseFloat((booking.totalPrice - netEarnings).toFixed(2));
-        } else {
-          const commissionInfo = await this.calculateCommission(bookingId);
-          const subtotal = booking.totalPrice - booking.taxes - booking.fees;
-
-          // Owner get: Subtotal - Commission + Taxes
-          netEarnings = parseFloat((subtotal - commissionInfo.amount + booking.taxes).toFixed(2));
-          // Admin get: Commission + Fees (implicit via subtraction)
-          platformCommission = parseFloat((booking.totalPrice - netEarnings).toFixed(2));
-          commissionDetails = commissionInfo.details;
-        }
+        const commissionInfo = await this.calculateCommission(bookingId);
+        platformCommission = commissionInfo.amount;
+        netEarnings = parseFloat((totalGross - platformCommission).toFixed(2));
+        commissionDetails = commissionInfo.details;
 
         // 3. Decrement totalBalance, Increment available balance
         await (tx.wallet as any).update({
           where: { id: wallet.id },
           data: {
-            totalBalance: { decrement: booking.totalPrice },
+            totalBalance: { decrement: totalGross },
             balance: { increment: netEarnings }
           }
         });
 
-        // 3. Create EARNED transaction for owner
+        // 4. Create EARNED transaction for owner
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
             type: "EARNED" as any,
             amount: netEarnings,
-            description: `Earnings released for booking ${booking.confirmationCode}`,
+            description: `Total earnings released for booking ${booking.confirmationCode} (incl. extras)`,
             status: "COMPLETED",
             reference: bookingId
           }
         });
 
-        // 4. Create COMMISSION transaction (deduction record for owner)
+        // 5. Create COMMISSION transaction (deduction record for owner)
         await (tx.walletTransaction as any).create({
           data: {
             walletId: wallet.id,
@@ -237,7 +249,7 @@ export class FinanceService {
           }
         });
 
-        // 5. Credit System Wallet
+        // 6. Credit System Wallet
         const systemWallet = await this.getSystemWallet(tx);
         await (tx.wallet as any).update({
           where: { id: systemWallet.id },
@@ -246,7 +258,7 @@ export class FinanceService {
           }
         });
 
-        // 6. Create System Transaction
+        // 7. Create System Transaction
         await (tx.walletTransaction as any).create({
           data: {
             walletId: systemWallet.id,
@@ -258,7 +270,7 @@ export class FinanceService {
           }
         });
 
-        // 7. Notify Owner
+        // 8. Notify Owner
         await NotificationService.create({
           userId,
           title: "Earnings Available",
@@ -354,7 +366,8 @@ export class FinanceService {
   }
 
   /**
-   * Records extra earnings from extensions or overstays and credits owner immediately
+   * Records extra earnings from extensions or overstays.
+   * Funds are HELD in totalBalance and only released via creditEarnings.
    */
   static async recordExtraEarnings(bookingId: string, amount: number, type: 'EXTENSION' | 'OVERSTAY', txClient?: any) {
     const prismaClient = txClient || prisma;
@@ -371,13 +384,6 @@ export class FinanceService {
 
       if (!booking) throw new Error("Booking not found");
       const ownerId = booking.location.owner.id;
-      const userId = booking.location.owner.userId;
-
-      // Calculate platform commission for this specific extra amount
-      // We'll use the platform commission rate directly for simplicity on extra charges
-      const commissionRate = await getPlatformCommissionRate();
-      const platformCommission = parseFloat((amount * (commissionRate / 100)).toFixed(2));
-      const netEarnings = parseFloat((amount - platformCommission).toFixed(2));
 
       const executeExtraEarnings = async (tx: any) => {
         // 1. Get or create owner wallet
@@ -396,69 +402,27 @@ export class FinanceService {
           });
         }
 
-        // 2. Credit owner available balance immediately for extra charges
+        // 2. Increment totalBalance only (Funds are HELD)
         await (tx.wallet as any).update({
           where: { id: wallet.id },
           data: {
-            balance: { increment: netEarnings }
+            totalBalance: { increment: amount }
           }
         });
 
-        // 3. Create EARNED transaction for owner
+        // 3. Create DEPOSITED transaction to record receipt
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
-            type: "EARNED" as any,
-            amount: netEarnings,
-            description: `${type === 'EXTENSION' ? 'Extension' : 'Overstay'} payment received for booking ${booking.confirmationCode}`,
+            type: WalletTransactionType.DEPOSITED,
+            amount: amount,
+            description: `Payment for ${type.toLowerCase()} received for booking ${booking.confirmationCode} (Held)`,
             status: "COMPLETED",
             reference: bookingId
           }
         });
 
-        // 4. Create COMMISSION deduction record for owner
-        await tx.walletTransaction.create({
-          data: {
-            walletId: wallet.id,
-            type: WalletTransactionType.COMMISSION,
-            amount: -platformCommission,
-            description: `Platform fee for booking ${booking.confirmationCode} ${type.toLowerCase()} (${commissionRate}%)`,
-            status: "COMPLETED",
-            reference: bookingId
-          }
-        });
-
-        // 5. Credit System Wallet
-        const systemWallet = await this.getSystemWallet(tx);
-        await (tx.wallet as any).update({
-          where: { id: systemWallet.id },
-          data: {
-            balance: { increment: platformCommission }
-          }
-        });
-
-        // 6. Create System Transaction
-        await tx.walletTransaction.create({
-          data: {
-            walletId: systemWallet.id,
-            type: WalletTransactionType.COMMISSION,
-            amount: platformCommission,
-            description: `Commission from ${type.toLowerCase()} of booking ${booking.confirmationCode} (${booking.location.name})`,
-            status: "COMPLETED",
-            reference: bookingId
-          }
-        });
-
-        // 7. Notify Owner
-        await NotificationService.create({
-          userId,
-          title: `${type === 'EXTENSION' ? 'Extension' : 'Overstay'} Earnings Received`,
-          message: `You earned $${netEarnings.toFixed(2)} from a booking ${type.toLowerCase()} (${booking.confirmationCode}).`,
-          type: NotificationType.EARNINGS_CREDITED,
-          metadata: { bookingId, netEarnings, type }
-        });
-
-        return { netEarnings, platformCommission };
+        return { success: true };
       };
 
       if (txClient) {
