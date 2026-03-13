@@ -136,6 +136,8 @@ export default function AdminSettingsPage() {
     defaultCommissionRate: 15,
   });
 
+  const [initialGeneralSettings, setInitialGeneralSettings] = useState<PlatformSettingsData | null>(null);
+
   // Notification Settings State
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsData>({
     emailEnabled: true,
@@ -201,6 +203,7 @@ export default function AdminSettingsPage() {
         ]);
 
         setGeneralSettings(general);
+        setInitialGeneralSettings(JSON.parse(JSON.stringify(general)));
         setNotificationSettings(notifications);
         setCommissions(rules as any[]);
         setPromotions(promos as any[]);
@@ -219,26 +222,69 @@ export default function AdminSettingsPage() {
   }, []);
 
   // Handle General Settings Save
-  const handleSaveGeneral = async () => {
+  const handleSavePlatform = async () => {
+    if (!adminId) return;
     setIsSaving(true);
     try {
-      const result = await updateGeneralSettings(generalSettings, adminId);
+      const platformData = {
+        platformName: generalSettings.platformName,
+        supportEmail: generalSettings.supportEmail,
+        termsOfServiceUrl: generalSettings.termsOfServiceUrl,
+        privacyPolicyUrl: generalSettings.privacyPolicyUrl,
+      };
+      
+      const result = await updateGeneralSettings(platformData, adminId);
       if (result.success) {
+        setInitialGeneralSettings((prev) => prev ? ({ ...prev, ...platformData }) : null);
         toast({
           title: "Settings saved",
-          description: "General settings have been updated successfully",
+          description: "Platform information has been updated successfully",
         });
-      } else {
-        throw new Error(result.error);
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to save general settings",
+        description: "Failed to save platform information",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
+  };
+
+  const handleSaveSystemControls = async () => {
+    if (!adminId) return;
+    setIsSaving(true);
+    try {
+      const systemData = {
+        maintenanceMode: generalSettings.maintenanceMode,
+        allowRegistrations: generalSettings.allowRegistrations,
+        requireEmailVerification: generalSettings.requireEmailVerification,
+        minBookingDuration: generalSettings.minBookingDuration,
+        modificationGapMinutes: generalSettings.modificationGapMinutes,
+        gracePeriodMinutes: generalSettings.gracePeriodMinutes,
+        taxRate: generalSettings.taxRate,
+        defaultCommissionRate: generalSettings.defaultCommissionRate,
+        serviceFee: generalSettings.serviceFee,
+      };
+
+      const result = await updateGeneralSettings(systemData, adminId);
+      if (result.success) {
+        setInitialGeneralSettings((prev) => prev ? ({ ...prev, ...systemData }) : null);
+        toast({
+          title: "Settings saved",
+          description: "System controls have been updated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save system controls",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handle Notification Settings Save
@@ -277,6 +323,7 @@ export default function AdminSettingsPage() {
     setGeneralSettings((prev) => ({ ...prev, maintenanceMode: enabled }));
     const result = await updateGeneralSettings({ maintenanceMode: enabled }, adminId);
     if (result.success) {
+      setInitialGeneralSettings((prev) => prev ? ({ ...prev, maintenanceMode: enabled }) : null);
       toast({
         title: enabled ? "Maintenance Mode Enabled" : "Maintenance Mode Disabled",
         description: enabled
@@ -471,6 +518,25 @@ export default function AdminSettingsPage() {
 
   const isPromoExpired = (promo: any) => new Date(promo.validUntil) < new Date();
 
+  const isPlatformDirty = initialGeneralSettings && (
+    generalSettings.platformName !== initialGeneralSettings.platformName ||
+    generalSettings.supportEmail !== initialGeneralSettings.supportEmail ||
+    generalSettings.termsOfServiceUrl !== initialGeneralSettings.termsOfServiceUrl ||
+    generalSettings.privacyPolicyUrl !== initialGeneralSettings.privacyPolicyUrl
+  );
+
+  const isSystemDirty = initialGeneralSettings && (
+    generalSettings.maintenanceMode !== initialGeneralSettings.maintenanceMode ||
+    generalSettings.allowRegistrations !== initialGeneralSettings.allowRegistrations ||
+    generalSettings.requireEmailVerification !== initialGeneralSettings.requireEmailVerification ||
+    generalSettings.minBookingDuration !== initialGeneralSettings.minBookingDuration ||
+    generalSettings.modificationGapMinutes !== initialGeneralSettings.modificationGapMinutes ||
+    generalSettings.gracePeriodMinutes !== initialGeneralSettings.gracePeriodMinutes ||
+    generalSettings.taxRate !== initialGeneralSettings.taxRate ||
+    generalSettings.defaultCommissionRate !== initialGeneralSettings.defaultCommissionRate ||
+    generalSettings.serviceFee !== initialGeneralSettings.serviceFee
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -541,14 +607,34 @@ export default function AdminSettingsPage() {
         {/* General Settings */}
         <TabsContent value="general" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Platform Information
-              </CardTitle>
-              <CardDescription>
-                Basic platform settings and branding
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Platform Information
+                </CardTitle>
+                <CardDescription>
+                  Basic platform settings and branding
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={handleSavePlatform} 
+                disabled={isSaving || !isPlatformDirty}
+                size="sm"
+                className="ml-auto"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -607,23 +693,37 @@ export default function AdminSettingsPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </CardFooter>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                System Controls
-              </CardTitle>
-              <CardDescription>
-                Platform-wide operational settings
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  System Controls
+                </CardTitle>
+                <CardDescription>
+                  Platform-wide operational settings
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={handleSaveSystemControls} 
+                disabled={isSaving || !isSystemDirty}
+                size="sm"
+                className="ml-auto"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
@@ -652,15 +752,11 @@ export default function AdminSettingsPage() {
                 </div>
                 <Switch
                   checked={generalSettings.allowRegistrations}
-                  onCheckedChange={async (checked) => {
+                  onCheckedChange={(checked) => {
                     setGeneralSettings((prev) => ({
                       ...prev,
                       allowRegistrations: checked,
                     }));
-                    await updateGeneralSettings(
-                      { allowRegistrations: checked },
-                      adminId
-                    );
                   }}
                 />
               </div>
@@ -673,15 +769,11 @@ export default function AdminSettingsPage() {
                 </div>
                 <Switch
                   checked={generalSettings.requireEmailVerification}
-                  onCheckedChange={async (checked) => {
+                  onCheckedChange={(checked) => {
                     setGeneralSettings((prev) => ({
                       ...prev,
                       requireEmailVerification: checked,
                     }));
-                    await updateGeneralSettings(
-                      { requireEmailVerification: checked },
-                      adminId
-                    );
                   }}
                 />
               </div>
@@ -706,19 +798,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      await updateGeneralSettings({ minBookingDuration: generalSettings.minBookingDuration }, adminId);
-                      setIsSaving(false);
-                      toast({ title: "Setting updated", description: "Minimum booking duration has been saved." });
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
 
@@ -742,19 +821,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      await updateGeneralSettings({ modificationGapMinutes: generalSettings.modificationGapMinutes }, adminId);
-                      setIsSaving(false);
-                      toast({ title: "Setting updated", description: "Modification time gap has been saved." });
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
 
@@ -778,19 +844,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      await updateGeneralSettings({ gracePeriodMinutes: generalSettings.gracePeriodMinutes }, adminId);
-                      setIsSaving(false);
-                      toast({ title: "Setting updated", description: "No-show grace period has been saved." });
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
               <div className="flex items-center justify-between border-t border-border pt-6">
@@ -813,19 +866,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      await updateGeneralSettings({ taxRate: generalSettings.taxRate }, adminId);
-                      setIsSaving(false);
-                      toast({ title: "Setting updated", description: "Tax rate has been saved." });
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
 
@@ -849,19 +889,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      await updateGeneralSettings({ defaultCommissionRate: generalSettings.defaultCommissionRate }, adminId);
-                      setIsSaving(false);
-                      toast({ title: "Setting updated", description: "Standard commission rate has been saved." });
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
 
@@ -888,23 +915,6 @@ export default function AdminSettingsPage() {
                       }))
                     }
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={async () => {
-                      setIsSaving(true);
-                      const result = await updateGeneralSettings({ serviceFee: generalSettings.serviceFee }, adminId);
-                      setIsSaving(false);
-                      if (result.success) {
-                        toast({ title: "Saved", description: `Service fee updated to $${generalSettings.serviceFee}` });
-                      } else {
-                        toast({ title: "Error", description: "Failed to save service fee.", variant: "destructive" });
-                      }
-                    }}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -1001,9 +1011,9 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         {/* Promotion Settings */}
-        < TabsContent value="promotions" className="space-y-6" >
+        <TabsContent value="promotions" className="space-y-6">
           {/* Stats */}
-          < div className="grid grid-cols-2 lg:grid-cols-4 gap-4" >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Active Promotions</p>
@@ -1143,7 +1153,7 @@ export default function AdminSettingsPage() {
         </TabsContent>
 
         {/* Notification Settings */}
-        < TabsContent value="notifications" className="space-y-6" >
+        <TabsContent value="notifications" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1302,7 +1312,7 @@ export default function AdminSettingsPage() {
             </CardFooter>
           </Card>
         </TabsContent>
-      </Tabs >
+      </Tabs>
 
       <Dialog
         open={isCommissionDialogOpen}
