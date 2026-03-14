@@ -24,11 +24,14 @@ export default function AccountDashboard() {
   const { user } = useAuth();
   const { reservations, vehicles, payments } = useDataStore();
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   const upcomingReservations = reservations.filter(
-    (r) => r.status === "confirmed" && new Date(r.checkIn) > new Date()
+    (r) => (r.status === "confirmed" || r.status === "pending") && new Date(r.checkIn) >= startOfToday
   );
   const pastReservations = reservations.filter(
-    (r) => r.status === "confirmed" && new Date(r.checkOut) < new Date()
+    (r) =>  r.status === "completed" || (r.status === "confirmed" && new Date(r.checkOut) < new Date())
   );
 
   const nextReservation = upcomingReservations[0];
