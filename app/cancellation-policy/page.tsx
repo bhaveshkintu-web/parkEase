@@ -7,7 +7,7 @@ export default function CancellationPolicyPage() {
       <Navbar />
       <main className="flex-1 container px-4 py-12 max-w-4xl">
         <h1 className="text-4xl font-bold mb-8">Cancellation Policy</h1>
-        
+
         <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
           <section className="bg-primary/5 p-6 rounded-xl border border-primary/10">
             <h2 className="text-2xl font-semibold mb-2 text-primary">Free Cancellation</h2>
