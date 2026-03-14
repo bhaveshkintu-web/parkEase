@@ -106,9 +106,10 @@ export default function ReservationsPage() {
 
   const pastCount = bookings.filter((b) => {
     const isPhysicallyCheckedOut = b.parkingSession?.status === "checked_out";
+    const isCompleted = b.status === "COMPLETED";
+  
     return (
-      (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
-      (new Date(b.checkOut) < startOfToday || isPhysicallyCheckedOut)
+      isCompleted || (b.status === "CONFIRMED" && (new Date(b.checkOut) < startOfToday || isPhysicallyCheckedOut))
     );
   }).length;
 
