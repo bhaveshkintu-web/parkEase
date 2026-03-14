@@ -18,11 +18,11 @@ const footerLinks = {
     { label: "Cancellation Policy", href: "/cancellation-policy" },
     // { label: "Report an Issue", href: "/report-issue" },
   ],
-  // Legal: [
-  //   { label: "Terms of Service", href: "/terms-of-service" },
-  //   { label: "Privacy Policy", href: "/privacy-policy" },
-  //   { label: "Cookie Policy", href: "/cookie-policy" },
-  // ],
+  Legal: [
+    { label: "Terms of Service", href: "/terms-of-service" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    // { label: "Cookie Policy", href: "/cookie-policy" },
+  ],
   Services: [
     { label: "Airport Parking", href: "/parking" },
     // { label: "Monthly Parking", href: "#" },
