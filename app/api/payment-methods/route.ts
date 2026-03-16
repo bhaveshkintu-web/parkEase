@@ -11,7 +11,11 @@ export async function GET(req: NextRequest) {
     }
 
     const paymentMethods = await prisma.paymentMethod.findMany({
-      where: { userId: session.user.id },
+      where: { 
+        userId: session.user.id,
+        // @ts-ignore - Prisma client type sync issue
+        isActive: true
+      },
       orderBy: [
         { isDefault: "desc" },
         { createdAt: "desc" },
@@ -75,6 +79,8 @@ export async function POST(req: NextRequest) {
         expiryMonth: finalExpMonth,
         expiryYear: finalExpYear,
         brand: finalBrand,
+        // @ts-ignore - Prisma client type sync issue
+        isActive: true, // Only block if an active card exists with same details
       },
     });
 
@@ -84,7 +90,11 @@ export async function POST(req: NextRequest) {
 
     // Check if user has any existing cards
     const userCardsCount = await prisma.paymentMethod.count({
-      where: { userId: session.user.id },
+      where: { 
+        userId: session.user.id,
+        // @ts-ignore - Prisma client type sync issue
+        isActive: true
+      },
     });
 
     const shouldBeDefault = userCardsCount === 0 || setAsDefault === true;

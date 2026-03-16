@@ -690,7 +690,7 @@ function LocationDetailsContent({ id }: { id: string }) {
                 <div className="flex items-center gap-2 text-sm">
                   <Star className="h-3 w-3 fill-accent text-accent" />
                   <span className="font-medium">{location.rating}</span>
-                  <span className="text-muted-foreground">· {quote.days.toFixed(1)} days</span>
+                  <span className="text-muted-foreground">· {formatCurrency(location.pricePerDay / 24)}/hr</span>
                   <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 </div>
               </button>

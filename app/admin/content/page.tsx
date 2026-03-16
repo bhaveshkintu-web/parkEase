@@ -84,6 +84,18 @@ export default function ContentManagementPage() {
     fetchPages();
   }, []);
 
+  // Lock body scroll when editor is open
+  useEffect(() => {
+    if (isDialogOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isDialogOpen]);
+
   const fetchPages = async () => {
     try {
       const response = await fetch("/api/admin/cms");
@@ -360,7 +372,7 @@ export default function ContentManagementPage() {
                       </Select>
                     </div>
 
-                    <div className="pt-4 border-t space-y-4">
+                    <div className="pt-11 border-t space-y-4">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold block">SEO Optimization</Label>
                       <div className="space-y-2">
                         <Label className="text-xs">Meta Title</Label>
@@ -377,7 +389,7 @@ export default function ContentManagementPage() {
                           placeholder="Learn how ParkZipply protects your privacy..."
                           value={formData.metaDescription}
                           onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
-                          rows={3}
+                          rows={5}
                           className="flex w-full rounded-md border border-border/30 bg-muted/10 px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all"
                         />
                         <p className="text-[10px] text-muted-foreground text-right italic">

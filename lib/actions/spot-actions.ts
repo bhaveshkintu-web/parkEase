@@ -58,35 +58,25 @@ export async function createSpotsForLocation(locationId: string, identifiers: st
   });
 }
 
-/**
- * Fetches all spots for a location with their current availability status.
- */
 export async function getSpotsForLocation(locationId: string, date: Date = new Date()) {
   try {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const spots = await (prisma as any).parkingSpot.findMany({
       where: {
         locationId,
-        OR: [
-          { status: "ACTIVE" },
-          {
-            bookings: {
-              some: {
-                status: { in: ["CONFIRMED", "PENDING"] as any },
-                checkOut: { gt: date },
-              }
-            }
-          }
-        ]
       },
       include: {
         bookings: {
           where: {
             status: { in: ["CONFIRMED", "PENDING"] as any },
-            // Fetch any booking that is either active now OR starts in the future
-            checkOut: { gt: date },
+            checkOut: { gt: startOfDay },
+            checkIn: { lt: endOfDay },
           },
           orderBy: { checkIn: "asc" },
-          take: 2, // Take current + next
           select: {
             id: true,
             guestFirstName: true,
@@ -108,28 +98,76 @@ export async function getSpotsForLocation(locationId: string, date: Date = new D
     return {
       success: true,
       data: sortedSpots.map((s: any) => {
-        // Find which booking is actually active at the selected date
+        // Find which booking is actually active EXACTLY at the selected datetime
         const currentBooking = s.bookings.find((b: any) =>
           new Date(b.checkIn) <= date && new Date(b.checkOut) > date
         );
 
-        // Find the first booking that starts AFTER the selected date but on the SAME day
+        // Find the first booking that starts AFTER the selected datetime but on the SAME day
         const upcomingBooking = s.bookings.find((b: any) => {
           const checkIn = new Date(b.checkIn);
           return checkIn > date && isSameDay(checkIn, date);
+        });
+
+        // All bookings for this specific spot on this specific day
+        const allDailyBookings = s.bookings.filter((b: any) => {
+          const bIn = new Date(b.checkIn);
+          const bOut = new Date(b.checkOut);
+          // Overlaps with the 24h window of the selected date
+          return bOut > startOfDay && bIn < endOfDay;
         });
 
         return {
           ...s,
           isOccupied: !!currentBooking,
           currentBooking: currentBooking || null,
-          upcomingBooking: upcomingBooking || null
+          upcomingBooking: upcomingBooking || null,
+          allDailyBookings
         };
       })
     };
   } catch (error) {
     console.error(`[Spot Action Error] Failed to fetch spots for location ${locationId}:`, error);
     return { success: false, error: "Failed to load spots" };
+  }
+}
+
+/**
+ * Toggles the status of a parking spot between ACTIVE and INACTIVE.
+ */
+export async function toggleSpotStatus(spotId: string, currentStatus: string) {
+  try {
+    const isActivating = currentStatus === "INACTIVE";
+    const newStatus = isActivating ? "ACTIVE" : "INACTIVE";
+    
+    // Safety check: Don't allow deactivation if there are current or future bookings
+    if (!isActivating) {
+      const activeOrFutureBookings = await prisma.booking.count({
+        where: {
+          spotId,
+          status: { in: ["CONFIRMED", "PENDING"] as any },
+          checkOut: { gt: new Date() }
+        }
+      });
+
+      if (activeOrFutureBookings > 0) {
+        return { 
+          success: false, 
+          error: "This spot cannot be deactivated because it has active or scheduled future bookings. Please reassign or cancel those bookings first."
+        };
+      }
+    }
+
+    const spot = await prisma.parkingSpot.update({
+      where: { id: spotId },
+      data: { status: newStatus as any },
+    });
+
+    revalidatePath(`/owner/locations/${spot.locationId}`);
+    return { success: true, status: spot.status };
+  } catch (error) {
+    console.error("Failed to toggle spot status:", error);
+    return { success: false, error: "Failed to update status" };
   }
 }
 
@@ -156,13 +194,8 @@ export async function allocateSpotForBooking(
     include: {
       bookings: {
         where: {
-          OR: [
-            { parkingSession: { status: "checked_in" } },
-            {
-              status: { in: ["CONFIRMED", "PENDING"] },
-              checkOut: { gt: new Date(now.getTime() - gracePeriodMs) }
-            }
-          ]
+          status: { in: ["CONFIRMED", "PENDING"] },
+          checkOut: { gt: new Date(now.getTime() - gracePeriodMs) }
         },
         orderBy: { checkIn: "asc" }
       }
@@ -175,13 +208,6 @@ export async function allocateSpotForBooking(
     const hasConflict = spot.bookings.some((booking: any) => {
       const bCheckIn = new Date(booking.checkIn);
       const bCheckOut = new Date(booking.checkOut);
-      const isCheckedIn = booking.parkingSession?.status === "checked_in";
-
-      // If it's physically checked in, it conflicts if our checkIn is before they leave
-      if (isCheckedIn) {
-        return checkIn < bCheckOut;
-      }
-
       // Standard overlap check (with grace period logic from original query)
       const overlaps = bCheckOut > checkIn &&
         bCheckIn < checkOut &&
@@ -203,33 +229,22 @@ export async function allocateSpotForBooking(
     return emptySpots[0];
   }
 
-  // If it's a FUTURE booking (not today), we strictly require an empty spot.
-  // We do not use "gap logic" for future reservations to keep the calendar clean.
-  const isToday = isSameDay(checkIn, now);
-  if (!isToday) {
-    console.log("[Spot Allocation Warning] Spot allocation failed. No completely empty spot for future booking.");
-    return null;
-  }
-
-  // Preference 2: Maximize the tightest gap (Fallback for TODAY's bookings only)
+  // Preference 2: Maximize the tightest gap (Safety margin)
   // We calculate the gap before check-in and the gap after check-out.
   // We rank spots by `Math.min(gapBefore, gapAfter)` to ensure maximum "free space".
-
   const spotsWithGaps = validSpots.map((spot: any) => {
     let gapBeforeMinutes = Infinity;
     let gapAfterMinutes = Infinity;
 
-    // 1. Calculate gap BEFORE checkIn
-    // Find all bookings that end before or at the requested checkIn
+    // 1. Calculate gap BEFORE checkIn (from the most recent booking that ends before our checkIn)
     const priorBookings = spot.bookings.filter((b: any) => new Date(b.checkOut) <= checkIn);
     if (priorBookings.length > 0) {
-      // Find the LATEST checkOut among prior bookings
+      // The bookings are already sorted by checkIn, but we want the one closest to our start
       const latestPriorCheckOut = new Date(Math.max(...priorBookings.map((b: any) => new Date(b.checkOut).getTime())));
       gapBeforeMinutes = (checkIn.getTime() - latestPriorCheckOut.getTime()) / (1000 * 60);
     }
 
-    // 2. Calculate gap AFTER checkOut
-    // Find all bookings that start at or after the requested checkOut
+    // 2. Calculate gap AFTER checkOut (until the next booking that starts after our checkOut)
     const futureBookings = spot.bookings.filter((b: any) => new Date(b.checkIn) >= checkOut);
     if (futureBookings.length > 0) {
       // Find the EARLIEST checkIn among future bookings
@@ -273,13 +288,8 @@ export async function checkSpotAvailability(
       include: {
         bookings: {
           where: {
-            OR: [
-              { parkingSession: { status: "checked_in" } },
-              {
-                status: { in: ["CONFIRMED", "PENDING"] },
-                checkOut: { gt: new Date(now.getTime() - gracePeriodMs) }
-              }
-            ]
+            status: { in: ["CONFIRMED", "PENDING"] },
+            checkOut: { gt: new Date(now.getTime() - gracePeriodMs) }
           },
           orderBy: { checkIn: "asc" }
         }
@@ -292,12 +302,6 @@ export async function checkSpotAvailability(
       const hasConflict = spot.bookings.some((booking: any) => {
         const bCheckIn = new Date(booking.checkIn);
         const bCheckOut = new Date(booking.checkOut);
-        const isCheckedIn = booking.parkingSession?.status === "checked_in";
-
-        if (isCheckedIn) {
-          return checkIn < bCheckOut;
-        }
-
         const overlaps = bCheckOut > checkIn &&
           bCheckIn < checkOut &&
           bCheckIn > new Date(now.getTime() - gracePeriodMs);
@@ -320,26 +324,16 @@ export async function checkSpotAvailability(
       console.log("[Spot Availability] Spots available:", emptySpots.length);
       return { 
         isAvailable: true, 
-        message: `${emptySpots.length} spots available`,
+        message: `${emptySpots.length} empty spots available`,
         availableCount: emptySpots.length 
       };
     }
 
-    // 2. Future vs Today check
-    const isToday = isSameDay(checkIn, now);
-    if (!isToday) {
-      return { 
-        isAvailable: false, 
-        message: "Future bookings require a completely empty spot. All spots have upcoming reservations.",
-        availableCount: 0
-      };
-    }
-
-    // 3. Today's Gap Fallback
-    console.log("[Spot Availability] Spots available (gap fallback):", validSpots.length);
+    // 2. Overlap availability (Gaps)
+    // Future bookings are now allowed to share spots!
     return { 
       isAvailable: true, 
-      message: `${validSpots.length} spots available`,
+      message: `${validSpots.length} spots available with safe gaps`,
       availableCount: validSpots.length 
     };
 

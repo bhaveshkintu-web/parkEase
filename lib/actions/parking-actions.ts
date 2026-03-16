@@ -74,16 +74,11 @@ export async function getParkingLocations(searchParams?: {
             status: "ACTIVE",
             bookings: {
               none: {
-                OR: [
-                  { parkingSession: { status: "checked_in" } },
-                  {
-                    status: { in: ["CONFIRMED", "PENDING"] },
-                    checkOut: { gt: checkIn },
-                    AND: [
-                      { checkIn: { lt: checkOut } },
-                      { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
-                    ]
-                  }
+                status: { in: ["CONFIRMED", "PENDING"] },
+                checkOut: { gt: checkIn },
+                AND: [
+                  { checkIn: { lt: checkOut } },
+                  { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
                 ]
               },
             },
@@ -192,17 +187,12 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
           locationId: id,
           status: "ACTIVE"
         },
-        OR: [
-          { parkingSession: { status: "checked_in" } },
-          {
-            status: { in: ["CONFIRMED", "PENDING"] },
-            checkOut: { gt: checkIn },
-            AND: [
-              { checkIn: { lt: checkOut } },
-              { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
-            ]
-          }
-        ],
+        status: { in: ["CONFIRMED", "PENDING"] },
+        checkOut: { gt: checkIn },
+        AND: [
+          { checkIn: { lt: checkOut } },
+          { checkIn: { gt: new Date(now.getTime() - gracePeriodMs) } }
+        ]
       },
     });
 

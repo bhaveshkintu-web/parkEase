@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useDataStore } from "@/lib/data-store";
 import { formatDate, formatTime } from "@/lib/data";
@@ -42,6 +42,7 @@ import { Calendar, Car, Clock, CheckCircle, XCircle, Search, Play, Pause, StopCi
 import type { WatchmanActivityLog, WatchmanShift, ShiftBreak } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "react-toastify";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 // No mock data needed anymore
 
@@ -68,6 +69,10 @@ export default function WatchmanActivityPage() {
   const [shiftFilter, setShiftFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const ITEMS_PER_PAGE = 10;
+  const [currentPageActivity, setCurrentPageActivity] = useState(1);
+  const [currentPageCar, setCurrentPageCar] = useState(1);
+  const [currentPageShift, setCurrentPageShift] = useState(1);
 
   // Shift History Filter
   const [shiftDateFilter, setShiftDateFilter] = useState("all");
@@ -575,6 +580,26 @@ export default function WatchmanActivityPage() {
     });
   }, [shiftsWithStats, shiftDateFilter]);
 
+  const getPagination = (data: any[], currentPage: number) => {
+    const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  
+    const paginatedData = data.slice(
+      (currentPage - 1) * ITEMS_PER_PAGE,
+      currentPage * ITEMS_PER_PAGE
+    );
+  
+    return { totalPages, paginatedData };
+  };
+  const { totalPages: totalPagesActivity, paginatedData: paginatedActivities } = getPagination(filteredActivities, currentPageActivity);
+  const { totalPages: totalPagesCar, paginatedData: paginatedCars } = getPagination(filteredCarTracking, currentPageCar);
+  const { totalPages: totalPagesShift, paginatedData: paginatedShifts } = getPagination(filteredShifts, currentPageShift);
+
+  useEffect(() => {
+    setCurrentPageActivity(1), 
+    setCurrentPageCar(1), 
+    setCurrentPageShift(1)
+  }, [activeTab]);
+
   return (
     <Suspense fallback={null}>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -816,7 +841,7 @@ export default function WatchmanActivityPage() {
                       {/* Timeline line */}
                       <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
 
-                      {filteredActivities.map((activity, index) => (
+                      {paginatedActivities.map((activity, index) => (
                         <div key={activity.id} className="relative flex gap-4 pb-6 last:pb-0">
                           {/* Timeline dot */}
                           <div className="relative z-10 w-12 h-12 rounded-full bg-background border-2 border-border flex items-center justify-center shrink-0">
@@ -871,6 +896,13 @@ export default function WatchmanActivityPage() {
                     </div>
                   )}
                 </div>
+                <PaginationFooter
+                  currentPage={currentPageActivity}
+                  totalPages={totalPagesActivity}
+                  totalItems={filteredActivities.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setCurrentPageActivity}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -911,7 +943,7 @@ export default function WatchmanActivityPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredCarTracking.map((car) => (
+                      {paginatedCars.map((car) => (
                         <TableRow key={car.id}>
                           <TableCell className="font-medium">{car.vehiclePlate}</TableCell>
                           <TableCell className="capitalize">{car.vehicleType}</TableCell>
@@ -970,6 +1002,13 @@ export default function WatchmanActivityPage() {
                     </div>
                   ))}
                 </div>
+                <PaginationFooter
+                  currentPage={currentPageCar}
+                  totalPages={totalPagesCar}
+                  totalItems={filteredCarTracking.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setCurrentPageCar}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -1109,7 +1148,7 @@ export default function WatchmanActivityPage() {
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No shift history found for this filter</p>
                     </div>
-                  ) : filteredShifts.map((shift) => (
+                  ) : paginatedShifts.map((shift) => (
                     <div
                       key={shift.id}
                       className={`p-4 border rounded-lg ${shift.status === "active"
@@ -1203,6 +1242,13 @@ export default function WatchmanActivityPage() {
                     </div>
                   ))}
                 </div>
+                <PaginationFooter
+                  currentPage={currentPageShift}
+                  totalPages={totalPagesShift}
+                  totalItems={filteredShifts.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setCurrentPageShift}
+                />
               </CardContent>
             </Card>
           </TabsContent>
