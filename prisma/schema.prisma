@@ -422,6 +422,7 @@ model PaymentMethod {
   isDefault      Boolean   @default(false)
   createdAt      DateTime  @default(now())
   cardholderName String?
+  isActive       Boolean   @default(true)
   payments       Payment[]
   user           User      @relation(fields: [userId], references: [id])
 }

@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "WalletType" AS ENUM ('OWNER', 'SYSTEM');
 
 -- AlterEnum
@@ -25,3 +25,5 @@ ALTER COLUMN "ownerId" DROP NOT NULL;
 -- CreateIndex
 CREATE INDEX "Wallet_type_idx" ON "Wallet"("type");
 
+-- AlterTable
+ALTER TABLE "PaymentMethod" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;

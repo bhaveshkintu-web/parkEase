@@ -152,7 +152,7 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          {formatCurrency(location.pricePerDay)}/day · {quote.days.toFixed(2)} day{quote.days > 1 ? "s" : ""}
+          {formatCurrency(location.pricePerDay)}/day · {formatCurrency(location.pricePerDay / 24)}/hr
         </p>
         {quote.savings > 0 && (
           <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary">
