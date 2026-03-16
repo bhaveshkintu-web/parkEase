@@ -37,6 +37,7 @@ import {
 import { Suspense, lazy } from "react";
 import dynamic from "next/dynamic";
 import Loading from "./loading";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 // Dynamically import MapView to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import("@/components/parking/map-view"), {
@@ -72,6 +73,8 @@ function ParkingResultsContent() {
 
   const [locations, setLocations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [filters, setFilters] = useState<Filters>({
     priceRange: [0, 100],
@@ -196,6 +199,16 @@ function ParkingResultsContent() {
     });
   }, [filteredLocations, sortBy]);
 
+  const paginatedLocations = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedLocations.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedLocations, currentPage]);
+  
+  const totalPages = Math.ceil(sortedLocations.length / itemsPerPage);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, query, sortBy]);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -296,7 +309,7 @@ function ParkingResultsContent() {
               {viewMode === "list" ? (
                 <div className="space-y-4">
                   {sortedLocations.length > 0 ? (
-                    sortedLocations.map((location) => (
+                    paginatedLocations.map((location) => (
                       <LocationCard
                         key={location.id}
                         location={location}
@@ -316,6 +329,13 @@ function ParkingResultsContent() {
                       </p>
                     </div>
                   )}
+                  <PaginationFooter
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={sortedLocations.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               ) : (
                 <div className="relative h-[600px] overflow-hidden rounded-xl border border-border bg-muted z-0">
