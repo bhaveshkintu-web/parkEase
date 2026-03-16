@@ -148,10 +148,11 @@ export async function extendBookingAction(bookingId: string, additionalMinutes: 
 
         revalidatePath(`/account/reservations/${bookingId}`);
         revalidatePath(`/extend-parking/${bookingId}`);
-
+ 
+        console.log(`[Extension Action] ✅ Booking ${bookingId} extended by ${additionalMinutes}m`);
         return { success: true, data: result };
     } catch (error: any) {
-        console.error("Extension failed:", error);
+        console.error("[Extension Action Error] Extension failed for booking:", bookingId, error);
         return { success: false, error: error.message || "Failed to extend booking" };
     }
 }

@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
+    const session = await getServerSession(authOptions);
     try {
-        const session = await getServerSession(authOptions);
 
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,10 +78,11 @@ export async function GET(request: NextRequest) {
             details: log.details || {}
         }));
 
+        console.log(`[Watchman Activity API] ✅ Fetched ${formattedLogs.length} activity logs for watchman: ${watchmanId}`);
         return NextResponse.json({ logs: formattedLogs });
 
     } catch (error: any) {
-        console.error("Error fetching activity logs:", error);
+        console.error(`[Watchman Activity API Error] GET failed for user ${session?.user?.id}:`, error);
         return NextResponse.json(
             { error: "Failed to fetch activity logs", details: error.message },
             { status: 500 }
@@ -90,8 +91,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await getServerSession(authOptions);
     try {
-        const session = await getServerSession(authOptions);
 
         if (!session || !session.user || session.user.role?.toUpperCase() !== "WATCHMAN") {
             return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
@@ -149,10 +150,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        console.log(`[Watchman Activity API] ✅ Manual activity log created: ${type} for watchman: ${watchman.id}`);
         return NextResponse.json({ success: true, log: newLog });
 
     } catch (error: any) {
-        console.error("Error creating activity log:", error);
+        console.error(`[Watchman Activity API Error] POST failed for user ${session?.user?.id}:`, error);
         return NextResponse.json(
             { error: "Failed to create log", details: error.message },
             { status: 500 }

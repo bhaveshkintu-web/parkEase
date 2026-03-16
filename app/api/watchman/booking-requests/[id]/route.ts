@@ -23,6 +23,7 @@ export async function PATCH(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    const requestId = params.id;
     try {
         const session = await getServerSession(authOptions);
 
@@ -32,7 +33,6 @@ export async function PATCH(
 
         const body = await request.json();
         const { action, rejectionReason } = body;
-        const requestId = params.id;
 
         if (!action || !["approve", "reject", "cancel"].includes(action)) {
             return NextResponse.json(
@@ -370,6 +370,7 @@ export async function PATCH(
             }
         }
 
+        console.log(`[Watchman Booking Request API] ✅ Request ${requestId} ${action}ed by user: ${sessionUser.id}`);
         return NextResponse.json({
             success: true,
             message: `Booking request ${action === "approve" ? "approved and booking created" : action + "ed"} successfully`,
@@ -381,6 +382,7 @@ export async function PATCH(
             },
         });
     } catch (error: any) {
+        console.error(`[Watchman Booking Request API Error] PATCH failed for request ${requestId}:`, error);
         logInfo(`CRITICAL ERROR in PATCH: ${error.message}\n${error.stack}`);
         console.error("Error updating booking request:", error);
         try {
@@ -399,14 +401,13 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
+    const requestId = params.id;
     try {
         const session = await getServerSession(authOptions);
 
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        const requestId = params.id;
 
         // Delete the booking request
         try {
@@ -417,12 +418,13 @@ export async function DELETE(
             await prisma.$executeRawUnsafe(`DELETE FROM "BookingRequest" WHERE id = $1`, requestId);
         }
 
+        console.log(`[Watchman Booking Request API] ✅ Request ${requestId} deleted by user: ${session.user.id}`);
         return NextResponse.json({
             success: true,
             message: "Booking request deleted successfully",
         });
     } catch (error: any) {
-        console.error("Error deleting booking request:", error);
+        console.error(`[Watchman Booking Request API Error] DELETE failed for request ${requestId}:`, error);
         return NextResponse.json(
             { error: "Failed to delete booking request", details: error.message },
             { status: 500 }

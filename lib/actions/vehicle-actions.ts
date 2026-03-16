@@ -44,9 +44,10 @@ export async function addVehicle(_: any, formData: FormData) {
     });
 
     revalidatePath("/account/vehicles");
+    console.log(`[Vehicle Action] ✅ Vehicle ${validated.data.licensePlate} added/updated for user: ${userId}`);
     return { success: true };
   } catch (error) {
-    console.error(error);
+    console.error("[Vehicle Action Error] Failed to add vehicle:", error);
     return { success: false };
   }
 }
@@ -61,28 +62,40 @@ export async function getVehicles() {
 }
 
 export async function deleteVehicle(id: string) {
-  const userId = await getAuthUserId();
+  try {
+    const userId = await getAuthUserId();
+    console.log("[Vehicle Action] Deleting vehicle:", id, "for user:", userId);
 
-  await prisma.savedVehicle.delete({
-    where: { id, userId },
-  });
+    await prisma.savedVehicle.delete({
+      where: { id, userId },
+    });
 
-  revalidatePath("/account/vehicles");
+    revalidatePath("/account/vehicles");
+    console.log("[Vehicle Action] ✅ Vehicle deleted successfully:", id);
+  } catch (error) {
+    console.error("[Vehicle Action Error] Failed to delete vehicle:", id, error);
+  }
 }
 
 export async function setDefaultVehicle(id: string) {
-  const userId = await getAuthUserId();
+  try {
+    const userId = await getAuthUserId();
+    console.log("[Vehicle Action] Setting default vehicle:", id, "for user:", userId);
 
-  await prisma.$transaction([
-    prisma.savedVehicle.updateMany({
-      where: { userId },
-      data: { isDefault: false },
-    }),
-    prisma.savedVehicle.update({
-      where: { id, userId },
-      data: { isDefault: true },
-    }),
-  ]);
+    await prisma.$transaction([
+      prisma.savedVehicle.updateMany({
+        where: { userId },
+        data: { isDefault: false },
+      }),
+      prisma.savedVehicle.update({
+        where: { id, userId },
+        data: { isDefault: true },
+      }),
+    ]);
 
-  revalidatePath("/account/vehicles");
+    revalidatePath("/account/vehicles");
+    console.log("[Vehicle Action] ✅ Default vehicle updated successfully:", id);
+  } catch (error) {
+    console.error("[Vehicle Action Error] Failed to set default vehicle:", id, error);
+  }
 }

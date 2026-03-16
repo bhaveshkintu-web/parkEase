@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("[PROMOTION_VALIDATE]", error);
+    console.error("[Promotion API Error] Validation failed:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -22,9 +22,11 @@ export async function POST(req: NextRequest) {
                 definition: definition, // Expecting valid JSON
             },
         });
-
+ 
+        console.log(`[Workflow API] ✅ Workflow created: ${workflow.name} (ID: ${workflow.id})`);
         return NextResponse.json(workflow, { status: 201 });
     } catch (error: any) {
+        console.error("[Workflow API Error] Failed to create workflow:", error);
         return NextResponse.json(
             { error: "Failed to create workflow", details: error.message },
             { status: 500 }
@@ -37,9 +39,11 @@ export async function GET() {
         const workflows = await prisma.workflow.findMany({
             orderBy: { createdAt: "desc" },
         });
-
+ 
+        console.log(`[Workflow API] ✅ Fetched ${workflows.length} workflows`);
         return NextResponse.json(workflows);
     } catch (error: any) {
+        console.error("[Workflow API Error] Failed to fetch workflows:", error);
         return NextResponse.json(
             { error: "Failed to fetch workflows" },
             { status: 500 }

@@ -46,12 +46,13 @@ export async function submitSupportTicket(formData: {
       metadata: { subject: formData.subject, email: formData.email }
     }).catch(err => console.error("Failed to notify admins in-app:", err));
 
+    console.log("[Support Action] ✅ Ticket submitted successfully:", formData.email);
     return {
       success: true,
       message: emailResult.success ? "Ticket submitted and email sent." : "Ticket submitted (Email notification pending)."
     };
   } catch (error) {
-    console.error("Error in submitSupportTicket action:", error);
+    console.error("[Support Action Error] Error in submitSupportTicket action:", error);
     return { success: false, error: "An unexpected error occurred. Please try again later." };
   }
 }
@@ -91,9 +92,10 @@ export async function updateTicketStatus(ticketId: string, status: "OPEN" | "IN_
       });
     }
 
+    console.log(`[Support Action] ✅ Ticket status updated for ${ticketId} to ${status}`);
     return { success: true, ticket: updatedTicket };
   } catch (error) {
-    console.error("Error updating ticket status:", error);
+    console.error(`[Support Action Error] Error updating ticket status for ${ticketId}:`, error);
     return { success: false, error: "Failed to update status" };
   }
 }
@@ -168,9 +170,10 @@ export async function submitDispute(data: {
     }
 
     revalidatePath(`/account/reservations/${data.bookingId}`);
+    console.log("[Support Action] ✅ Dispute created successfully for booking:", data.bookingId);
     return { success: true, data: dispute };
   } catch (error) {
-    console.error("Error submitting dispute:", error);
+    console.error("[Support Action Error] Error submitting dispute:", error);
     return { success: false, error: "Failed to submit dispute" };
   }
 }
@@ -219,9 +222,10 @@ export async function requestRefund(data: {
     });
 
     revalidatePath(`/account/reservations/${data.bookingId}`);
+    console.log("[Support Action] ✅ Refund requested successfully for booking:", data.bookingId);
     return { success: true, data: refundRequest };
   } catch (error) {
-    console.error("Error requesting refund:", error);
+    console.error("[Support Action Error] Error requesting refund:", error);
     return { success: false, error: "Failed to submit refund request" };
   }
 }

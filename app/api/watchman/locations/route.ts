@@ -32,9 +32,10 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Watchman not found" }, { status: 404 });
         }
 
+        console.log(`[Watchman Locations API] ✅ Fetched ${watchman.assignedLocations.length} locations for watchman: ${watchman.id}`);
         return NextResponse.json(watchman.assignedLocations);
     } catch (error: any) {
-        console.error("Error fetching locations:", error);
+        console.error(`[Watchman Locations API Error] GET failed for user ${session?.user?.id}:`, error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -16,9 +16,10 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    console.log(`[User Vehicles API] ✅ Fetched ${vehicles.length} vehicles for user: ${session.user.id}`);
     return NextResponse.json(vehicles);
   } catch (error) {
-    console.error("Error fetching vehicles:", error);
+    console.error("[User Vehicles API Error] Failed to fetch vehicles:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -127,9 +127,11 @@ export async function getParkingLocations(searchParams?: {
         };
       });
 
+    console.log("[Parking Search] Retrieved locations count:", locationsWithStats.length);
+
     return { success: true, data: locationsWithStats };
   } catch (error) {
-    console.error("Failed to fetch parking locations:", error);
+    console.error("[Parking Error] Failed to fetch parking locations:", error);
     return { success: false, error: "Failed to fetch parking locations" };
   }
 }
@@ -212,6 +214,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
 
     const pricing = calculatePricing(location.pricePerDay, location.pricingRules, checkIn, checkOut, null, null, settings.taxRate, settings.serviceFee);
 
+    console.log(`[Parking Action] ✅ Fetched details for location ${id}`);
     return {
       success: true,
       data: {
@@ -228,7 +231,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
           if (!location.airportCode || !location.latitude || !location.longitude) return "Contact for details";
           const airport = require("@/lib/data").destinations.find((d: any) => d.code === location.airportCode);
           if (!airport) return "Near terminal";
-
+ 
           const { calculateDistance, formatDistance } = require("@/lib/utils/geo-utils");
           const dist = calculateDistance(
             airport.coordinates.lat,
@@ -241,7 +244,7 @@ export async function getParkingLocationById(id: string, searchParams?: { checkI
       }
     };
   } catch (error) {
-    console.error("Failed to fetch location details:", error);
+    console.error(`[Parking Action Error] Failed to fetch location details for ${id}:`, error);
     return { success: false, error: "Failed to fetch location details" };
   }
 }
@@ -275,10 +278,11 @@ export async function getNearbyParkingLocations(airportCode: string, excludeId: 
         rating,
       };
     });
-
+ 
+    console.log(`[Parking Action] ✅ Fetched ${locationsWithStats.length} nearby locations for airport ${airportCode}`);
     return { success: true, data: locationsWithStats };
   } catch (error) {
-    console.error("Failed to fetch nearby locations:", error);
+    console.error(`[Parking Action Error] Failed to fetch nearby locations for ${airportCode}:`, error);
     return { success: false, error: "Failed to fetch nearby locations" };
   }
 }
@@ -309,9 +313,10 @@ export async function getOwnerLocations(userId: string) {
       }
     });
 
+    console.log(`[Parking Action] ✅ Fetched ${locations.length} locations for owner associated with user ${userId}`);
     return { success: true, data: locations };
   } catch (error) {
-    console.error("Failed to fetch owner locations:", error);
+    console.error(`[Parking Action Error] Failed to fetch owner locations for user ${userId}:`, error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -342,9 +347,10 @@ export async function updateLocationStatus(id: string, status: string) {
       where: { id },
       data: { status: newStatus as any },
     });
+    console.log(`[Parking Action] ✅ Location ${id} status updated to ${newStatus}`);
     return { success: true, data: updated };
   } catch (error) {
-    console.error("Failed to update location status:", error);
+    console.error(`[Parking Action Error] Failed to update location status for ${id}:`, error);
     return { success: false, error: "Failed to update status" };
   }
 }
@@ -379,10 +385,11 @@ export async function deleteLocation(id: string) {
       prisma.bookingRequest.deleteMany({ where: { parkingId: id } }),
       prisma.parkingLocation.delete({ where: { id } }),
     ]);
-
+ 
+    console.log(`[Parking Action] ✅ Location ${id} deleted successfully`);
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete location:", error);
+    console.error(`[Parking Action Error] Failed to delete location ${id}:`, error);
     return { success: false, error: "Failed to delete location" };
   }
 }
@@ -511,12 +518,14 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
       });
     });
 
+    console.log("[Parking Mutation] Successfully updated location:", id);
+
     revalidatePath("/owner/locations");
     revalidatePath(`/owner/locations/${id}`);
 
     return { success: true, data: updatedLocation };
   } catch (error) {
-    console.error("Failed to update location:", error);
+    console.error("[Parking Error] Failed to update location:", id, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update location"
@@ -540,10 +549,11 @@ export async function updateLocationImages(id: string, images: string[]) {
     revalidatePath("/owner/locations");
     revalidatePath(`/owner/locations/${id}`);
     revalidatePath("/parking");
-
+ 
+    console.log(`[Parking Action] ✅ Images updated for location ${id}`);
     return { success: true, data: updatedLocation };
   } catch (error) {
-    console.error("Failed to update location images:", error);
+    console.error(`[Parking Action Error] Failed to update location images for ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update location images"

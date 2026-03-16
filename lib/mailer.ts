@@ -50,15 +50,13 @@ export async function sendVerificationEmail(email: string, token: string) {
     });
 
     // Log the result
-    console.log("✅ Email sent!");
-    console.log("Message ID:", info.messageId);
-    console.log("Accepted recipients:", info.accepted);
-    console.log("Rejected recipients:", info.rejected);
+    console.log(`[Email Tracking] ✅ Verification email sent to: ${email}`);
+    console.log("[Email Tracking] Message ID:", info.messageId);
     if (nodemailer.getTestMessageUrl(info)) {
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+      console.log("[Email Tracking] Preview URL:", nodemailer.getTestMessageUrl(info));
     }
   } catch (error: any) {
-    console.error("❌ Failed to send verification email:", error);
+    console.error("[Email Tracking] ❌ Failed to send verification email to:", email, error);
 
     // Extra debug info for SMTP issues
     if (error.response) console.error("SMTP Response:", error.response);
@@ -107,9 +105,9 @@ export async function sendBookingNotification(email: string, status: string, det
       `,
     });
 
-    console.log(`✅ Booking ${status} notification sent to:`, email);
+    console.log(`[Email Tracking] ✅ Booking ${status} notification sent to:`, email);
   } catch (error) {
-    console.error(`❌ NOTIFICATION_SEND_FAILED:`, error);
+    console.error(`[Email Tracking] ❌ NOTIFICATION_SEND_FAILED to ${email}:`, error);
   }
 }
 
@@ -143,10 +141,10 @@ export async function sendResetPasswordEmail(email: string, token: string) {
     `,
     });
 
-    console.log("✅ Reset password email sent!");
-    console.log("Message ID:", info.messageId);
+    console.log("[Email Tracking] ✅ Reset password email sent to:", email);
+    console.log("[Email Tracking] Message ID:", info.messageId);
   } catch (error: any) {
-    console.error("❌ Failed to send reset password email:", error);
+    console.error("[Email Tracking] ❌ Failed to send reset password email to:", email, error);
     throw new Error(
       "Unable to send reset password email. Check SMTP settings and logs.",
     );
@@ -224,10 +222,10 @@ export async function sendWatchmanWelcomeEmail(email: string, name: string, pass
     `,
     });
 
-    console.log("✅ Watchman welcome email sent!");
+    console.log(`[Email Tracking] ✅ Watchman welcome email sent to: ${email}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error("❌ Failed to send watchman welcome email:", error);
+    console.error("[Email Tracking] ❌ Failed to send watchman welcome email to:", email, error);
     return { success: false, error: error.message };
   }
 }
@@ -278,10 +276,10 @@ export async function sendWelcomeEmail(email: string, name: string, password: st
     `,
     });
 
-    console.log("✅ Welcome email sent!");
+    console.log(`[Email Tracking] ✅ Welcome email sent to: ${email}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error("❌ Failed to send welcome email:", error);
+    console.error("[Email Tracking] ❌ Failed to send welcome email to:", email, error);
     return { success: false, error: error.message };
   }
 }
@@ -322,10 +320,10 @@ export async function sendMagicLink(email: string, magicLink: string) {
     `,
     });
 
-    console.log("✅ Magic link email sent to:", email);
+    console.log("[Email Tracking] ✅ Magic link email sent to:", email);
     return { success: true };
   } catch (error: any) {
-    console.error("❌ Failed to send magic link email:", error);
+    console.error("[Email Tracking] ❌ Failed to send magic link email to:", email, error);
     return { success: false, error: error.message };
   }
 }

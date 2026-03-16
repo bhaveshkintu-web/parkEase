@@ -8,8 +8,8 @@ import { ownerProfileSchema } from "@/lib/validations";
  * @api {get} /api/owner/profile Get owner profile
  */
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -22,9 +22,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    console.log(`[Owner Profile API] ✅ Fetched profile for user: ${session.user.id}`);
     return NextResponse.json(profile);
   } catch (error) {
-    console.error("[OWNER_PROFILE_GET]", error);
+    console.error(`[Owner Profile API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
@@ -33,8 +34,8 @@ export async function GET(req: NextRequest) {
  * @api {post} /api/owner/profile Create or update owner profile
  */
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -104,10 +105,11 @@ export async function POST(req: NextRequest) {
         currency: "USD",
       },
     });
-
+ 
+    console.log(`[Owner Profile API] ✅ Profile updated/created for user: ${session.user.id}`);
     return NextResponse.json(profile);
   } catch (error) {
-    console.error("[OWNER_PROFILE_POST]", error);
+    console.error(`[Owner Profile API Error] POST failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

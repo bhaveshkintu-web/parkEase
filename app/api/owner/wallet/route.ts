@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getPlatformCommissionRate } from "@/lib/actions/settings-actions";
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user || session.user.role?.toUpperCase() !== "OWNER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -101,6 +101,7 @@ export async function GET(req: NextRequest) {
       _sum: { amount: true }
     });
 
+    console.log(`[Owner Wallet API] ✅ Fetched wallet and stats for user: ${session.user.id}`);
     return NextResponse.json({
       ...wallet,
       lifetimeEarnings: (deposits._sum.amount || 0) - Math.abs(refunds._sum.amount || 0),
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest) {
       commissionRate: await getPlatformCommissionRate()
     });
   } catch (error) {
-    console.error("[OWNER_WALLET_GET]", error);
+    console.error(`[Owner Wallet API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

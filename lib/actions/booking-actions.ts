@@ -27,10 +27,11 @@ export async function getUserBookings() {
         checkIn: "desc",
       },
     });
-
+ 
+    console.log(`[Booking Action] ✅ Fetched ${bookings.length} reservations for user ${userId}`);
     return { success: true, data: bookings };
   } catch (error) {
-    console.error("Failed to fetch user bookings:", error);
+    console.error(`[Booking Action Error] Failed to fetch user bookings for user ${await getAuthUserId().catch(() => 'unknown')}:`, error);
     return { success: false, error: "Failed to fetch reservations" };
   }
 }
@@ -162,6 +163,7 @@ export async function createBooking(data: any) {
     }
 
     // 1. Validation
+    console.log("[Booking] Incoming booking request for location:", data.locationId);
     const {
       locationId, checkIn, checkOut,
       guestFirstName, guestLastName, guestEmail, guestPhone,
@@ -189,8 +191,14 @@ export async function createBooking(data: any) {
         }
       });
 
-      if (!location) throw new Error("Parking location not found");
-      if (location.status !== "ACTIVE") throw new Error("Location not active");
+      if (!location) {
+        console.log("[Booking Warning] Location not found:", locationId);
+        throw new Error("Parking location not found");
+      }
+      if (location.status !== "ACTIVE") {
+        console.log("[Booking Warning] Location not active:", locationId);
+        throw new Error("Location not active");
+      }
 
       // b. Allocate a specific parking spot
       const spot = await allocateSpotForBooking(locationId, checkInDate, checkOutDate, tx);
@@ -318,6 +326,8 @@ export async function createBooking(data: any) {
       timeout: 15000
     });
 
+    console.log("[Booking] Transaction successful. Created Booking ID:", result.id);
+
     revalidatePath("/account/reservations");
     revalidatePath(`/parking/${locationId}`);
 
@@ -328,7 +338,7 @@ export async function createBooking(data: any) {
 
     return { success: true, data: result };
   } catch (error: any) {
-    console.error("Failed to create booking action:", error);
+    console.error("[Booking Error] Failed in createBooking for user:", await getAuthUserId().catch(() => "unknown"), error);
     return { success: false, error: error.message || "Failed to create reservation" };
   }
 }
@@ -452,13 +462,15 @@ export async function cancelBooking(bookingId: string, reason: string) {
       return updatedBooking;
     });
 
+    console.log("[Booking] Successfully cancelled booking:", bookingId);
+
     revalidatePath("/account/reservations");
     revalidatePath(`/account/reservations/${bookingId}`);
     revalidatePath(`/parking/${booking.locationId}`);
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("Failed to cancel booking:", error);
+    console.error("[Booking Error] Failed to cancel booking:", bookingId, error);
     return { success: false, error: "Failed to cancel reservation" };
   }
 }
@@ -495,9 +507,10 @@ export async function updateBookingVehicle(bookingId: string, vehicleInfo: {
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);
+    console.log(`[Booking Action] ✅ Vehicle info updated for booking ${bookingId}`);
     return { success: true, data: updatedBooking };
   } catch (error) {
-    console.error("Failed to update booking vehicle:", error);
+    console.error(`[Booking Action Error] Failed to update booking vehicle for ${bookingId}:`, error);
     return { success: false, error: "Failed to update vehicle information" };
   }
 }
@@ -539,9 +552,10 @@ export async function submitReview(bookingId: string, reviewData: {
     });
 
     revalidatePath(`/account/reservations/${bookingId}`);
+    console.log(`[Booking Action] ✅ Review submitted for booking ${bookingId} by user ${userId}`);
     return { success: true, data: review };
   } catch (error) {
-    console.error("Failed to submit review:", error);
+    console.error(`[Booking Action Error] Failed to submit review for booking ${bookingId}:`, error);
     return { success: false, error: "Failed to submit review" };
   }
 }
@@ -753,12 +767,14 @@ export async function updateBookingDates(
       timeout: 15000
     });
 
+    console.log("[Booking] Successfully updated dates for:", bookingId);
+
     revalidatePath(`/account/reservations/${bookingId}`);
     revalidatePath("/account/reservations");
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("Failed to update booking dates:", error);
+    console.error("[Booking Error] Failed to update booking dates:", bookingId, error);
     return { success: false, error: "Failed to update reservation dates" };
   }
 }

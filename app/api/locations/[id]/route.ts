@@ -74,7 +74,7 @@ export async function GET(
       pricing
     });
   } catch (error) {
-    console.error("Location Details API Error:", error);
+    console.error(`[Location Details API Error] Failed to fetch details for ${params.id}:`, error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

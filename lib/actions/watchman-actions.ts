@@ -73,9 +73,10 @@ export async function getOwnerWatchmen(ownerUserId: string) {
       };
     });
 
+    console.log(`[Watchman Action] ✅ Fetched ${formattedWatchmen.length} watchmen for owner: ${ownerUserId}`);
     return { success: true, data: formattedWatchmen };
   } catch (error) {
-    console.error("Failed to fetch watchmen:", error);
+    console.error(`[Watchman Action Error] Failed to fetch watchmen for owner ${ownerUserId}:`, error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -85,6 +86,7 @@ export async function getOwnerWatchmen(ownerUserId: string) {
  */
 export async function createWatchman(ownerUserId: string, data: any) {
   try {
+    console.log("[Watchman Action] Creating watchman for owner:", ownerUserId, "Email:", data.email);
     const ownerProfile = await prisma.ownerProfile.findUnique({
       where: { userId: ownerUserId },
     });
@@ -180,9 +182,10 @@ export async function createWatchman(ownerUserId: string, data: any) {
     }
 
     revalidatePath("/owner/watchmen");
+    console.log("[Watchman Action] ✅ Watchman created successfully:", watchman.id);
     return { success: true, data: watchman };
   } catch (error) {
-    console.error("Failed to create watchman:", error);
+    console.error("[Watchman Action Error] Failed to create watchman:", error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -229,9 +232,10 @@ export async function updateWatchmanAction(id: string, data: any) {
     });
 
     revalidatePath("/owner/watchmen");
+    console.log("[Watchman Action] ✅ Watchman updated successfully:", id);
     return { success: true, data: updatedWatchman };
   } catch (error) {
-    console.error("Failed to update watchman:", error);
+    console.error("[Watchman Action Error] Failed to update watchman:", error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -253,9 +257,10 @@ export async function deleteWatchmanAction(id: string) {
     });
 
     revalidatePath("/owner/watchmen");
+    console.log("[Watchman Action] ✅ Watchman archived successfully:", id);
     return { success: true, message: "Watchman archived successfully" };
   } catch (error) {
-    console.error("Failed to archive watchman:", error);
+    console.error("[Watchman Action Error] Failed to archive watchman:", error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -284,9 +289,10 @@ export async function getAllWatchmen() {
       phone: u.phone || "N/A",
     }));
 
+    console.log(`[Watchman Action] ✅ Fetched ${formatted.length} systems watchmen`);
     return { success: true, data: formatted };
   } catch (error) {
-    console.error("Failed to fetch all watchmen:", error);
+    console.error("[Watchman Action Error] Failed to fetch all watchmen:", error);
     return { success: false, error: "Internal server error" };
   }
 }

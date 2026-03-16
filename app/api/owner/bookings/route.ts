@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user || session.user.role?.toUpperCase() !== "OWNER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -87,10 +87,11 @@ export async function GET(req: NextRequest) {
 
     // Sort by newest first by default
     reservations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
+ 
+    console.log(`[Owner Bookings API] ✅ Fetched ${reservations.length} bookings for owner: ${session.user.id}`);
     return NextResponse.json(reservations);
   } catch (error) {
-    console.error("[OWNER_BOOKINGS]", error);
+    console.error(`[Owner Bookings API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

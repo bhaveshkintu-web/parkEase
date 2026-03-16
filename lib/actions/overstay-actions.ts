@@ -59,9 +59,11 @@ export async function markOverstayAsPaidAction(bookingId: string, paymentMethod:
         revalidatePath(`/watchman/sessions`);
         revalidatePath(`/watchman/scan`);
 
+        console.log("[Overstay] Overstay marked as paid for booking:", bookingId);
+
         return result;
     } catch (error: any) {
-        console.error("Failed to mark overstay as paid:", error);
+        console.error("[Overstay Error] Failed in markOverstayAsPaid:", error);
         return { success: false, error: error.message };
     }
 }
@@ -69,10 +71,11 @@ export async function markOverstayAsPaidAction(bookingId: string, paymentMethod:
 export async function sendOverstayLinkAction(bookingId: string, overstayCharge: number) {
     try {
         const { sendOverstayPaymentEmail } = await import("@/lib/notifications");
+        console.log("[Overstay] Sending overstay link to booking:", bookingId, "Amount:", overstayCharge);
         const result = await sendOverstayPaymentEmail(bookingId, overstayCharge);
         return result;
     } catch (error: any) {
-        console.error("Failed to send overstay link:", error);
+        console.error("[Overstay Error] Failed to send overstay link:", bookingId, error);
         return { success: false, error: error.message };
     }
 }
@@ -132,9 +135,11 @@ export async function payOverstayAction(bookingId: string, amount: number, payme
         revalidatePath(`/watchman/scan`);
         revalidatePath(`/pay-overstay/${bookingId}`);
 
+        console.log("[Overstay] Overstay payment successful for booking:", bookingId, "Amount:", amount);
+
         return result;
     } catch (error: any) {
-        console.error("Failed to pay overstay:", error);
+        console.error("[Overstay Error] Failed to pay overstay:", bookingId, error);
         return { success: false, error: error.message };
     }
 }
@@ -151,10 +156,11 @@ export async function getOverstaySessionAction(bookingId: string) {
         });
 
         if (!booking) return { success: false, error: "Booking not found" };
-
+ 
+        console.log(`[Overstay Action] ✅ Fetched overstay session for booking ${bookingId}`);
         return { success: true, data: booking };
     } catch (error: any) {
-        console.error("Failed to fetch overstay session:", error);
+        console.error(`[Overstay Action Error] Failed to fetch overstay session for ${bookingId}:`, error);
         return { success: false, error: error.message };
     }
 }

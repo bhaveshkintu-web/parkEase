@@ -16,9 +16,10 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    console.log(`[User Payments API] ✅ Fetched ${payments.length} payment methods for user: ${session.user.id}`);
     return NextResponse.json(payments);
   } catch (error) {
-    console.error("Error fetching payment methods:", error);
+    console.error(`[User Payments API Error] GET failed for user ${session.user.id}:`, error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

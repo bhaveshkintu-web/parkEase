@@ -6,9 +6,14 @@ import { runExpiryCheck } from "@/lib/utils/expiry-check";
  */
 export async function GET(req: NextRequest) {
   const logs: string[] = [];
-  const logger = (msg: string) => logs.push(msg);
 
   try {
+    console.log("[Expiry Job API] Starting check-expiry cron job...");
+    const logger = (msg: string) => {
+        logs.push(msg);
+        console.log(`[Expiry Job API] ${msg}`);
+    };
+
     const authHeader = req.headers.get("authorization");
     const expectedSecret = process.env.CRON_SECRET;
 
@@ -35,8 +40,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const stats = await runExpiryCheck(logger);
+    const stats = await runExpiryCheck();
 
+    console.log("[Expiry Job API] ✅ Cron job completed successfully");
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -44,7 +50,7 @@ export async function GET(req: NextRequest) {
       ...stats,
     });
   } catch (error: any) {
-    console.error("Cron Error (check-expiry):", error);
+    console.error("[Expiry Job API Error] Cron failure:", error);
 
     return NextResponse.json(
       {

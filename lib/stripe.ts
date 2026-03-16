@@ -10,7 +10,7 @@ export function getStripe() {
   const isMock = !key || key.toLowerCase().includes("your_secret_key");
 
   if (isMock) {
-    console.warn("Stripe: Running in MOCK MODE (Secret Key is missing or placeholder)");
+    console.warn("[Stripe Service Warning] Running in MOCK MODE (Secret Key is missing or placeholder)");
     return null;
   }
 
@@ -19,7 +19,7 @@ export function getStripe() {
     typescript: true,
   });
 
-  console.log("Stripe: Initialized successfully");
+  console.log("[Stripe Service] ✅ Initialized successfully");
   return stripeInstance;
 }
 
@@ -65,7 +65,7 @@ export async function createPaymentIntent(
     const isMock = !stripeConfigured || amount < 50; // Stripe minimum is 50 cents ($0.50)
 
     if (isMock) {
-      console.log(`Stripe Mock Mode: Simulating PaymentIntent creation for amount ${amount} cents`);
+      console.log(`[Stripe Service] Mock Mode: Simulating PaymentIntent creation for amount ${amount} cents`);
       return {
         success: true,
         clientSecret: "mock_client_secret_" + Math.random().toString(36).substring(7),
@@ -92,13 +92,14 @@ export async function createPaymentIntent(
       },
     });
 
+    console.log(`[Stripe Service] ✅ PaymentIntent created: ${paymentIntent.id}`);
     return {
       success: true,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     };
   } catch (error: any) {
-    console.error("Failed to create PaymentIntent:", error);
+    console.error("[Stripe Service Error] Failed to create PaymentIntent:", error);
     return {
       success: false,
       error: error.message || "Failed to create payment intent",
@@ -113,7 +114,7 @@ export async function createSetupIntent(userId: string) {
   try {
     const isMock = checkIsMockMode();
     if (isMock) {
-      console.log("Stripe Mock Mode: Simulating SetupIntent creation");
+      console.log("[Stripe Service] Mock Mode: Simulating SetupIntent creation");
       return {
         success: true,
         clientSecret: "seti_mock_secret_" + Math.random().toString(36).substring(7),
@@ -132,13 +133,14 @@ export async function createSetupIntent(userId: string) {
       metadata: { userId },
     });
 
+    console.log(`[Stripe Service] ✅ SetupIntent created: ${setupIntent.id}`);
     return {
       success: true,
       clientSecret: setupIntent.client_secret,
       setupIntentId: setupIntent.id,
     };
   } catch (error: any) {
-    console.error("Failed to create SetupIntent:", error);
+    console.error("[Stripe Service Error] Failed to create SetupIntent:", error);
     return {
       success: false,
       error: error.message || "Failed to create setup intent",

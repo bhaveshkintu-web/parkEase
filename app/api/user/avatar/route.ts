@@ -49,8 +49,8 @@ async function uploadAvatarToCloudinary(buffer: Buffer, mimeType: string): Promi
 }
 
 export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -77,9 +77,10 @@ export async function POST(req: Request) {
       data: { avatar: avatarUrl },
     });
 
+    console.log(`[User Avatar API] ✅ Avatar updated for user: ${session.user.id}`);
     return NextResponse.json({ avatar: avatarUrl });
   } catch (error: any) {
-    console.error("AVATAR_UPLOAD_ERROR:", error);
+    console.error(`[User Avatar API Error] POST failed for user ${session?.user?.id}:`, error);
     return NextResponse.json(
       { error: error.message || "Failed to upload photo" },
       { status: 500 }
@@ -88,8 +89,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -99,9 +100,10 @@ export async function DELETE(req: Request) {
       data: { avatar: null },
     });
 
+    console.log(`[User Avatar API] ✅ Avatar removed for user: ${session.user.id}`);
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("AVATAR_DELETE_ERROR:", error);
+    console.error(`[User Avatar API Error] DELETE failed for user ${session?.user?.id}:`, error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }
