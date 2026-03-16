@@ -603,7 +603,6 @@ export async function updateBookingDates(
           spotId: booking.spotId,
           id: { not: bookingId },
           OR: [
-            { parkingSession: { status: "checked_in" } },
             {
               status: { in: ["CONFIRMED", "PENDING"] },
               checkOut: { gt: checkIn },

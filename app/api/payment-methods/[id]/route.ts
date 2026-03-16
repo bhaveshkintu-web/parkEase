@@ -27,9 +27,10 @@ export async function DELETE(
     // Check if used in active bookings
     const activeBookingCount = await prisma.booking.count({
       where: {
-        payment: {
-          // @ts-ignore - Prisma client out of sync
-          paymentMethodId: id,
+        payments: {
+          some: {
+            paymentMethodId: id,
+          }
         },
         status: {
           in: ["PENDING", "CONFIRMED"], // or whatever signifies "active"
@@ -44,16 +45,23 @@ export async function DELETE(
     }
 
     const wasDefault = paymentMethod.isDefault;
+    const userId = session.user.id;
 
-    // Delete the card
-    await prisma.paymentMethod.delete({
+    // Soft-delete the card
+    await prisma.paymentMethod.update({
       where: { id },
+      data: { 
+        // @ts-ignore - Prisma client type sync issue
+        isActive: false,
+        isDefault: false, // Ensure it's no longer default
+      },
     });
 
-    // If default card deleted → set latest card as default
+    // If default card soft-deleted → set latest ACTIVE card as default
     if (wasDefault) {
       const latestCard = await prisma.paymentMethod.findFirst({
-        where: { userId: session.user.id },
+        // @ts-ignore - Prisma client type sync issue
+        where: { userId, isActive: true },
         orderBy: { createdAt: "desc" },
       });
 
