@@ -21,7 +21,7 @@ export async function createSettingsAuditLog({
   const userAgent = (await headersList).get("user-agent") || "unknown";
 
   try {
-    return await prisma.settingsAuditLog.create({
+    const log = await prisma.settingsAuditLog.create({
       data: {
         entityType,
         entityId,
@@ -33,8 +33,10 @@ export async function createSettingsAuditLog({
         userAgent,
       },
     });
+    console.log(`[Audit Log] ✅ Audit record created for ${entityType}:${entityId} action: ${action}`);
+    return log;
   } catch (error) {
-    console.error("Failed to create settings audit log:", error);
+    console.error("[Audit Log Error] Failed to create settings audit log:", error);
     return null;
   }
 }

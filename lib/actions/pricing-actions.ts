@@ -30,9 +30,10 @@ export async function addPricingRule(data: any) {
       },
     });
     revalidatePath("/admin/pricing");
+    console.log("[Pricing Action] ✅ Pricing rule created successfully:", rule.id);
     return { success: true, rule };
   } catch (error: any) {
-    console.error("ADD_PRICING_RULE_ERROR:", error);
+    console.error("[Pricing Action Error] ADD_PRICING_RULE_ERROR:", error);
     return { success: false, error: error.message || "Failed to add pricing rule" };
   }
 }
@@ -50,9 +51,10 @@ export async function updatePricingRule(id: string, data: any) {
       },
     });
     revalidatePath("/admin/pricing");
+    console.log("[Pricing Action] ✅ Pricing rule updated successfully:", id);
     return { success: true, rule };
   } catch (error: any) {
-    console.error("UPDATE_PRICING_RULE_ERROR:", error);
+    console.error("[Pricing Action Error] UPDATE_PRICING_RULE_ERROR:", error);
     return { success: false, error: error.message || "Failed to update pricing rule" };
   }
 }
@@ -63,9 +65,10 @@ export async function deletePricingRule(id: string) {
       where: { id },
     });
     revalidatePath("/admin/pricing");
+    console.log("[Pricing Action] ✅ Pricing rule deleted successfully:", id);
     return { success: true };
   } catch (error: any) {
-    console.error("DELETE_PRICING_RULE_ERROR:", error);
+    console.error("[Pricing Action Error] DELETE_PRICING_RULE_ERROR:", error);
     return { success: false, error: error.message || "Failed to delete pricing rule" };
   }
 }

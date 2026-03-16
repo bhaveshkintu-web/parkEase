@@ -159,7 +159,8 @@ export async function validatePromoCode(
     }
 
     discountAmount = Math.round(discountAmount * 100) / 100;
-
+    console.log(`[Promotion Action] ✅ Promo code ${code} validated for amount ${bookingAmount}`);
+ 
     return {
       valid: true,
       promotion: {
@@ -173,7 +174,7 @@ export async function validatePromoCode(
       },
     };
   } catch (error) {
-    console.error("VALIDATE_PROMO_CODE_ERROR:", error);
+    console.error(`[Promotion Action Error] VALIDATE_PROMO_CODE_ERROR for ${code}:`, error);
     return { valid: false, error: "Failed to validate promo code" };
   }
 }
@@ -241,9 +242,10 @@ export async function addPromotion(data: any, adminId?: string) {
 
     revalidatePath("/admin/promotions");
     revalidatePath("/admin/settings");
+    console.log("[Promotion Action] ✅ Promotion created successfully:", promo.id);
     return { success: true, promo };
   } catch (error) {
-    console.error("ADD_PROMOTION_ERROR:", error);
+    console.error("[Promotion Action Error] ADD_PROMOTION_ERROR:", error);
     if (error instanceof Error && error.message.includes("unique-constraint")) {
       return { success: false, error: "Promotion code already exists" };
     }
@@ -285,9 +287,10 @@ export async function updatePromotion(id: string, data: any, adminId?: string) {
 
     revalidatePath("/admin/promotions");
     revalidatePath("/admin/settings");
+    console.log("[Promotion Action] ✅ Promotion updated successfully:", id);
     return { success: true, promo };
   } catch (error) {
-    console.error("UPDATE_PROMOTION_ERROR:", error);
+    console.error("[Promotion Action Error] UPDATE_PROMOTION_ERROR:", error);
     return { success: false, error: "Failed to update promotion" };
   }
 }

@@ -94,6 +94,7 @@ export async function getSpotsForLocation(locationId: string, date: Date = new D
       a.identifier.localeCompare(b.identifier, undefined, { numeric: true, sensitivity: 'base' })
     );
 
+    console.log(`[Spot Action] ✅ Found ${sortedSpots.length} spots for location ${locationId}`);
     return {
       success: true,
       data: sortedSpots.map((s: any) => {
@@ -126,7 +127,7 @@ export async function getSpotsForLocation(locationId: string, date: Date = new D
       })
     };
   } catch (error) {
-    console.error("Failed to fetch location spots:", error);
+    console.error(`[Spot Action Error] Failed to fetch spots for location ${locationId}:`, error);
     return { success: false, error: "Failed to load spots" };
   }
 }
@@ -217,12 +218,14 @@ export async function allocateSpotForBooking(
   });
 
   if (validSpots.length === 0) {
+    console.log("[Spot Allocation Warning] Spot allocation failed. No valid spots found for dates.");
     return null;
   }
 
   // Preference 1: Completely empty spots (no active/future bookings)
   const emptySpots = validSpots.filter((s: any) => s.bookings.length === 0);
   if (emptySpots.length > 0) {
+    console.log("[Spot Allocation] Successfully allocated spot ID:", emptySpots[0].identifier);
     return emptySpots[0];
   }
 
@@ -258,6 +261,7 @@ export async function allocateSpotForBooking(
   // Sort descending by minGap: the highest minGap offers the most safety margin
   spotsWithGaps.sort((a: any, b: any) => b.minGap - a.minGap);
 
+  console.log("[Spot Allocation] Successfully allocated spot ID:", spotsWithGaps[0].spot.identifier, "with gap:", spotsWithGaps[0].minGap, "minutes.");
   return spotsWithGaps[0].spot;
 }
 
@@ -317,6 +321,7 @@ export async function checkSpotAvailability(
     // 1. Pristine Check (Empty spots)
     const emptySpots = validSpots.filter((s: any) => s.bookings.length === 0);
     if (emptySpots.length > 0) {
+      console.log("[Spot Availability] Spots available:", emptySpots.length);
       return { 
         isAvailable: true, 
         message: `${emptySpots.length} empty spots available`,
@@ -362,10 +367,11 @@ export async function updateSpotIdentifiers(locationId: string, spots: { id?: st
         }
       }
       revalidatePath(`/owner/locations/${locationId}`);
+      console.log(`[Spot Action] ✅ Spot identifiers updated for location ${locationId}`);
       return { success: true };
     });
   } catch (error) {
-    console.error("Failed to update spot identifiers:", error);
+    console.error(`[Spot Action Error] Failed to update spot identifiers for ${locationId}:`, error);
     return { success: false, error: "Failed to update spots. Make sure identifiers are unique." };
   }
 }
@@ -381,9 +387,10 @@ export async function updateSpotStatus(spotId: string, status: "ACTIVE" | "INACT
     });
 
     revalidatePath(`/owner/locations/${spot.locationId}`);
+    console.log(`[Spot Action] ✅ Spot ${spotId} status updated to ${status}`);
     return { success: true };
   } catch (error) {
-    console.error("Failed to update spot status:", error);
+    console.error(`[Spot Action Error] Failed to update spot status for ${spotId}:`, error);
     return { success: false, error: "Failed to update spot status" };
   }
 }
@@ -411,9 +418,10 @@ export async function migrateExistingLocations() {
       console.log(`Migrated ${count}/${locations.length}: ${loc.name}`);
     }
 
+    console.log(`[Spot Action] ✅ Migration complete: ${count} locations migrated.`);
     return { success: true, migratedCount: count };
   } catch (error) {
-    console.error("Migration failed:", error);
+    console.error(`[Spot Action Error] Spot migration failed:`, error);
     return { success: false, error: "Migration failed" };
   }
 }

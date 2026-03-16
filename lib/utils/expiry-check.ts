@@ -2,14 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { sendSessionExpiryWarning } from "@/lib/notifications";
 import { getGeneralSettings } from "../actions/settings-actions";
 
-export async function runExpiryCheck(logger: (msg: string) => void = console.log) {
+export async function runExpiryCheck() {
     const now = new Date();
-    logger(`Checking for bookings expiring soon (Now: ${now.toISOString()})`);
+    console.log(`[Expiry Job] Checking for bookings expiring soon (Now: ${now.toISOString()})`);
 
     const warningWindowStart = now;
     const warningWindowEnd = new Date(now.getTime() + 45 * 60 * 1000); // Expanded to 45 mins for safety
 
-    logger(`Searching for checkOut between ${now.toISOString()} and ${warningWindowEnd.toISOString()}`);
+    console.log(`[Expiry Job] Searching for checkOut between ${now.toISOString()} and ${warningWindowEnd.toISOString()}`);
 
     const stats = {
         notified: 0,
@@ -21,7 +21,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         const allCheckedInCount = await prisma.parkingSession.count({
             where: { status: "checked_in" }
         });
-        logger(`Diagnostic: Found ${allCheckedInCount} total active sessions.`);
+        console.log(`[Expiry Job] Diagnostic: Found ${allCheckedInCount} total active sessions.`);
 
         const sessions = await prisma.parkingSession.findMany({
             where: { status: "checked_in" },
@@ -37,8 +37,8 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
             const unsent = s.expiryWarningSentAt === null;
 
             if (inWindow || s.booking.guestEmail.includes("gmail.com")) {
-                logger(`Checking Booking ${s.bookingId}: InWindow=${inWindow}, StatusMatch=${statusMatch}, Unsent=${unsent}`);
-                logger(`  - CheckOut: ${co.toISOString()}, Status: ${s.booking.status}, WarningSent: ${s.expiryWarningSentAt}`);
+                console.log(`[Expiry Job] Checking Booking ${s.bookingId}: InWindow=${inWindow}, StatusMatch=${statusMatch}, Unsent=${unsent}`);
+                console.log(`[Expiry Job]   - CheckOut: ${co.toISOString()}, Status: ${s.booking.status}, WarningSent: ${s.expiryWarningSentAt}`);
             }
         });
 
@@ -61,25 +61,25 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
             }
         });
 
-        logger(`Found ${expiringBookings.length} bookings to notify.`);
+        console.log(`[Expiry Job] Found ${expiringBookings.length} bookings to notify.`);
 
         for (const booking of expiringBookings) {
             try {
-                logger(`Triggering notification for booking ${booking.id}...`);
+                console.log(`[Expiry Job] Triggering notification for booking ${booking.id}...`);
                 const result = await sendSessionExpiryWarning(booking.id);
                 if (result.success) {
                     await prisma.parkingSession.update({
                         where: { bookingId: booking.id },
                         data: { expiryWarningSentAt: new Date() }
                     });
-                    logger(`✅ Notification successfully sent and recorded for booking ${booking.id}`);
+                    console.log(`[Expiry Job] ✅ Notification successfully sent and recorded for booking ${booking.id}`);
                     stats.notified++;
                 } else {
-                    logger(`❌ Notification failed for booking ${booking.id}: ${result.error}`);
+                    console.log(`[Expiry Job] ❌ Notification failed for booking ${booking.id}: ${result.error}`);
                     stats.errors++;
                 }
             } catch (err: any) {
-                logger(`❌ Critical error notifying booking ${booking.id}: ${err.message}`);
+                console.log(`[Expiry Job] ❌ Critical error notifying booking ${booking.id}: ${err.message}`);
                 stats.errors++;
             }
         }
@@ -89,7 +89,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         const gracePeriodMinutes = settings.gracePeriodMinutes ?? 30;
         const nowMinusGrace = new Date(now.getTime() - gracePeriodMinutes * 60 * 1000);
 
-        logger(`Applying grace period of ${gracePeriodMinutes} mins for overstay check. (Before ${nowMinusGrace.toISOString()})`);
+        console.log(`[Expiry Job] Applying grace period of ${gracePeriodMinutes} mins for overstay check. (Before ${nowMinusGrace.toISOString()})`);
 
         const overstayingBookings = await prisma.booking.findMany({
             where: {
@@ -104,7 +104,7 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
         });
 
         if (overstayingBookings.length > 0) {
-            logger(`Found ${overstayingBookings.length} new overstaying bookings past grace period.`);
+            console.log(`[Expiry Job] Found ${overstayingBookings.length} new overstaying bookings past grace period.`);
         }
 
         for (const booking of overstayingBookings) {
@@ -113,16 +113,16 @@ export async function runExpiryCheck(logger: (msg: string) => void = console.log
                     where: { id: booking.id },
                     data: { status: "OVERSTAY" as any }
                 });
-                logger(`Booking ${booking.id} marked as OVERSTAY`);
+                console.log(`[Expiry Job] Booking ${booking.id} marked as OVERSTAY`);
                 stats.markedOverstay++;
             } catch (err: any) {
-                logger(`Failed to mark booking ${booking.id} as OVERSTAY: ${err.message}`);
+                console.log(`[Expiry Job] Failed to mark booking ${booking.id} as OVERSTAY: ${err.message}`);
                 stats.errors++;
             }
         }
 
     } catch (error: any) {
-        logger(`CRITICAL ERROR in runExpiryCheck: ${error.message}`);
+        console.log(`[Expiry Job] CRITICAL ERROR in runExpiryCheck: ${error.message}`);
         throw error;
     }
 

@@ -7,6 +7,15 @@ import { notifyAdminsOfLocationSubmission } from "@/lib/notifications";
 import { createSpotsForLocation, generateSpotIdentifiers } from "@/lib/actions/spot-actions";
 
 /**
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
+import { prisma } from "@/lib/prisma";
+import { ownerLocationSchema } from "@/lib/validations";
+import { notifyAdminsOfLocationSubmission } from "@/lib/notifications";
+import { createSpotsForLocation, generateSpotIdentifiers } from "@/lib/actions/spot-actions";
+
+/**
  * @api {post} /api/owner/locations Create a new parking location
  * @apiName CreateParkingLocation
  * @apiGroup Owner
@@ -14,9 +23,9 @@ import { createSpotsForLocation, generateSpotIdentifiers } from "@/lib/actions/s
  * @apiPermission OWNER (Approved & Verified)
  */
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
     // 1. Authentication Check
-    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json(
         { error: "Unauthorized. Please log in." },
@@ -154,6 +163,7 @@ export async function POST(req: NextRequest) {
       console.error("Failed to send location submission notifications:", err)
     );
 
+    console.log(`[Owner Locations API] ✅ Location '${newLocation.name}' created successfully for owner: ${session.user.id}`);
     return NextResponse.json(
       {
         message: "Parking location created successfully.",
@@ -163,7 +173,7 @@ export async function POST(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error("[OWNER_LOCATION_POST]", error);
+    console.error(`[Owner Locations API Error] POST failed for user ${session?.user?.id}:`, error);
     return NextResponse.json(
       { error: "An internal server error occurred." },
       { status: 500 }
@@ -172,8 +182,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user || (session.user.role?.toUpperCase() !== "OWNER" && session.user.role?.toUpperCase() !== "ADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -214,9 +224,10 @@ export async function GET(req: NextRequest) {
       }
     }));
 
+    console.log(`[Owner Locations API] ✅ Fetched ${locations.length} locations for owner: ${session.user.id}`);
     return NextResponse.json(locations);
   } catch (error) {
-    console.error("[OWNER_LOCATIONS_GET]", error);
+    console.error(`[Owner Locations API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -24,7 +24,8 @@ export async function GET(req: Request) {
 
   if (!user)
     return NextResponse.json({ error: "User not found" }, { status: 404 });
-
+ 
+  console.log(`[User Profile API] ✅ Fetched profile for user: ${userId}`);
   return NextResponse.json({ user });
 }
 
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
       avatar,
     },
   });
-
+ 
+  console.log(`[User Profile API] ✅ Profile updated for user: ${userId}`);
   return NextResponse.json({
     user: {
       id: user.id,

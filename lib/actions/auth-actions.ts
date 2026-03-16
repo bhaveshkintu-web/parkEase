@@ -11,6 +11,7 @@ export async function updateUserPassword(
   newPassword: string
 ) {
   try {
+    console.log("[Auth Action] Updating password for user:", userId);
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -51,9 +52,10 @@ export async function updateUserPassword(
       changedBy: userId,
     });
 
+    console.log("[Auth Action] ✅ Password updated for user:", userId);
     return { success: true };
   } catch (error) {
-    console.error("UPDATE_USER_PASSWORD_ERROR:", error);
+    console.error("[Auth Action Error] UPDATE_USER_PASSWORD_ERROR:", error);
     return { success: false, error: "Failed to update password" };
   }
 }
@@ -80,7 +82,7 @@ export async function getUserSecuritySettings(userId: string) {
 
     return result;
   } catch (error) {
-    console.error("GET_USER_SECURITY_SETTINGS_ERROR:", error);
+    console.error(`[Auth Action Error] GET_USER_SECURITY_SETTINGS_ERROR for user ${userId}:`, error);
     return { twoFactorEnabled: false, lastRevokedAt: null };
   }
 }
@@ -113,9 +115,10 @@ export async function updateUserSecuritySetting(
     });
 
     revalidatePath("/account/security");
+    console.log(`[Auth Action] ✅ Security setting ${field} updated for user: ${userId}`);
     return { success: true };
   } catch (error) {
-    console.error("UPDATE_USER_SECURITY_SETTING_ERROR:", error);
+    console.error("[Auth Action Error] UPDATE_USER_SECURITY_SETTING_ERROR:", error);
     return { success: false, error: "Failed to update security setting" };
   }
 }
@@ -143,9 +146,10 @@ export async function revokeAllUserSessions(userId: string) {
       changedBy: userId,
     });
 
+    console.log("[Auth Action] ✅ All sessions revoked for user:", userId);
     return { success: true };
   } catch (error) {
-    console.error("REVOKE_ALL_SESSIONS_ERROR:", error);
+    console.error("[Auth Action Error] REVOKE_ALL_SESSIONS_ERROR:", error);
     return { success: false, error: "Failed to revoke sessions" };
   }
 }
@@ -172,10 +176,11 @@ export async function updateUserSecurityPreferences(userId: string, prefs: any) 
       action: "update_security_prefs",
       changedBy: userId,
     });
-
+ 
+    console.log(`[Auth Action] ✅ Security preferences updated for user: ${userId}`);
     return { success: true };
   } catch (error) {
-    console.error("UPDATE_SECURITY_PREFS_ERROR:", error);
+    console.error(`[Auth Action Error] UPDATE_SECURITY_PREFS_ERROR for user ${userId}:`, error);
     return { success: false, error: "Failed to update security preferences" };
   }
 }
@@ -203,10 +208,11 @@ export async function enableUserTwoFactor(userId: string, method: string) {
         category: "user_security_temp",
       },
     });
-
+ 
+    console.log(`[Auth Action] ✅ 2FA setup initiated for user: ${userId}`);
     return { success: true, secret };
   } catch (error) {
-    console.error("ENABLE_2FA_ERROR:", error);
+    console.error(`[Auth Action Error] ENABLE_2FA_ERROR for user ${userId}:`, error);
     return { success: false, error: "Failed to enable two-factor setup" };
   }
 }
@@ -251,9 +257,10 @@ export async function verifyUserTwoFactor(userId: string, code: string) {
       changedBy: userId,
     });
 
+    console.log("[Auth Action] ✅ 2FA verified and enabled for user:", userId);
     return { success: true };
   } catch (error) {
-    console.error("VERIFY_2FA_ERROR:", error);
+    console.error("[Auth Action Error] VERIFY_2FA_ERROR:", error);
     return { success: false, error: "Failed to verify 2FA code" };
   }
 }
@@ -264,9 +271,11 @@ export async function getUserTrustedDevices(userId: string) {
       where: { userId },
       orderBy: { lastActive: "desc" },
     });
+ 
+    console.log(`[Auth Action] ✅ Fetched trusted devices for user: ${userId}`);
     return devices;
   } catch (error) {
-    console.error("GET_TRUSTED_DEVICES_ERROR:", error);
+    console.error(`[Auth Action Error] GET_TRUSTED_DEVICES_ERROR for user ${userId}:`, error);
     return [];
   }
 }
@@ -284,10 +293,11 @@ export async function removeUserTrustedDevice(userId: string, deviceId: string) 
       changedBy: userId,
       newValue: { deviceId },
     });
-
+ 
+    console.log(`[Auth Action] ✅ Trusted device ${deviceId} removed for user: ${userId}`);
     return { success: true };
   } catch (error) {
-    console.error("REMOVE_TRUSTED_DEVICE_ERROR:", error);
+    console.error(`[Auth Action Error] REMOVE_TRUSTED_DEVICE_ERROR for device ${deviceId}:`, error);
     return { success: false, error: "Failed to remove trusted device" };
   }
 }
@@ -304,7 +314,7 @@ export async function getUserLoginActivity(userId: string) {
       take: 20,
     });
 
-    return logs.map((log: any) => {
+    const formattedLogs = logs.map((log: any) => {
       const ua = log.userAgent || "Unknown Device";
       let browser = "Browser";
       let os = "OS";
@@ -329,8 +339,11 @@ export async function getUserLoginActivity(userId: string) {
         status: log.action.includes("failure") ? "failed" : "success",
       };
     });
+
+    console.log(`[Auth Action] ✅ Fetched login activity for user: ${userId}`);
+    return formattedLogs;
   } catch (error) {
-    console.error("GET_LOGIN_ACTIVITY_ERROR:", error);
+    console.error(`[Auth Action Error] GET_LOGIN_ACTIVITY_ERROR for user ${userId}:`, error);
     return [];
   }
 }

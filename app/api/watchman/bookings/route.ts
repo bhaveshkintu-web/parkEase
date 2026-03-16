@@ -133,6 +133,7 @@ export async function GET(request: NextRequest) {
             }
         });
 
+        console.log(`[Watchman API] ✅ Fetched ${bookings.length} ${dateFilter} bookings for watchman: ${sessionUser.email}`);
         return NextResponse.json({
             success: true,
             bookings: bookings.map(b => ({
@@ -165,9 +166,9 @@ export async function GET(request: NextRequest) {
                 spotIdentifier: b.spotIdentifier
             }))
         });
-
+ 
     } catch (error: any) {
-        console.error("Error fetching watchman bookings:", error);
+        console.error("[Watchman API Error] Failed to fetch watchman bookings:", error);
         return NextResponse.json(
             { error: "Failed to fetch bookings", details: error.message },
             { status: 500 }

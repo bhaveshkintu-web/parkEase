@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user || session.user.role?.toUpperCase() !== "OWNER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -126,6 +126,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    console.log(`[Owner Analytics API] ✅ Fetched dashboard analytics for user: ${session.user.id}`);
     return NextResponse.json({
       stats: {
         totalRevenue,
@@ -145,7 +146,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error("[OWNER_ANALYTICS]", error);
+    console.error(`[Owner Analytics API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

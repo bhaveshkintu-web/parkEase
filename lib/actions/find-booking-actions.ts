@@ -42,6 +42,8 @@ export async function findBookingByLicensePlate(licensePlate: string, phone: str
       },
     });
 
+    console.log(`[Find Booking Action] Search by license plate ${normalizedPlate} for phone ${normalizedPhone}. Found: ${bookings.length}`);
+
     if (bookings.length === 0) {
       return { 
         success: false, 
@@ -109,12 +111,14 @@ export async function findBookingByConfirmationCode(code: string) {
     });
 
     if (!booking) {
+      console.log(`[Find Booking Action] No booking found for code: ${normalizedCode}`);
       return { 
         success: false, 
         error: "No booking found with the provided confirmation code" 
       };
     }
 
+    console.log(`[Find Booking Action] ✅ Found booking ${booking.id} for code: ${normalizedCode}`);
     return { 
       success: true, 
       data: [{
@@ -140,7 +144,7 @@ export async function findBookingByConfirmationCode(code: string) {
       }]
     };
   } catch (error) {
-    console.error("Failed to find booking by confirmation code:", error);
+    console.error(`[Find Booking Action Error] Failed to find booking by confirmation code ${code}:`, error);
     return { success: false, error: "Failed to search for booking" };
   }
 }
@@ -178,18 +182,20 @@ export async function resendBookingConfirmation(bookingId: string, newEmail: str
     const result = await sendReservationReceipt(bookingId, newEmail);
 
     if (result.success) {
+      console.log(`[Find Booking Action] ✅ Confirmation email resent to ${newEmail} for booking ${bookingId}`);
       return { 
         success: true, 
         message: `Confirmation email sent to ${newEmail}` 
       };
     } else {
+      console.error(`[Find Booking Action Error] Failed to resend email to ${newEmail} for ${bookingId}:`, result.error);
       return { 
         success: false, 
         error: result.error || "Failed to send confirmation email" 
       };
     }
   } catch (error) {
-    console.error("Failed to resend booking confirmation:", error);
+    console.error(`[Find Booking Action Error] Failed to resend booking confirmation for ${bookingId}:`, error);
     return { success: false, error: "Failed to resend confirmation email" };
   }
 }

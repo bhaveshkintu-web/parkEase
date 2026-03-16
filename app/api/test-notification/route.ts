@@ -14,11 +14,12 @@ export async function GET() {
       return NextResponse.json({ message: "No bookings found to test." }, { status: 404 });
     }
 
-    console.log(`Testing notification for booking: ${booking.id}`);
-    console.log(`Confirmation Code: ${booking.confirmationCode}`);
+    console.log(`[Test API] Testing notification for booking: ${booking.id}`);
+    console.log(`[Test API] Confirmation Code: ${booking.confirmationCode}`);
     
     const notification = await notifyOwnerOfNewBooking(booking.id);
     
+    console.log("[Test API] ✅ Notification test completed");
     return NextResponse.json({ 
       success: true, 
       message: "Notification test triggered. Check server logs.",
@@ -26,7 +27,7 @@ export async function GET() {
       notification 
     });
   } catch (error: any) {
-    console.error("Test failed:", error);
+    console.error("[Test API Error] Test failed:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

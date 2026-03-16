@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
   try {
-    const session = await getServerSession(authOptions);
     if (!session || !session.user || session.user.role?.toUpperCase() !== "OWNER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -82,9 +82,10 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    console.log(`[Owner Earnings Breakdown API] ✅ Fetched earnings breakdown for user: ${session.user.id}`);
     return NextResponse.json(data);
   } catch (error) {
-    console.error("[OWNER_EARNINGS_BREAKDOWN_GET]", error);
+    console.error(`[Owner Earnings Breakdown API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -140,10 +140,11 @@ export class FinanceService {
           totalBalance: { increment: booking.totalPrice }
         }
       });
-
+ 
+      console.log(`[Finance Service] ✅ Preliminary earnings recorded for booking ${booking.confirmationCode}: $${booking.totalPrice}`);
       return { success: true };
     } catch (error) {
-      console.error("[RECORD_PRELIMINARY_EARNINGS_ERROR]", error);
+      console.error("[Finance Service Error] RECORD_PRELIMINARY_EARNINGS_ERROR:", error);
       throw error;
     }
   }
@@ -278,7 +279,8 @@ export class FinanceService {
           type: NotificationType.EARNINGS_CREDITED,
           metadata: { bookingId, netEarnings }
         });
-
+ 
+        console.log(`[Finance Service] ✅ Earnings credited for booking ${booking.confirmationCode}. Owner: $${netEarnings}, System: $${platformCommission}`);
         return { netEarnings, platformCommission };
       };
 
@@ -290,7 +292,7 @@ export class FinanceService {
         });
       }
     } catch (error) {
-      console.error("[CREDIT_EARNINGS_ERROR]", error);
+      console.error("[Finance Service Error] CREDIT_EARNINGS_ERROR:", error);
       throw error;
     }
   }
@@ -358,9 +360,11 @@ export class FinanceService {
           type: NotificationType.REFUND_DEDUCTION,
           metadata: { bookingId, refundAmount }
         });
+ 
+        console.log(`[Finance Service] ✅ Refund processed for booking ${booking.confirmationCode}: -$${refundAmount}`);
       });
     } catch (error) {
-      console.error("[REFUND_DEDUCTION_ERROR]", error);
+      console.error("[Finance Service Error] REFUND_DEDUCTION_ERROR:", error);
       throw error;
     }
   }

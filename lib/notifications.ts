@@ -98,9 +98,9 @@ export async function notifyAdminsOfBookingRequest(requestId: string) {
       });
     }
 
-    console.log(`✅ Admin notifications sent for request ${requestId}`);
+    console.log(`[Email Tracking] ✅ Admin notifications sent for request ${requestId}`);
   } catch (error) {
-    console.error("❌ Failed to notify admins:", error);
+    console.error("[Email Tracking] ❌ Failed to notify admins of request:", requestId, error);
   }
 }
 
@@ -183,9 +183,9 @@ export async function notifyOwnerOfBookingRequest(requestId: string) {
       },
     });
 
-    console.log(`✅ Owner notification sent for request ${requestId} to ${owner.email}`);
+    console.log(`[Email Tracking] ✅ Owner notification sent for request ${requestId} to ${owner.email}`);
   } catch (error) {
-    console.error("❌ Failed to notify owner:", error);
+    console.error("[Email Tracking] ❌ Failed to notify owner of request:", requestId, error);
   }
 }
 
@@ -289,12 +289,12 @@ export async function notifyOwnerOfNewBooking(bookingId: string) {
       },
     });
 
-    console.log(`✅ Owner notification sent for booking ${bookingId} to ${owner.email}`);
+    console.log(`[Email Tracking] ✅ Owner notification sent for booking ${bookingId} to ${owner.email}`);
     return notification;
   } catch (error) {
-    console.error("❌ Failed to notify owner of new booking:", error);
+    console.error("[Email Tracking] ❌ Failed to notify owner of new booking:", bookingId, error);
     if (error instanceof Error) {
-      console.error("Error stack:", error.stack);
+      console.error("[Email Tracking] Error stack:", error.stack);
     }
   }
 }
@@ -417,10 +417,10 @@ export async function sendReservationReceipt(bookingId: string, customEmail?: st
       `,
     });
 
-    console.log(`✅ Reservation receipt sent to ${targetEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] ✅ Reservation receipt sent to ${targetEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error("❌ Failed to send reservation receipt:", error);
+    console.error("[Email Tracking] ❌ Failed to send reservation receipt for booking:", bookingId, error);
     return { success: false, error: "Failed to send email" };
   }
 }
@@ -476,9 +476,9 @@ export async function notifyAdminsOfPartnerInquiry(lead: any) {
       });
     }
 
-    console.log(`✅ Admin notifications sent for lead ${lead.id}`);
+    console.log(`[Email Tracking] ✅ Admin notifications sent for partner inquiry lead ${lead.id}`);
   } catch (error) {
-    console.error("❌ Failed to notify admins:", error);
+    console.error("[Email Tracking] ❌ Failed to notify admins of partner inquiry:", lead.id, error);
   }
 }
 
@@ -543,9 +543,9 @@ export async function notifyAdminsOfLocationSubmission(location: any) {
       })),
     });
 
-    console.log(`✅ Admin notifications sent for location ${location.id}`);
+    console.log(`[Email Tracking] ✅ Admin notifications sent for location approval ${location.id}`);
   } catch (error) {
-    console.error("❌ Failed to notify admins of location submission:", error);
+    console.error("[Email Tracking] ❌ Failed to notify admins of location submission:", location.id, error);
   }
 }
 
@@ -612,10 +612,10 @@ export async function sendSupportEmail(data: {
       `,
     });
 
-    console.log(`✅ Support email sent from ${data.email}: ${data.subject}`);
+    console.log(`[Email Tracking] ✅ Support email sent from ${data.email}: ${data.subject}`);
     return { success: true };
   } catch (error) {
-    console.error("❌ Failed to send support email:", error);
+    console.error("[Email Tracking] ❌ Failed to send support email from:", data.email, error);
     return { success: false, error: "Failed to send message" };
   }
 }
@@ -810,10 +810,10 @@ export async function sendSessionExpiryWarning(bookingId: string) {
       });
     }
 
-    console.log(`✅ Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] ✅ Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error("❌ Failed to send session expiry warning:", error);
+    console.error("[Email Tracking] ❌ Failed to send session expiry warning for booking:", bookingId, error);
     return { success: false, error: "Failed to send email" };
   }
 }
@@ -885,10 +885,10 @@ export async function sendOverstayPaymentEmail(bookingId: string, overstayCharge
       `,
     });
 
-    console.log(`✅ Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] ✅ Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error("❌ Failed to send overstay payment email:", error);
+    console.error(`[Email Tracking] ❌ Failed to send overstay payment email for booking: ${bookingId}`, error);
     return { success: false, error: "Failed to send email" };
   }
 }

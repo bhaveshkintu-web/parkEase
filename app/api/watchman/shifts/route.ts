@@ -36,11 +36,12 @@ export async function GET(request: NextRequest) {
                 location: { select: { name: true } }
             }
         });
-
+ 
+        console.log(`[Watchman Shifts API] ✅ Fetched ${shifts.length} shifts for watchman: ${session.user.email}`);
         return NextResponse.json({ shifts });
 
     } catch (error: any) {
-        console.error("Error fetching shifts:", error);
+        console.error("[Watchman Shifts API Error] Failed to fetch shifts:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -112,11 +113,12 @@ export async function POST(request: NextRequest) {
             where: { id: newShift.id },
             include: { location: { select: { name: true } } }
         });
-
+ 
+        console.log(`[Watchman Shifts API] ✅ Shift started for watchman ${session.user.email} at location ${createdWithLocation?.location?.name}`);
         return NextResponse.json({ shift: createdWithLocation });
 
     } catch (error: any) {
-        console.error("Error creating shift:", error);
+        console.error("[Watchman Shifts API Error] Failed to create shift:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

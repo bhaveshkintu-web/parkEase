@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
+    console.log(`[Watchman Session API] ✅ Fetched ${sessions.length} sessions for locationIds: ${locationIds.join(', ')}`);
     return NextResponse.json({
       success: true,
       sessions: (sessions as any[]).map((s: any) => {
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
       })
     });
   } catch (error: any) {
-    console.error("Error fetching sessions:", error);
+    console.error("[Watchman Session API Error] Failed to fetch sessions:", error);
     return NextResponse.json(
       { error: "Failed to fetch sessions", details: error.message },
       { status: 500 }
@@ -329,10 +330,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log(`[Watchman Session API] ✅ Action '${action}' processed successfully for booking ${bookingId}`);
     return NextResponse.json({ success: true, session: parkingSession });
 
   } catch (error: any) {
-    console.error("Error processing session:", error);
+    console.error("[Watchman Session API Error] Failed to process session action:", error);
     return NextResponse.json(
       { error: "Failed to process session", details: error.message },
       { status: 500 }

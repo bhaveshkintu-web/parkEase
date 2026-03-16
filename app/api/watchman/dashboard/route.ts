@@ -87,6 +87,7 @@ export async function GET(request: Request) {
       occupiedSpots: loc.totalSpots - loc.availableSpots
     }));
 
+    console.log(`[Watchman Dashboard API] ✅ Fetched dashboard stats for watchman: ${session.user.id}`);
     return NextResponse.json({
       stats: {
         todayCheckIns,
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
       }))
     });
   } catch (error) {
-    console.error("Dashboard API Error:", error);
+    console.error(`[Watchman Dashboard API Error] GET failed for user ${session?.user?.id}:`, error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

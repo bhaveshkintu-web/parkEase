@@ -139,9 +139,10 @@ export async function seedDefaultSettings(): Promise<{ success: boolean; seeded:
     }
 
     invalidateCache();
+    console.log(`[Settings Action] ✅ Default settings seeded. New entries: ${seededCount}`);
     return { success: true, seeded: seededCount };
   } catch (error) {
-    console.error("SEED_SETTINGS_ERROR:", error);
+    console.error("[Settings Action Error] SEED_SETTINGS_ERROR:", error);
     return { success: false, seeded: 0 };
   }
 }
@@ -328,10 +329,11 @@ export async function updateSetting(
 
     invalidateCache();
     revalidatePath("/admin/settings");
-
+ 
+    console.log(`[Settings Action] ✅ Setting ${key} updated by admin ${adminId}`);
     return { success: true };
   } catch (error) {
-    console.error(`UPDATE_SETTING_ERROR [${key}]:`, error);
+    console.error(`[Settings Action Error] UPDATE_SETTING_ERROR for ${key}:`, error);
     return { success: false, error: "Failed to update setting" };
   }
 }
@@ -364,7 +366,8 @@ export async function updateGeneralSettings(
         await updateSetting(key, value, adminId);
       }
     }
-
+ 
+    console.log(`[Settings Action] ✅ General settings updated in bulk by admin ${adminId}`);
     return { success: true };
   } catch (error) {
     console.error("UPDATE_GENERAL_SETTINGS_ERROR:", error);
@@ -393,7 +396,8 @@ export async function updateNotificationSettings(
         await updateSetting(key, value, adminId);
       }
     }
-
+ 
+    console.log(`[Settings Action] ✅ Notification settings updated in bulk by admin ${adminId}`);
     return { success: true };
   } catch (error) {
     console.error("UPDATE_NOTIFICATION_SETTINGS_ERROR:", error);

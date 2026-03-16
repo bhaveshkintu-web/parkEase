@@ -12,11 +12,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized: Watchman role required" }, { status: 401 });
   }
 
+  const params = await props.params;
+  const sessionId = params.id;
   try {
     const { action } = await request.json();
-    const params = await props.params;
-    const sessionId = params.id;
-
+    
     if (!sessionId) {
       return NextResponse.json({ error: "Session ID is missing" }, { status: 400 });
     }
@@ -88,6 +88,7 @@ export async function PATCH(
         });
       }
 
+      console.log(`[Watchman Session ID API] ✅ Action '${action}' processed successfully for session: ${sessionId}`);
       return NextResponse.json(updatedSession);
     } else if (action === "check-out") {
       const result = await prisma.$transaction(async (tx) => {
@@ -225,13 +226,15 @@ export async function PATCH(
         });
       }
 
+      console.log(`[Watchman Session ID API] ✅ Action '${action}' processed successfully for session: ${sessionId}`);
       return NextResponse.json(updatedSession);
     }
 
+    console.error(`[Watchman Session ID API Error] Invalid action selected: ${action}`);
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
   } catch (error: any) {
-    console.error("Session Update Error:", error);
+    console.error(`[Watchman Session ID API Error] PATCH failed for session ${sessionId}:`, error);
     return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }

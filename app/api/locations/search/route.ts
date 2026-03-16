@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
 
     const checkIn = new Date(checkInStr);
     const checkOut = new Date(checkOutStr);
-
+ 
+    console.log(`[Search API] Searching for locations in: ${airportCode || city || 'Anywhere'} | Range: ${checkIn.toISOString()} to ${checkOut.toISOString()}`);
+ 
     const settings = await getGeneralSettings();
 
     // 1. Fetch search matching active locations
@@ -78,10 +80,11 @@ export async function GET(req: NextRequest) {
           availableSpots: loc.totalSpots - loc._count.bookings,
         };
       });
-
+ 
+    console.log(`[Search API] ✅ Found ${results.length} available locations`);
     return NextResponse.json(results);
   } catch (error) {
-    console.error("Search API Error:", error);
+    console.error("[Search API Error] Location search failed:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
