@@ -18,11 +18,11 @@ const footerLinks = {
     { label: "Cancellation Policy", href: "/cancellation-policy" },
     // { label: "Report an Issue", href: "/report-issue" },
   ],
-  // Legal: [
-  //   { label: "Terms of Service", href: "/terms-of-service" },
-  //   { label: "Privacy Policy", href: "/privacy-policy" },
-  //   { label: "Cookie Policy", href: "/cookie-policy" },
-  // ],
+  Legal: [
+    { label: "Terms of Service", href: "/terms-of-service" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    // { label: "Cookie Policy", href: "/cookie-policy" },
+  ],
   Services: [
     { label: "Airport Parking", href: "/parking" },
     // { label: "Monthly Parking", href: "#" },
@@ -44,7 +44,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border bg-card">
-      <div className="container py-12 md:py-16">
+      <div className="container py-4 md:py-6">
         <div className="grid gap-x-8 gap-y-10 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <div className="col-span-2 sm:col-span-3 lg:col-span-2">
             <Link href="/" className="flex items-center gap-2">
@@ -92,7 +92,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-border pt-3 md:flex-row">
           <p className="text-sm text-muted-foreground" suppressHydrationWarning>
             © {new Date().getFullYear()} {platformName}. All rights reserved.
           </p>
