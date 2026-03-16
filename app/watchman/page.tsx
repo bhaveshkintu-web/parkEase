@@ -356,7 +356,7 @@ export default function WatchmanDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentActivity.map((session: any) => (
+            {recentActivity.slice(0,3).map((session: any) => (
               <div
                 key={session.id}
                 className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"

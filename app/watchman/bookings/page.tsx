@@ -56,6 +56,7 @@ import {
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
 import { RequestDialog } from "@/components/watchman/request-dialog";
+import { PaginationFooter } from '../../../components/ui/pagination-footer';
 
 const Loading = () => null;
 
@@ -81,6 +82,9 @@ export default function WatchmanBookingsPage() {
   const [bookingRequests, setBookingRequests] = useState<WatchmanBookingRequest[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const ITEMS_PER_PAGE = 10;
+  const [bookingPage, setBookingPage] = useState(1);
+  const [requestPage, setRequestPage] = useState(1);
 
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -227,6 +231,26 @@ export default function WatchmanBookingsPage() {
   const pendingCount = bookingRequests.filter((r) => r.status === "PENDING").length;
   const urgentCount = bookingRequests.filter((r) => r.status === "PENDING" && r.priority === "URGENT").length; // URGENT matched from Prisma enum
 
+  function paginate<T>(data: T[], page: number, perPage: number) {
+    const totalPages = Math.ceil(data.length / perPage);
+  
+    const paginatedData = data.slice(
+      (page - 1) * perPage,
+      page * perPage
+    );
+  
+    return { totalPages, paginatedData };
+  }
+  const {totalPages: bookingTotalPages,paginatedData: paginatedBookings} = paginate(filteredBookings, bookingPage, ITEMS_PER_PAGE);
+  const {totalPages: requestTotalPages,paginatedData: paginatedRequests} = paginate(filteredRequests, requestPage, ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setBookingPage(1);
+  }, [search, statusFilter, dateFilter]);
+  
+  useEffect(() => {
+    setRequestPage(1);
+  }, [requestTab]);
   return (
     <Suspense fallback={<Loading />}>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -352,6 +376,9 @@ export default function WatchmanBookingsPage() {
                         <SelectItem value="confirmed">Confirmed</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="relative">
@@ -379,7 +406,7 @@ export default function WatchmanBookingsPage() {
                       <p>No bookings found for the selected filters</p>
                     </div>
                   ) : (
-                    filteredBookings.map((booking) => {
+                    paginatedBookings.map((booking) => {
                       const checkInDate = new Date(booking.checkIn);
                       const checkOutDate = new Date(booking.checkOut);
                       const today = new Date();
@@ -452,6 +479,13 @@ export default function WatchmanBookingsPage() {
                     })
                   )}
                 </div>
+                <PaginationFooter
+                  currentPage={bookingPage}
+                  totalPages={bookingTotalPages}
+                  totalItems={filteredBookings.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setBookingPage}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -498,7 +532,7 @@ export default function WatchmanBookingsPage() {
                       </Button>
                     </div>
                   ) : (
-                    filteredRequests.map((request) => (
+                    paginatedRequests.map((request) => (
                       <div
                         key={request.id}
                         className={`p-4 border rounded-lg ${request.priority === "URGENT" && request.status === "PENDING"
@@ -623,6 +657,13 @@ export default function WatchmanBookingsPage() {
                     ))
                   )}
                 </div>
+                <PaginationFooter
+                  currentPage={requestPage}
+                  totalPages={requestTotalPages}
+                  totalItems={filteredRequests.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setRequestPage}
+                />
               </CardContent>
             </Card>
           </TabsContent>

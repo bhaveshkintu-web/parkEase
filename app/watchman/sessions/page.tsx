@@ -33,6 +33,7 @@ import {
   Timer,
 } from "lucide-react";
 import { RequestDialog } from "@/components/watchman/request-dialog";
+import { PaginationFooter } from "@/components/ui/pagination-footer";
 
 export default function WatchmanSessionsPage() {
   const { toast } = useToast();
@@ -46,6 +47,8 @@ export default function WatchmanSessionsPage() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [overstayInfo, setOverstayInfo] = useState<any | null>(null);
   const router = useRouter();
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
@@ -156,6 +159,14 @@ export default function WatchmanSessionsPage() {
     return plate.toLowerCase().includes(search.toLowerCase()) ||
       bookingId.toLowerCase().includes(search.toLowerCase());
   });
+  const totalPages = Math.ceil(searchedSessions.length / ITEMS_PER_PAGE);
+  const paginatedSessions = searchedSessions.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeTab]);
 
   return (
     <Suspense fallback={<Loading />}>
@@ -248,7 +259,7 @@ export default function WatchmanSessionsPage() {
                   No sessions found
                 </div>
               ) : (
-                searchedSessions.map((session) => {
+                paginatedSessions.map((session) => {
                   const booking = session.booking || {};
 
                   return (
@@ -369,6 +380,13 @@ export default function WatchmanSessionsPage() {
                 })
               )}
             </div>
+            <PaginationFooter
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={searchedSessions.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+             />
           </CardContent>
         </Card>
 
