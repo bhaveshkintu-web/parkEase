@@ -1,42 +1,57 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { runExpiryCheck } from "@/lib/utils/expiry-check";
 
 /**
  * GET /api/cron/check-expiry
- * Processed via the BookingCleanupPoller component in the frontend.
  */
 export async function GET(req: NextRequest) {
-    const logs: string[] = [];
-    const logger = (msg: string) => logs.push(msg);
+  const logs: string[] = [];
+  const logger = (msg: string) => logs.push(msg);
 
-    try {
-        const authHeader = req.headers.get("Authorization");
-        const expectedSecret = process.env.CRON_SECRET;
-        const host = req.headers.get("host") || "";
+  try {
+    const authHeader = req.headers.get("authorization");
+    const expectedSecret = process.env.CRON_SECRET;
 
-        // Internal (localhost) calls are allowed
-        const isLocalRequest = host.startsWith("localhost") || host.startsWith("127.0.0.1");
+    const host = req.headers.get("host") || "";
+    const forwardedFor = req.headers.get("x-forwarded-for") || "";
+    const realIp = req.headers.get("x-real-ip") || "";
 
-        // Enforce secret for external requests if a secret is configured
-        if (expectedSecret && !isLocalRequest && authHeader !== `Bearer ${expectedSecret}`) {
-            return NextResponse.json({ error: "Unauthorized cron access" }, { status: 401 });
-        }
+    // Detect local requests
+    const isLocalRequest =
+      host.includes("localhost") ||
+      host.includes("127.0.0.1") ||
+      forwardedFor.startsWith("127.0.0.1") ||
+      realIp.startsWith("127.0.0.1");
 
-        const stats = await runExpiryCheck(logger);
-        return NextResponse.json({
-            success: true,
-            timestamp: new Date().toISOString(),
-            logs,
-            ...stats
-        });
-    } catch (error: any) {
-        console.error("Cron Error (check-expiry):", error);
-        return NextResponse.json({
-            success: false,
-            error: error.message
-        }, { status: 500 });
+    // Protect endpoint
+    if (
+      expectedSecret &&
+      !isLocalRequest &&
+      authHeader !== `Bearer ${expectedSecret}`
+    ) {
+      return NextResponse.json(
+        { error: "Unauthorized cron access" },
+        { status: 401 },
+      );
     }
+
+    const stats = await runExpiryCheck(logger);
+
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      logs,
+      ...stats,
+    });
+  } catch (error: any) {
+    console.error("Cron Error (check-expiry):", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 500 },
+    );
+  }
 }
-
-
