@@ -36,6 +36,7 @@ export enum NotificationType {
   REFUND_DEDUCTION = "REFUND_DEDUCTION",
   NEW_BOOKING = "NEW_BOOKING",
   SESSION_EXPIRY_WARNING = "SESSION_EXPIRY_WARNING",
+  BOOKING_REJECTED = "BOOKING_REJECTED",
 }
 
 export async function notifyAdminsOfBookingRequest(requestId: string) {
@@ -296,6 +297,105 @@ export async function notifyOwnerOfNewBooking(bookingId: string) {
     if (error instanceof Error) {
       console.error("[Email Tracking] Error stack:", error.stack);
     }
+  }
+}
+
+/**
+ * Notifies the customer that their booking has been rejected by the owner.
+ */
+export async function notifyCustomerOfRejection(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        location: true,
+      },
+    });
+
+    if (!booking || !booking.userId) {
+      console.log(`⚠️ Booking not found or no userId for notification: ${bookingId}`);
+      return;
+    }
+
+    const formatDateStr = (date: Date) => {
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    };
+
+    // 1. Send Email
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"ParkZipply" <${process.env.SMTP_USER}>`,
+      to: booking.guestEmail,
+      subject: `Reservation Update: Rejected - ${booking.location.name}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #ef4444; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">ParkZipply</h1>
+            <p style="margin: 5px 0 0; opacity: 0.9;">Reservation Rejected</p>
+          </div>
+          
+          <div style="padding: 30px;">
+            <h2 style="margin-top: 0; color: #ef4444;">Hello ${booking.guestFirstName},</h2>
+            <p>We regret to inform you that your reservation at <strong>${booking.location.name}</strong> has been rejected by the owner.</p>
+            
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 14px; color: #666; text-transform: uppercase;">Reservation Details</p>
+              <p style="margin: 5px 0;"><strong>Confirmation:</strong> ${booking.confirmationCode}</p>
+              <p style="margin: 5px 0;"><strong>Date:</strong> ${formatDateStr(new Date(booking.checkIn))} - ${formatDateStr(new Date(booking.checkOut))}</p>
+              <p style="margin: 5px 0;"><strong>Total Paid:</strong> $${booking.totalPrice.toFixed(2)}</p>
+            </div>
+
+            <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold; color: #991b1b;">Refund Initiation</p>
+              <p style="margin: 5px 0 0; font-size: 14px; color: #7f1d1d;">
+                Since you have already paid for this reservation, an automated refund request has been created. 
+                Our team will process your refund shortly. You will receive another notification once the refund is completed.
+              </p>
+            </div>
+
+            <p>We apologize for any convenience this may have caused. You can find alternative parking near you on our website.</p>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${getAppUrl()}/parking" style="display: inline-block; background-color: #0d9488; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Find Alternative Parking</a>
+            </div>
+          </div>
+          
+          <div style="background-color: #f3f4f6; color: #666; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} ParkZipply. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    // 2. Create In-App Notification
+    await NotificationService.create({
+      userId: booking.userId,
+      title: "Reservation Rejected",
+      message: `Your booking at "${booking.location.name}" was rejected. A refund has been initiated.`,
+      type: NotificationType.BOOKING_REJECTED as any,
+      metadata: { bookingId: booking.id, confirmationCode: booking.confirmationCode },
+    });
+
+    console.log(`[Email Tracking] ✅ Rejection notification sent to customer ${booking.guestEmail} for booking ${bookingId}`);
+  } catch (error) {
+    console.error("[Email Tracking] ❌ Failed to notify customer of rejection:", bookingId, error);
   }
 }
 

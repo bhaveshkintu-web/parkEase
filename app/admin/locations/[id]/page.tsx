@@ -1,18 +1,47 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Trash2, Loader2, ToggleLeft, ToggleRight, Upload, X, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  AlertCircle,
+  Info,
+  Car,
+  Clock,
+  Shield,
+  Zap,
+  Phone,
+  Search,
+  Loader2,
+  X,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { MediaManagementCard } from "@/components/owner/media-management-card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,167 +53,376 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useDataStore } from "@/lib/data-store";
 import { useToast } from "@/hooks/use-toast";
 import { airports } from "@/lib/data";
-import type { AdminParkingLocation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { 
+  getParkingLocationById, 
+  updateParkingLocation, 
+  deleteLocation as removeLocationAction 
+} from "@/lib/actions/parking-actions";
+import { SpotIdentifierGrid } from "@/components/owner/spot-identifier-grid";
+import { getSpotsWithBookingStatus } from "@/lib/actions/spot-actions";
 
 const amenityOptions = [
-  "Covered Parking",
-  "EV Charging",
-  "Handicap Accessible",
-  "Car Wash",
-  "Oil Change",
-  "Restrooms",
-  "WiFi",
-  "Luggage Assistance",
+  { id: "covered", label: "Covered Parking", icon: Car },
+  { id: "ev_charging", label: "EV Charging", icon: Zap },
+  { id: "handicap", label: "Handicap Accessible", icon: Shield },
+  { id: "car_wash", label: "Car Wash", icon: Car },
+  { id: "restrooms", label: "Restrooms", icon: Info },
+  { id: "wifi", label: "WiFi", icon: Zap },
+  { id: "luggage", label: "Luggage Assistance", icon: Shield },
+  { id: "24_7_access", label: "24/7 Access", icon: Clock },
 ];
 
-export default function EditLocationPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+interface FormData {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  airportCode: string;
+  description: string;
+  pricePerDay: string;
+  originalPrice: string;
+  amenities: string[];
+  shuttle: boolean;
+  shuttleHours: string;
+  shuttleFrequency: string;
+  shuttlePhone: string;
+  totalSpots: string;
+  heightLimit: string;
+  selfPark: boolean;
+  valetPark: boolean;
+  covered: boolean;
+  open24Hours: boolean;
+  cancellationPolicy: string;
+  cancellationDeadline: string;
+  securityFeatures: string[];
+  specialInstructions: string;
+  latitude: number;
+  longitude: number;
+  images: string[];
+  spotIdentifiers: any[];
+  status: string;
+}
+
+const initialFormData: FormData = {
+  name: "",
+  address: "",
+  city: "",
+  state: "",
+  zipCode: "",
+  airportCode: "",
+  description: "",
+  pricePerDay: "",
+  originalPrice: "",
+  amenities: [],
+  shuttle: true,
+  shuttleHours: "24/7",
+  shuttleFrequency: "Every 10-15 minutes",
+  shuttlePhone: "",
+  totalSpots: "",
+  heightLimit: "",
+  selfPark: true,
+  valetPark: false,
+  covered: false,
+  open24Hours: true,
+  cancellationPolicy: "free",
+  cancellationDeadline: "24",
+  securityFeatures: [],
+  specialInstructions: "",
+  latitude: 0,
+  longitude: 0,
+  images: [],
+  spotIdentifiers: [],
+  status: "ACTIVE",
+};
+
+// Utility to sync list with target total
+const syncSpotList = (total: number, currentList: any[]) => {
+  const normalizedTotal = Math.max(0, total);
+  if (normalizedTotal === currentList.length) return currentList;
+
+  if (normalizedTotal < currentList.length) {
+    return currentList.slice(0, normalizedTotal);
+  }
+
+  const newList = [...currentList];
+  let lastId = "A0";
+  if (currentList.length > 0) {
+    const last = currentList[currentList.length - 1];
+    lastId = typeof last === "string" ? last : (last as any).identifier;
+  }
+
+  const match = lastId.match(/^(.*?)(\d+)$/);
+  let prefix = "A";
+  let startNum = 1;
+
+  if (match) {
+    prefix = match[1] || "";
+    startNum = (parseInt(match[2]) || 0) + 1;
+  }
+
+  while (newList.length < normalizedTotal) {
+    newList.push({
+      id: `new-${Date.now()}-${newList.length}`,
+      identifier: `${prefix}${startNum++}`,
+      status: "ACTIVE"
+    });
+  }
+  return newList;
+};
+
+export default function AdminEditLocationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: locationId } = use(params);
   const router = useRouter();
   const { toast } = useToast();
-  const { adminLocations, updateLocation, deleteLocation } = useDataStore();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [airportOpen, setAirportOpen] = useState(false);
+  // Identifiers of spots that have active/future bookings (cannot be deleted)
+  const [bookedIdentifiers, setBookedIdentifiers] = useState<string[]>([]);
+  const [allSpotsBlocked, setAllSpotsBlocked] = useState(false);
 
-  // Find location from store
-  const existingLocation = adminLocations.find((l: AdminParkingLocation) => l.id === id);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    airportCode: "",
-    description: "",
-    pricePerDay: "",
-    originalPrice: "",
-    amenities: [] as string[],
-    shuttle: false,
-    covered: false,
-    selfPark: true,
-    valet: false,
-    open24Hours: false,
-    totalSpots: "100",
-    availableSpots: "100",
-    status: "active" as "active" | "inactive" | "maintenance",
-    images: [] as string[],
-  });
+  // Address fetching states
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isFetchingAddress, setIsFetchingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const addressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (existingLocation) {
-      setFormData({
-        name: existingLocation.name,
-        address: existingLocation.address,
-        airportCode: existingLocation.airportCode || "",
-        description: existingLocation.description || "",
-        pricePerDay: existingLocation.pricePerDay.toString(),
-        originalPrice: existingLocation.originalPrice?.toString() || "",
-        amenities: existingLocation.amenities || [],
-        shuttle: existingLocation.shuttle || false,
-        covered: existingLocation.covered || false,
-        selfPark: existingLocation.selfPark || true,
-        valet: existingLocation.valet || false,
-        open24Hours: existingLocation.open24Hours || false,
-        totalSpots: existingLocation.totalSpots?.toString() || "100",
-        availableSpots: existingLocation.availableSpots?.toString() || "100",
-        status: "active",
-        images: existingLocation.images || [],
-      });
+    function handleClickOutside(event: MouseEvent) {
+      if (addressRef.current && !addressRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
     }
-  }, [existingLocation]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const handleInputChange = (field: string, value: string | boolean | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    const fetchLocation = async () => {
+      if (!locationId) return;
+      setIsLoading(true);
+      const result = await getParkingLocationById(locationId);
 
-  const toggleAmenity = (amenity: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter((a) => a !== amenity)
-        : [...prev.amenities, amenity],
-    }));
-  };
+      if (result.success && result.data) {
+        const data = result.data;
+        const loadedTotalSpots = data.totalSpots || 0;
+        const loadedSpots = (data as any).spots || [];
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsSubmitting(true);
-    const uploadedUrls: string[] = [...formData.images];
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formDataUpload = new FormData();
-        formDataUpload.append("file", file);
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formDataUpload,
+        setFormData({
+          name: data.name,
+          address: data.address,
+          city: data.city,
+          state: data.state || "",
+          zipCode: data.zipCode || "",
+          airportCode: data.airportCode || "",
+          description: data.description || "",
+          pricePerDay: String(data.pricePerDay),
+          originalPrice: data.originalPrice ? String(data.originalPrice) : "",
+          amenities: data.amenities || [],
+          shuttle: data.shuttle,
+          shuttleHours: "24/7",
+          shuttleFrequency: "Every 10-15 minutes",
+          shuttlePhone: "",
+          totalSpots: String(loadedTotalSpots),
+          heightLimit: (data as any).heightLimit || "",
+          selfPark: data.selfPark,
+          valetPark: data.valet,
+          covered: data.covered,
+          open24Hours: data.open24Hours,
+          cancellationPolicy: "free",
+          cancellationDeadline: "24",
+          securityFeatures: (data as any).securityFeatures || [],
+          specialInstructions: "",
+          latitude: data.latitude || 0,
+          longitude: data.longitude || 0,
+          images: data.images || [],
+          spotIdentifiers: syncSpotList(loadedTotalSpots, loadedSpots),
+          status: data.status || "ACTIVE",
         });
 
-        if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
-
-        const data = await response.json();
-        uploadedUrls.push(data.url);
+        // Load booking status for each spot to know which are protected
+        const statusResult = await getSpotsWithBookingStatus(locationId);
+        if (statusResult.success && statusResult.data) {
+          const booked = statusResult.data
+            .filter((s: any) => s.hasActiveOrFutureBooking)
+            .map((s: any) => s.identifier);
+          setBookedIdentifiers(booked);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch location details",
+          variant: "destructive",
+        });
+        router.push("/admin/locations");
       }
-      handleInputChange("images", uploadedUrls);
-      toast({
-        title: "Images uploaded",
-        description: `Successfully uploaded ${files.length} image(s).`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload images. Please try again.",
-        variant: "destructive",
-      });
+      setIsLoading(false);
+    };
+
+    fetchLocation();
+  }, [locationId, router, toast]);
+
+  const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
+    setFormData((prev) => {
+      const newState = { ...prev, [field]: value };
+
+      if (field === "totalSpots") {
+        const newTotal = parseInt(value as string);
+        const oldTotal = prev.spotIdentifiers.length;
+        if (!isNaN(newTotal)) {
+          newState.spotIdentifiers = syncSpotList(newTotal, prev.spotIdentifiers);
+
+          // Check if all spots being removed are protected (have active/future bookings)
+          if (newTotal < oldTotal) {
+            const slotsToRemove = prev.spotIdentifiers.slice(newTotal);
+            const removableCount = slotsToRemove.filter(
+              (s: any) => !bookedIdentifiers.includes(typeof s === "string" ? s : s.identifier)
+            ).length;
+            setAllSpotsBlocked(removableCount === 0 && slotsToRemove.length > 0);
+          } else {
+            setAllSpotsBlocked(false);
+          }
+        }
+      } else if (field === "spotIdentifiers") {
+        newState.totalSpots = String((value as any[]).length);
+        setAllSpotsBlocked(false);
+      }
+
+      return newState;
+    });
+
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }, [errors, bookedIdentifiers]);
+
+  const fetchSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_LOCATIONIQ_API_KEY;
+    if (!apiKey) {
+      console.error("LocationIQ API key is missing");
+      return;
+    }
+
+    setIsFetchingAddress(true);
+    try {
+      const response = await fetch(
+        `https://api.locationiq.com/v1/autocomplete?key=${apiKey}&q=${encodeURIComponent(query)}&limit=5&dedupe=1`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAddressSuggestions(data || []);
+        setShowSuggestions(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch address suggestions:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsFetchingAddress(false);
     }
   };
 
-  const removeImage = (index: number) => {
-    const newImages = [...formData.images];
-    newImages.splice(index, 1);
-    handleInputChange("images", newImages);
+  const handleSelectSuggestion = (suggestion: any) => {
+    const addr = suggestion.address;
+    let streetAddress = suggestion.display_name.split(',')[0];
+    if (addr.house_number && addr.road) {
+      streetAddress = `${addr.house_number} ${addr.road}`;
+    } else if (addr.road) {
+      streetAddress = addr.road;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      address: streetAddress,
+      city: addr.city || addr.town || addr.village || addr.suburb || "",
+      state: addr.state || "",
+      zipCode: addr.postcode || "",
+      latitude: parseFloat(suggestion.lat),
+      longitude: parseFloat(suggestion.lon),
+    }));
+
+    setShowSuggestions(false);
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsSubmitting(true);
+    setErrors({});
+
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.name.trim()) newErrors.name = "Location name is required";
+    if (!formData.pricePerDay || parseFloat(formData.pricePerDay) <= 0) newErrors.pricePerDay = "Valid price is required";
+    if (!formData.totalSpots || parseInt(formData.totalSpots) <= 0) newErrors.totalSpots = "Valid spot count is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      const airport = airports.find((a) => a.code === formData.airportCode);
-
-      await updateLocation(id, {
+      const locationData = {
         name: formData.name,
         address: formData.address,
-        airport: airport?.name || existingLocation?.airport || "",
-        airportCode: formData.airportCode,
+        city: formData.city,
+        state: formData.state,
+        country: "USA",
+        zipCode: formData.zipCode,
+        airportCode: formData.airportCode || undefined,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        description: formData.description,
         pricePerDay: parseFloat(formData.pricePerDay),
-        originalPrice: parseFloat(formData.originalPrice) || parseFloat(formData.pricePerDay) * 1.2,
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
+        totalSpots: parseInt(formData.totalSpots),
+        heightLimit: formData.heightLimit || undefined,
+        securityFeatures: formData.securityFeatures,
         amenities: formData.amenities,
+        images: formData.images,
         shuttle: formData.shuttle,
         covered: formData.covered,
         selfPark: formData.selfPark,
-        valet: formData.valet,
+        valet: formData.valetPark,
         open24Hours: formData.open24Hours,
-        totalSpots: parseInt(formData.totalSpots),
-        availableSpots: parseInt(formData.availableSpots),
-        description: formData.description,
-        images: formData.images,
-      });
+        cancellationPolicy: formData.cancellationPolicy as any,
+        cancellationDeadline: formData.cancellationDeadline,
+        spotIdentifiers: formData.spotIdentifiers,
+      };
 
-      toast({
-        title: "Location updated",
-        description: "The parking location has been updated successfully.",
-      });
+      const result = await updateParkingLocation(locationId, locationData);
+
+      if (result.success) {
+        const protectedSpots = (result as any).protectedSpots as string[];
+        if (protectedSpots && protectedSpots.length > 0) {
+          toast({
+            title: "Saved with restrictions",
+            description: `${protectedSpots.length} spot(s) (${protectedSpots.join(", ")}) could not be removed because they have active or future bookings.`,
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Location updated successfully",
+          });
+        }
+        router.refresh();
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update location. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update location",
         variant: "destructive",
       });
     } finally {
@@ -194,446 +432,378 @@ export default function EditLocationPage({ params }: { params: Promise<{ id: str
 
   const handleDelete = async () => {
     setIsDeleting(true);
-
     try {
-      await deleteLocation(id);
-
-      toast({
-        title: "Location deleted",
-        description: "The parking location has been deleted.",
-      });
-
-      router.push("/admin/locations");
-    } catch (error) {
+      const result = await removeLocationAction(locationId);
+      if (result.success) {
+        toast({
+          title: "Location deleted",
+          description: "The parking location has been deleted.",
+        });
+        router.push("/admin/locations");
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to delete location. Please try again.",
+        description: error.message || "Failed to delete location",
         variant: "destructive",
       });
+    } finally {
       setIsDeleting(false);
     }
   };
 
-  if (!existingLocation) {
+  const selectedAirport = airports.find((a) => a.code === formData.airportCode);
+
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h2 className="text-xl font-semibold text-foreground">Location not found</h2>
-        <p className="text-muted-foreground mt-2">The requested location does not exist.</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/locations">Back to Locations</Link>
-        </Button>
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin/locations">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-foreground">Edit Location</h1>
-              <Badge variant={formData.status === "active" ? "default" : "secondary"}>
-                {formData.status}
-              </Badge>
+    <div className="min-h-screen bg-muted/30 -mx-4 -mt-6">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="container px-4 py-4 max-w-4xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/admin/locations">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-xl font-semibold">Edit Location</h1>
+                <p className="text-sm text-muted-foreground">{formData.name}</p>
+              </div>
             </div>
-            <p className="text-muted-foreground">{existingLocation.name}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Location</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{existingLocation.name}&quot;? This action cannot be undone.
-                  All reservations for this location will be affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button onClick={handleSave} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
+            <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Location</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be undone.
+                      All reservations for this location will be affected.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button onClick={() => handleSubmit()} disabled={isSubmitting || allSpotsBlocked} size="sm">
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
-              </>
-            )}
-          </Button>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="details" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing</TabsTrigger>
-          <TabsTrigger value="amenities">Amenities</TabsTrigger>
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
+      <div className="container px-4 py-6 max-w-4xl space-y-8 mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Location Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                aria-invalid={!!errors.name}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            </div>
 
-        <TabsContent value="details" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Edit the location details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Location Name</Label>
+            <div className="space-y-4">
+              <Label>Address</Label>
+              <div className="relative" ref={addressRef}>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
                   value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange("address", e.target.value);
+                    fetchSuggestions(e.target.value);
+                  }}
+                  onFocus={() => {
+                    if (addressSuggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  placeholder="Street Address"
+                  className="pr-10"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="airport">Airport</Label>
-                <Select
-                  value={formData.airportCode}
-                  onValueChange={(value) => handleInputChange("airportCode", value)}
-                >
-                  <SelectTrigger id="airport">
-                    <SelectValue placeholder="Select airport" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {airports.map((airport) => (
-                      <SelectItem key={airport.code} value={airport.code}>
-                        {airport.code} - {airport.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger id="status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Capacity</CardTitle>
-              <CardDescription>Manage parking capacity</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="totalSpots">Total Spots</Label>
-                  <Input
-                    id="totalSpots"
-                    type="number"
-                    min="1"
-                    value={formData.totalSpots}
-                    onChange={(e) => handleInputChange("totalSpots", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="availableSpots">Available Spots</Label>
-                  <Input
-                    id="availableSpots"
-                    type="number"
-                    min="0"
-                    max={formData.totalSpots}
-                    value={formData.availableSpots}
-                    onChange={(e) => handleInputChange("availableSpots", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="rounded-lg bg-muted p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Occupancy Rate</span>
-                  <span className="font-medium text-foreground">
-                    {Math.round(((parseInt(formData.totalSpots) - parseInt(formData.availableSpots)) / parseInt(formData.totalSpots)) * 100)}%
-                  </span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-background">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{
-                      width: `${Math.round(((parseInt(formData.totalSpots) - parseInt(formData.availableSpots)) / parseInt(formData.totalSpots)) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="pricing" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-              <CardDescription>Set daily rates and discounts</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="pricePerDay">Price Per Day</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="pricePerDay"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.pricePerDay}
-                      onChange={(e) => handleInputChange("pricePerDay", e.target.value)}
-                      className="pl-7"
-                    />
+                {isFetchingAddress && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="originalPrice">Original Price</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="originalPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.originalPrice}
-                      onChange={(e) => handleInputChange("originalPrice", e.target.value)}
-                      className="pl-7"
-                    />
-                  </div>
-                </div>
-              </div>
-              {formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.pricePerDay) && (
-                <div className="rounded-lg bg-primary/10 p-4 text-sm text-primary">
-                  Discount: {Math.round((1 - parseFloat(formData.pricePerDay) / parseFloat(formData.originalPrice)) * 100)}% off
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                )}
 
-        <TabsContent value="amenities" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Features</CardTitle>
-              <CardDescription>Toggle parking features</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  { id: "shuttle", label: "Free Shuttle Service" },
-                  { id: "covered", label: "Covered Parking" },
-                  { id: "selfPark", label: "Self Park" },
-                  { id: "valet", label: "Valet Available" },
-                  { id: "open24Hours", label: "Open 24 Hours" },
-                ].map((feature) => (
-                  <div key={feature.id} className="flex items-center justify-between rounded-lg border border-border p-4">
-                    <Label htmlFor={feature.id} className="cursor-pointer">{feature.label}</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleInputChange(feature.id, !formData[feature.id as keyof typeof formData])}
-                      className="p-0"
-                    >
-                      {formData[feature.id as keyof typeof formData] ? (
-                        <ToggleRight className="h-8 w-8 text-primary" />
-                      ) : (
-                        <ToggleLeft className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Amenities</CardTitle>
-              <CardDescription>Select available amenities</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                {amenityOptions.map((amenity) => (
-                  <div key={amenity} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`amenity-${amenity}`}
-                      checked={formData.amenities.includes(amenity)}
-                      onCheckedChange={() => toggleAmenity(amenity)}
-                    />
-                    <Label htmlFor={`amenity-${amenity}`} className="cursor-pointer">{amenity}</Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="media" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Location Media</CardTitle>
-              <CardDescription>Manage photos of the parking location</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {formData.images.map((url, index) => (
-                  <div key={index} className="group relative aspect-video rounded-lg border overflow-hidden bg-muted">
-                    <img src={url} alt={`Location ${index + 1}`} className="h-full w-full object-cover" />
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                    {index === 0 && (
-                      <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-[10px] text-white py-1 text-center font-bold">
-                        MAIN COVER
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <label
-                  className={cn(
-                    "flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/[0.02] cursor-pointer transition-all gap-2",
-                    isSubmitting && "opacity-50 pointer-events-none"
-                  )}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Upload className="h-5 w-5 text-primary" />}
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold uppercase tracking-widest text-foreground">Upload Photos</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP up to 5MB</p>
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                    disabled={isSubmitting}
-                  />
-                </label>
-              </div>
-
-              {formData.images.length === 0 && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
-                  <AlertCircle className="h-5 w-5 shrink-0" />
-                  <p className="text-sm">We recommend uploading at least 1 image to help your location stand out.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Total Bookings", value: "1,234", change: "+12%" },
-              { label: "Revenue", value: "$45,678", change: "+8%" },
-              { label: "Avg Rating", value: existingLocation.rating.toFixed(1), change: "+0.2" },
-              { label: "Occupancy", value: "78%", change: "+5%" },
-            ].map((stat) => (
-              <Card key={stat.label}>
-                <CardContent className="p-6">
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="mt-1 text-xs text-primary">{stat.change} from last month</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest bookings and reviews</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { type: "booking", message: "New reservation by John D.", time: "2 hours ago" },
-                  { type: "review", message: "5-star review received", time: "5 hours ago" },
-                  { type: "booking", message: "Reservation cancelled by Sarah M.", time: "1 day ago" },
-                  { type: "booking", message: "New reservation by Mike T.", time: "2 days ago" },
-                ].map((activity, i) => (
-                  <div key={i} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-2 w-2 rounded-full ${activity.type === "review" ? "bg-accent" : "bg-primary"
-                          }`}
-                      />
-                      <span className="text-sm text-foreground">{activity.message}</span>
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <Card className="absolute z-50 w-full mt-1 shadow-lg overflow-hidden border-border max-h-[300px] overflow-y-auto">
+                    <div className="p-1">
+                      {addressSuggestions.map((suggestion, idx) => {
+                        const subText = suggestion.display_name.split(',').slice(1).join(',').trim();
+                        return (
+                          <div
+                            key={idx}
+                            className="px-3 py-2 text-sm hover:bg-muted cursor-pointer rounded-md transition-colors border-b last:border-0"
+                            onClick={() => handleSelectSuggestion(suggestion)}
+                          >
+                            <div className="font-medium text-foreground">
+                              {suggestion.display_name.split(',')[0]}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{subText}</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  </Card>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="col-span-2">
+                  <Input
+                    value={formData.city}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
+                    placeholder="City"
+                  />
+                </div>
+                <Input
+                  value={formData.state}
+                  onChange={(e) => handleInputChange("state", e.target.value)}
+                  placeholder="State"
+                />
+                <Input
+                  value={formData.zipCode}
+                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  placeholder="ZIP"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nearest Airport</Label>
+              <Popover open={airportOpen} onOpenChange={setAirportOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                  >
+                    {selectedAirport
+                      ? `${selectedAirport.code} - ${selectedAirport.name}`
+                      : "Search airport..."}
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search airports..." />
+                    <CommandList>
+                      <CommandEmpty>No airport found.</CommandEmpty>
+                      <CommandGroup>
+                        {airports.map((airport) => (
+                          <CommandItem
+                            key={airport.code}
+                            value={`${airport.code} ${airport.name}`}
+                            onSelect={() => {
+                              handleInputChange("airportCode", airport.code);
+                              setAirportOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.airportCode === airport.code ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {airport.code} - {airport.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                rows={4}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing & Capacity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="pricePerDay">Daily Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="pricePerDay"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.pricePerDay}
+                    onChange={(e) => handleInputChange("pricePerDay", e.target.value)}
+                    className="pl-7"
+                  />
+                </div>
+                {errors.pricePerDay && <p className="text-sm text-destructive">{errors.pricePerDay}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalSpots">Total Spots *</Label>
+                <Input
+                  id="totalSpots"
+                  type="number"
+                  min="1"
+                  value={formData.totalSpots}
+                  onChange={(e) => handleInputChange("totalSpots", e.target.value)}
+                />
+                {errors.totalSpots && <p className="text-sm text-destructive">{errors.totalSpots}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Parking Spot Identifiers</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Assign names to each physical spot (e.g. A1, A2, B1...)
+                  </p>
+                </div>
+              </div>
+
+              <SpotIdentifierGrid
+                identifiers={formData.spotIdentifiers}
+                onChange={(ids) => handleInputChange("spotIdentifiers", ids)}
+                lockedIdentifiers={formData.spotIdentifiers
+                  .filter((s: any) => s._count?.bookings > 0)
+                  .map((s: any) => s.identifier)}
+                bookedIdentifiers={bookedIdentifiers}
+                maxSpots={parseInt(formData.totalSpots) || 500}
+                locationId={locationId}
+              />
+
+              {allSpotsBlocked && (
+                <Alert variant="destructive" className="py-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="font-medium">
+                    <strong>Cannot Reduce Spots:</strong> All spots in this reduction range have active or future bookings. Please wait until those bookings are completed before reducing the total spot count.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Services & Amenities</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <Label>Parking Types</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="selfPark" checked={formData.selfPark} onCheckedChange={(c) => handleInputChange("selfPark", !!c)} />
+                  <Label htmlFor="selfPark">Self-Park</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="valetPark" checked={formData.valetPark} onCheckedChange={(c) => handleInputChange("valetPark", !!c)} />
+                  <Label htmlFor="valetPark">Valet</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="covered" checked={formData.covered} onCheckedChange={(c) => handleInputChange("covered", !!c)} />
+                  <Label htmlFor="covered">Covered</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="open24Hours" checked={formData.open24Hours} onCheckedChange={(c) => handleInputChange("open24Hours", !!c)} />
+                  <Label htmlFor="open24Hours">Open 24/7</Label>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Shuttle Service</Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="shuttle" checked={formData.shuttle} onCheckedChange={(c) => handleInputChange("shuttle", !!c)} />
+                  <Label htmlFor="shuttle">Available</Label>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Amenities</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {amenityOptions.map((amenity) => (
+                  <div
+                    key={amenity.id}
+                    className={cn(
+                      "flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors cursor-pointer",
+                      formData.amenities.includes(amenity.id)
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "hover:bg-muted"
+                    )}
+                    onClick={() => {
+                      const newAmenities = formData.amenities.includes(amenity.id)
+                        ? formData.amenities.filter(a => a !== amenity.id)
+                        : [...formData.amenities, amenity.id];
+                      handleInputChange("amenities", newAmenities);
+                    }}
+                  >
+                    <amenity.icon className="h-4 w-4" />
+                    {amenity.label}
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          </CardContent>
+        </Card>
+
+        <MediaManagementCard
+          locationId={locationId}
+          images={formData.images}
+          onImagesChange={(newImages) => handleInputChange("images", newImages)}
+          autoSave={false}
+        />
+      </div>
     </div>
   );
 }

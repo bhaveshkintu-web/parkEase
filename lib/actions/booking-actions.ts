@@ -906,7 +906,12 @@ export async function rejectBooking(bookingId: string, reason: string) {
     const result = await prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({
         where: { id: bookingId },
-        include: { location: true }
+        include: { 
+          location: true,
+          payments: {
+            where: { status: "SUCCESS" }
+          }
+        }
       });
 
       if (!booking) throw new Error("Booking not found");
@@ -929,8 +934,54 @@ export async function rejectBooking(bookingId: string, reason: string) {
         });
       }
 
+      // 3. Automated Refund Logic
+      const successfulPayment = booking.payments[0]; // Get the first successful payment
+      if (successfulPayment) {
+        const refundAmount = successfulPayment.amount;
+
+        // a. Create Refund Request for Admin
+        await tx.refundRequest.create({
+          data: {
+            bookingId,
+            amount: refundAmount,
+            reason: "Owner rejected paid booking",
+            description: `Auto-generated refund request because owner rejected a paid booking. \nRejection Reason: ${reason}. \nOriginal Price: ${booking.totalPrice}`,
+            status: "PENDING",
+            approvedAmount: refundAmount,
+          },
+        });
+
+        // The wallet deduction is handled by FinanceService.processRefundDeduction 
+        // which is called from the admin's refund approval API route.
+      }
+
       return updatedBooking;
     });
+
+    // --- Out of Transaction Side Effects ---
+    
+    // 1. Notify Admins if it's a refund case
+    const bookingWithPayments = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { payments: { where: { status: "SUCCESS" } } }
+    });
+
+    if (bookingWithPayments?.payments.length && bookingWithPayments.payments.length > 0) {
+      const { NotificationService, NotificationType } = await import("@/lib/notifications");
+      
+      await NotificationService.notifyAdmins({
+        title: "New Refund Ticket: Owner Rejection",
+        message: `A booking rejection triggered an auto-refund request for ${bookingWithPayments.confirmationCode}`,
+        type: NotificationType.REFUND_REQUESTED as any,
+        metadata: { bookingId: bookingId }
+      }).catch(err => console.error("Failed to notify admins of auto-refund:", err));
+
+      // 2. Notify Customer (Rejection + Refund Initiation)
+      const { notifyCustomerOfRejection } = await import("@/lib/notifications");
+      notifyCustomerOfRejection(bookingId).catch(err => 
+        console.error("Failed to notify customer of rejection:", err)
+      );
+    }
 
     revalidatePath("/owner/bookings");
     revalidatePath("/account/reservations");
