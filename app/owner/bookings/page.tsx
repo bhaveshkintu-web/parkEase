@@ -62,6 +62,7 @@ import {
   Loader2,
   FileText,
   RotateCw,
+  Pencil,
 } from "lucide-react";
 import type { Reservation, AdminReview, Booking } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
@@ -71,6 +72,14 @@ import { useToast } from "@/hooks/use-toast";
 import type { WatchmanBookingRequest } from "@/lib/types";
 import { approveBooking, rejectBooking } from "@/lib/actions/booking-actions";
 import { PaginationFooter } from "@/components/ui/pagination-footer";
+import { checkSpotAvailability, updateAllocatedSpot } from "@/lib/actions/spot-actions";
+
+type AvailabilityResult = {
+  isAvailable: boolean;
+  message: string;
+  availableCount: number;
+  availableSpots?: any[];
+};
 
 export default function OwnerBookingsPage() {
   const { user } = useAuth();
@@ -100,6 +109,10 @@ export default function OwnerBookingsPage() {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [requestsPage, setRequestsPage] = useState(1);
   const [reviewsPage, setReviewsPage] = useState(1);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedSpot, setSelectedSpot] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
+
   const { toast } = useToast();
 
   // Fetch booking requests
@@ -433,6 +446,52 @@ export default function OwnerBookingsPage() {
     }
   };
 
+  const handleEditClick = async () => {
+    if (!selectedBooking?.location?.id) {
+      console.error("Location ID missing");
+      return;
+    }
+    setIsEditOpen(true);
+    const result = await checkSpotAvailability(
+      selectedBooking.location.id,
+      new Date(selectedBooking.checkIn),
+      new Date(selectedBooking.checkOut)
+    );
+    setAvailability(result);
+  };
+  
+  const handleUpdateEditSpot = async () => {
+    if (!selectedBooking?.id || !selectedSpot) return;
+    const res = await updateAllocatedSpot(
+      selectedBooking.id,
+      selectedSpot
+    );
+    if (!res.success) {
+      console.error(res.error);
+      toast({
+        title: "Error",
+        description: "Error while updating spot.",
+        variant: "destructive"
+      })
+      return;
+    }
+    console.log("Update response:", res);
+    if(!res.data) return;
+    setSelectedBooking((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        spotId: res.data.spotId ?? undefined,
+        spotIdentifier: res.data.spotIdentifier ?? undefined,
+      };
+    });
+    toast({
+      title: "Spot Updated",
+      description: "Allocated Spot updated successfully",
+    });
+    setIsEditOpen(false);
+    window.location.reload()
+  };
   return (
     <Suspense fallback={<Loading />}> {/* Wrap the main content in Suspense */}
       <div className="max-w-7xl mx-auto space-y-6">
@@ -1142,7 +1201,16 @@ export default function OwnerBookingsPage() {
                           <p className="font-black text-foreground">{selectedBooking.location?.name}</p>
                         </div>
                         <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                          <p className="text-[9px] text-blue-600/70 uppercase font-black mb-1">Allocated Spot</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[9px] text-blue-600/70 uppercase font-black">Allocated Spot</p>
+                            {
+                              selectedBooking.status === "pending" || selectedBooking.status === "confirmed" ? 
+                              <Pencil
+                                className="h-3.5 w-3.5 cursor-pointer text-gray-600 hover:text-black"
+                                onClick={handleEditClick}
+                              /> : ''
+                            }
+                          </div>
                           <div className="flex items-center gap-2">
                             <Car className="w-4 h-4 text-blue-600" />
                             <p className="font-black text-foreground">
@@ -1181,6 +1249,45 @@ export default function OwnerBookingsPage() {
                           </div>
                         </div>
                       </div>
+                      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} modal={false}>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Select Parking Spot</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              Choose an available spot
+                            </p>
+                            <Select onValueChange={(val) => {console.log(val,"selected value"); setSelectedSpot(val)}}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a spot" />
+                              </SelectTrigger>
+
+                              <SelectContent position="popper">
+                                {availability?.availableSpots?.map((spot) => (
+                                  <SelectItem key={spot.id} value={spot.id}>
+                                    {spot.identifier}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsEditOpen(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              disabled={!selectedSpot}
+                              onClick={handleUpdateEditSpot}
+                            >
+                              Save
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
                     {/* Payment Summary */}
