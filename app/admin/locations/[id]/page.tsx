@@ -76,6 +76,7 @@ const amenityOptions = [
 ];
 
 interface FormData {
+  ownerId: string;
   name: string;
   address: string;
   city: string;
@@ -108,6 +109,7 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
+  ownerId: "",
   name: "",
   address: "",
   city: "",
@@ -181,6 +183,9 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
 
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [owners, setOwners] = useState<any[]>([]);
+  const [isOwnersLoading, setIsOwnersLoading] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -206,6 +211,24 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
   }, []);
 
   useEffect(() => {
+    const fetchOwners = async () => {
+      setIsOwnersLoading(true);
+      try {
+        const response = await fetch("/api/admin/owners");
+        if (response.ok) {
+          const data = await response.json();
+          setOwners(data.owners || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch owners:", error);
+      } finally {
+        setIsOwnersLoading(false);
+      }
+    };
+    fetchOwners();
+  }, []);
+
+  useEffect(() => {
     const fetchLocation = async () => {
       if (!locationId) return;
       setIsLoading(true);
@@ -217,6 +240,7 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
         const loadedSpots = (data as any).spots || [];
 
         setFormData({
+          ownerId: data.ownerId || "",
           name: data.name,
           address: data.address,
           city: data.city,
@@ -362,6 +386,7 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
 
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.name.trim()) newErrors.name = "Location name is required";
+    if (!formData.ownerId) newErrors.ownerId = "Owner is required";
     if (!formData.pricePerDay || parseFloat(formData.pricePerDay) <= 0) newErrors.pricePerDay = "Valid price is required";
     if (!formData.totalSpots || parseInt(formData.totalSpots) <= 0) newErrors.totalSpots = "Valid spot count is required";
 
@@ -398,6 +423,7 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
         cancellationPolicy: formData.cancellationPolicy as any,
         cancellationDeadline: formData.cancellationDeadline,
         spotIdentifiers: formData.spotIdentifiers,
+        ownerId: formData.ownerId || undefined,
       };
 
       const result = await updateParkingLocation(locationId, locationData);
@@ -526,6 +552,62 @@ export default function AdminEditLocationPage({ params }: { params: Promise<{ id
             <CardTitle>Basic Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>Owner Company Name *</Label>
+              <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                  >
+                    {formData.ownerId
+                      ? owners.find((o) => o.id === formData.ownerId)?.businessName || "Select owner..."
+                      : "Search owner..."}
+                    {isOwnersLoading ? (
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin opacity-50" />
+                    ) : (
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search owners..." />
+                    <CommandList>
+                      <CommandEmpty>No owner found.</CommandEmpty>
+                      <CommandGroup>
+                        {owners.map((owner) => (
+                          <CommandItem
+                            key={owner.id}
+                            value={`${owner.businessName} ${owner.user?.email} ${owner.user?.firstName} ${owner.user?.lastName}`}
+                            onSelect={() => {
+                              handleInputChange("ownerId", owner.id);
+                              setOwnerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.ownerId === owner.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{owner.businessName}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {owner.user?.firstName} {owner.user?.lastName} ({owner.user?.email})
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {errors.ownerId && <p className="text-sm text-destructive">{errors.ownerId}</p>}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Location Name *</Label>
               <Input

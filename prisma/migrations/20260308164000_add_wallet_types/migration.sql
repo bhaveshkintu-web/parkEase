@@ -27,3 +27,6 @@ CREATE INDEX "Wallet_type_idx" ON "Wallet"("type");
 
 -- AlterTable
 ALTER TABLE "PaymentMethod" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;
+
+-- add enum value
+ALTER TYPE "NotificationType" ADD VALUE 'BOOKING_REJECTED';

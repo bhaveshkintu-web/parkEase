@@ -105,6 +105,7 @@ export const ownerProfileSchema = z.object({
 
 // Owner location creation validations
 export const ownerLocationSchema = z.object({
+  ownerId: z.string().optional(),
   name: z.string().min(1, "Name is required").max(100),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
