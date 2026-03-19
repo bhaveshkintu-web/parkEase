@@ -911,10 +911,10 @@ export async function sendSessionExpiryWarning(bookingId: string) {
       });
     }
 
-    console.log(`[Email Tracking] ✅ Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error("[Email Tracking] ❌ Failed to send session expiry warning for booking:", bookingId, error);
+    console.error("[Email Tracking] Failed to send session expiry warning for booking:", bookingId, error);
     return { success: false, error: "Failed to send email" };
   }
 }
@@ -986,10 +986,10 @@ export async function sendOverstayPaymentEmail(bookingId: string, overstayCharge
       `,
     });
 
-    console.log(`[Email Tracking] ✅ Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error(`[Email Tracking] ❌ Failed to send overstay payment email for booking: ${bookingId}`, error);
+    console.error(`[Email Tracking] Failed to send overstay payment email for booking: ${bookingId}`, error);
     return { success: false, error: "Failed to send email" };
   }
 }
