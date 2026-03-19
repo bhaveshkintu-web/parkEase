@@ -370,7 +370,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
                         {showPaymentForm && clientSecret && (useNewCard || savedMethods.length === 0) ? (
                             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                {!isStripeActive() ? (
+                                {!isStripeActive() || clientSecret.startsWith("mock_") ? (
                                     <MockCardForm
                                         onSuccess={handleExtensionSuccess}
                                         amount={enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0}

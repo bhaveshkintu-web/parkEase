@@ -76,6 +76,54 @@ export async function POST(req: Request) {
                const { FinanceService } = await import("@/lib/finance-service");
                await FinanceService.creditEarnings(checkoutCheck.id);
             }
+
+            // 4. Save Payment Method for future use if it was a setup charge
+            // This ensures "Primary Card" is stored correctly in our DB
+            if (paymentIntent.customer && paymentIntent.payment_method && paymentIntent.setup_future_usage) {
+               try {
+                 const { getPaymentMethod } = await import("@/lib/stripe");
+                 const pmDetails = await getPaymentMethod(paymentIntent.payment_method);
+                 
+                 if (pmDetails.success) {
+                    const user = await prisma.user.findFirst({
+                      where: { stripeCustomerId: paymentIntent.customer }
+                    });
+
+                    if (user) {
+                      // Check if PM already exists
+                      const existingPM = await prisma.paymentMethod.findFirst({
+                        where: { 
+                          userId: user.id,
+                          stripeMethodId: paymentIntent.payment_method
+                        }
+                      });
+
+                      if (!existingPM) {
+                        // Check if user has any existing cards to decide if this should be default
+                        const pmCount = await prisma.paymentMethod.count({
+                          where: { userId: user.id }
+                        });
+
+                        await (prisma.paymentMethod as any).create({
+                          data: {
+                            userId: user.id,
+                            stripeMethodId: paymentIntent.payment_method,
+                            brand: pmDetails.brand,
+                            last4: pmDetails.last4,
+                            expiryMonth: pmDetails.expMonth,
+                            expiryYear: pmDetails.expYear,
+                            isDefault: pmCount === 0,
+                            cardholderName: "Saved Card"
+                          }
+                        });
+                        console.log(`[Webhook] ✅ Automatically saved card ${pmDetails.last4} for user ${user.id}`);
+                      }
+                    }
+                 }
+               } catch (pmError) {
+                 console.error("[Webhook PM Sync Error]", pmError);
+               }
+            }
           } else {
             console.warn(`[Webhook Warning] No booking found for PaymentIntent ${paymentIntent.id}`);
           }

@@ -61,13 +61,10 @@ import {
 } from "lucide-react";
 
 import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
-
 import { isStripeConfigured } from "@/lib/stripe";
-const isStripeActive = isStripeConfigured();
-
-// Using reusable MockCardForm instead of local implementation
 
 function CheckoutContent() {
+  const isStripeActive = isStripeConfigured();
   const router = useRouter();
   const { toast } = useToast();
   const {
@@ -878,6 +875,15 @@ function CheckoutContent() {
                       {(useNewCard || !isAuthenticated || savedCards.length === 0) && (
                         <div className="pt-2 animate-in fade-in slide-in-from-top-2">
                           {!isStripeActive && useNewCard ? (
+                            <MockCardForm
+                              onSuccess={(pi) => handlePaymentSuccess(pi)}
+                              amount={finalPrice}
+                              isSubmitting={isSubmitting}
+                              setIsSubmitting={setIsSubmitting}
+                              agreedToTerms={agreedToTerms}
+                              setAgreedToTerms={setAgreedToTerms}
+                            />
+                          ) : clientSecret && clientSecret.startsWith("mock_") ? (
                             <MockCardForm
                               onSuccess={(pi) => handlePaymentSuccess(pi)}
                               amount={finalPrice}

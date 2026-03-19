@@ -130,6 +130,19 @@ export function StripePaymentForm({
       {/* Security & Button Section */}
       <div className="space-y-4 pt-2">
         {/* Terms Checkbox - Shared placement */}
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <Checkbox
+            id="save-card"
+            defaultChecked={true}
+          />
+          <Label htmlFor="save-card" className="flex-1 block text-sm font-bold text-primary leading-relaxed cursor-pointer">
+            <span>
+              Save this card for future bookings
+              <span className="block text-[10px] font-normal opacity-70">Your card details are stored securely with Stripe.</span>
+            </span>
+          </Label>
+        </div>
+
         <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
           <Checkbox
             id="terms"

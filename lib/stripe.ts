@@ -27,15 +27,26 @@ export function getStripe() {
 // Deprecated: use getStripe() instead
 export const stripe = null;
 
+/**
+ * Checks if Stripe is configured for the current environment.
+ * On the Client: Only requires NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+ * On the Server: Requires both SECRET and PUBLISHABLE keys.
+ */
 export function isStripeConfigured() {
-  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
-
-  const hasSecret = !!(secretKey && !secretKey.toLowerCase().includes("your_secret_key"));
-  const hasPublishable = !!(publishableKey &&
-    !publishableKey.toLowerCase().includes("your_publishable_key") &&
-    publishableKey.startsWith("pk_") &&
+  const hasPublishable = !!(publishableKey && 
+    !publishableKey.toLowerCase().includes("your_publishable_key") && 
+    publishableKey.startsWith("pk_") && 
     publishableKey.length > 20);
+
+  // If we are in the browser, we only care about the publishable key
+  if (typeof window !== "undefined") {
+    return hasPublishable;
+  }
+
+  // If we are on the server, we also need the secret key
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  const hasSecret = !!(secretKey && !secretKey.toLowerCase().includes("your_secret_key"));
 
   return hasSecret && hasPublishable;
 }
@@ -97,7 +108,7 @@ export async function createPaymentIntent(
       }
     }
 
-    const paymentIntent = await stripeClient.paymentIntents.create({
+    const paymentIntentConfig: Stripe.PaymentIntentCreateParams = {
       amount: Math.round(amount), // Stripe expects amount in cents
       currency: "usd",
       customer: customerId,
@@ -106,9 +117,16 @@ export async function createPaymentIntent(
       },
       metadata: {
         ...metadata,
-        integration_type: "production_v1",
+        integration_type: "production_v2",
       },
-    });
+    };
+
+    // If we have a customer, we can set up the card for future use
+    if (customerId) {
+       paymentIntentConfig.setup_future_usage = "off_session";
+    }
+
+    const paymentIntent = await stripeClient.paymentIntents.create(paymentIntentConfig);
 
     console.log(`[Stripe Service] ✅ PaymentIntent created: ${paymentIntent.id}`);
     return {
