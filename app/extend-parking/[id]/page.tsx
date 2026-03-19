@@ -9,8 +9,12 @@ import { getBookingDetails } from "@/lib/actions/booking-actions";
 import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { extendBookingAction, checkExtensionOverlapAction } from "@/lib/actions/extension-actions";
 import { formatCurrency, formatTime, formatDate } from "@/lib/data";
-import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking, CreditCard } from "lucide-react";
+import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking, CreditCard, PlusCircle, Lock, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { MockCardForm } from "@/components/mock-card-form";
@@ -313,12 +317,16 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                     })()}
 
                     <div className="space-y-3">
-                        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Details</label>
-
                         {/* Saved Cards Selection */}
                         {savedMethods.length > 0 && (
-                            <div className="space-y-3 mb-4">
-                                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Your Saved Cards</label>
+                            <div className="space-y-4 mb-8">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="w-3.5 h-3.5" /> 
+                                        <span>Your Saved Cards</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 tracking-widest">SECURE</span>
+                                </label>
                                 <div className="grid gap-3">
                                     {savedMethods.map((card) => (
                                         <div
@@ -328,23 +336,33 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                                 setUseNewCard(false);
                                                 setShowPaymentForm(false);
                                             }}
-                                            className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                                selectedCardId === card.id && !useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
-                                            }`}
+                                            className={cn(
+                                                "flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300",
+                                                selectedCardId === card.id && !useNewCard 
+                                                    ? "border-primary bg-primary/[0.03] shadow-md shadow-primary/5 scale-[1.01]" 
+                                                    : "border-border/50 bg-card hover:border-primary/20 hover:bg-slate-50/50"
+                                            )}
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-8 rounded flex items-center justify-center text-[10px] font-black text-white uppercase ${
+                                            <div className="flex items-center gap-5">
+                                                <div className={cn(
+                                                    "w-14 h-9 rounded-lg flex items-center justify-center text-[10px] font-black text-white uppercase shadow-inner relative overflow-hidden",
                                                     card.brand === 'visa' ? "bg-[#1A1F71]" :
-                                                    card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-700"
-                                                }`}>
+                                                    card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-800"
+                                                )}>
                                                     {card.brand}
+                                                    <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-sm">•••• {card.last4}</p>
-                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase">Expires {String(card.expiryMonth).padStart(2, '0')}/{card.expiryYear}</p>
+                                                    <p className="font-black text-slate-800 text-sm tracking-tight capitalize">•••• {card.last4}</p>
+                                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Expires {String(card.expiryMonth).padStart(2, '0')}/{card.expiryYear}</p>
                                                 </div>
                                             </div>
-                                            {selectedCardId === card.id && !useNewCard && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                                            <div className={cn(
+                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                selectedCardId === card.id && !useNewCard ? "border-primary bg-primary" : "border-border"
+                                            )}>
+                                                {selectedCardId === card.id && !useNewCard && <Check className="w-4 h-4 text-white" />}
+                                            </div>
                                         </div>
                                     ))}
                                     <div
@@ -352,17 +370,26 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                             setUseNewCard(true);
                                             setSelectedCardId(null);
                                         }}
-                                        className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                            useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
-                                        }`}
+                                        className={cn(
+                                            "flex items-center gap-5 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300",
+                                            useNewCard 
+                                                ? "border-primary bg-primary/[0.03] scale-[1.01]" 
+                                                : "border-border/60 bg-slate-50/20 hover:border-primary/40 hover:bg-slate-50/50"
+                                        )}
                                     >
-                                        <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
-                                            <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                        <div className="w-14 h-9 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
+                                            <PlusCircle className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
                                         </div>
                                         <div className="flex-1">
-                                            <p className="font-bold text-sm">Use a new card / another payment method</p>
+                                            <p className="font-black text-slate-800 text-sm tracking-tight">Use a new card / another method</p>
+                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Select your preferred payment option below</p>
                                         </div>
-                                        {useNewCard && <CheckCircle2 className="ml-auto w-5 h-5 text-primary" />}
+                                        <div className={cn(
+                                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                            useNewCard ? "border-primary bg-primary" : "border-border"
+                                        )}>
+                                            {useNewCard && <Check className="w-4 h-4 text-white" />}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -395,16 +422,63 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                 )}
                             </div>
                         ) : (
-                            <Button
-                                className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20"
-                                onClick={handlePaymentIntentCreated}
-                                disabled={isProcessing || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
-                            >
-                                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                                {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes
-                                    ? "Time Slot Unavailable"
-                                    : "Pay & Extend Session"}
-                            </Button>
+                            <div className="space-y-4">
+                                {selectedCardId && !useNewCard && (
+                                    <div className={cn(
+                                        "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+                                        agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+                                    )}>
+                                        <div className="pt-0.5">
+                                            <Checkbox
+                                                id="terms-saved"
+                                                checked={agreedToTerms}
+                                                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                                                className="w-5 h-5 rounded-md"
+                                            />
+                                        </div>
+                                        <Label htmlFor="terms-saved" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                                            <span>
+                                                I agree to the{" "}
+                                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
+                                                    Terms
+                                                </Link>{" "}
+                                                and{" "}
+                                                <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                                                    Cancellation Policy
+                                                </Link>
+                                                . I understand my booking is subject to availability.
+                                            </span>
+                                        </Label>
+                                    </div>
+                                )}
+
+                                <Button
+                                    className={cn(
+                                        "w-full h-16 text-xl font-black uppercase tracking-[0.2em] shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-2xl group",
+                                        (agreedToTerms || (!selectedCardId || useNewCard))
+                                            ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
+                                            : "opacity-40 grayscale"
+                                    )}
+                                    onClick={handlePaymentIntentCreated}
+                                    disabled={isProcessing || (selectedCardId && !useNewCard && !agreedToTerms) || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
+                                >
+                                    {isProcessing ? (
+                                        <div className="flex items-center gap-4">
+                                            <Loader2 className="h-6 w-6 animate-spin" />
+                                            <span className="animate-pulse">Processing...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center w-full relative">
+                                            <span className="drop-shadow-sm truncate px-8 leading-none">
+                                                {overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes
+                                                    ? "Time Slot Unavailable"
+                                                    : `Pay ${formatCurrency(enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0)} & Extend`}
+                                            </span>
+                                            <Lock className="absolute right-4 h-6 w-6 opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all scale-90 group-hover:scale-100" />
+                                        </div>
+                                    )}
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>

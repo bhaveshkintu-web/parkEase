@@ -94,7 +94,7 @@ export function StripePaymentForm({
         </div>
       </div>
 
-      <div className="space-y-4">
+        <div className="space-y-4">
         {!stripe || !elements ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -103,7 +103,24 @@ export function StripePaymentForm({
         ) : (
           <div className={cn("transition-all duration-500", !isReady && "opacity-0 h-0 overflow-hidden")}>
             <PaymentElement
-              options={{ layout: "tabs" }}
+              options={{ 
+                layout: "tabs",
+                wallets: {
+                  applePay: "never",
+                  googlePay: "never",
+                  link: "never"
+                },
+                terms: {
+                  card: "never"
+                },
+                fields: {
+                  billingDetails: {
+                    address: {
+                      country: 'never'
+                    }
+                  }
+                }
+              }}
               onReady={() => setIsReady(true)}
               onChange={(e) => {
                 if (e.complete) setError(null);
@@ -129,19 +146,6 @@ export function StripePaymentForm({
 
       {/* Security & Button Section */}
       <div className="space-y-4 pt-2">
-        {/* Terms Checkbox - Shared placement */}
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-          <Checkbox
-            id="save-card"
-            defaultChecked={true}
-          />
-          <Label htmlFor="save-card" className="flex-1 block text-sm font-bold text-primary leading-relaxed cursor-pointer">
-            <span>
-              Save this card for future bookings
-              <span className="block text-[10px] font-normal opacity-70">Your card details are stored securely with Stripe.</span>
-            </span>
-          </Label>
-        </div>
 
         <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
           <Checkbox

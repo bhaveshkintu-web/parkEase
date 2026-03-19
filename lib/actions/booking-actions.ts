@@ -660,6 +660,7 @@ export async function updateBookingDates(
         checkOut,
         spotId: finalSpotId,
         spotIdentifier: finalSpotIdentifier,
+        status: BookingStatus.CONFIRMED,
       };
 
       if (pricingData) {
@@ -697,7 +698,7 @@ export async function updateBookingDates(
               currency: "USD",
               provider: "STRIPE",
               transactionId: transactionId,
-              status: isMockPayment ? "SUCCESS" : "PENDING", 
+              status: (isMockPayment || (pricingData.transactionId && pricingData.transactionId.startsWith('pi_'))) ? "SUCCESS" : "PENDING", 
               paymentMethodId: pricingData.paymentMethodId || null,
             }
           });

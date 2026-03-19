@@ -64,7 +64,8 @@ export function StripeElementsWrapper({ children, clientSecret }: StripeElements
               marginBottom: '8px',
             }
           }
-        }
+        },
+        loader: 'auto',
       }}
     >
       {children}
