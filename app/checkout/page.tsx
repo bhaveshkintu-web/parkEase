@@ -8,11 +8,12 @@ import { Navbar } from "@/components/navbar";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { MockCardForm } from "@/components/mock-card-form";
 import { useBooking } from "@/lib/booking-context";
+import { AuthProvider } from "@/lib/auth-context";
 import { formatCurrency, formatDate, formatTime, calculateQuote, CAR_MAKES } from "@/lib/data";
 import { createBooking } from "@/lib/actions/booking-actions";
 import { fetchModelsByMake } from "@/lib/vehicle-api";
 import { useToast } from "@/hooks/use-toast";
-import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { validateLuhn, formatCardNumber, detectCardBrand, validateExpiry } from "@/lib/card-utils";
@@ -136,6 +137,13 @@ function CheckoutContent() {
   const [isFetchingModels, setIsFetchingModels] = useState(false);
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [stripe, setStripe] = useState<any>(null);
+
+  useEffect(() => {
+    if (isStripeActive) {
+      loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!).then(setStripe);
+    }
+  }, []);
 
   const isGuestInfoComplete = firstName && lastName && email && phone;
   const isVehicleInfoComplete = make && model && licensePlate;
@@ -389,6 +397,7 @@ function CheckoutContent() {
         taxes: quote!.taxes,
         fees: quote!.fees,
         paymentIntentId: paymentId,
+        confirmed: true,
         promoCode: promoApplied ? appliedPromotion?.code : undefined,
       };
 
@@ -418,6 +427,38 @@ function CheckoutContent() {
     setIsSubmitting(true);
 
     try {
+      // 1. Charge the saved card directly via our secure server action
+      const chargeResult = await chargeSavedCardAction({
+        amount: finalPrice,
+        paymentMethodId: selectedCardId,
+        locationId: bookingLocation.id,
+        locationName: bookingLocation.name,
+        checkIn: new Date(checkIn).toISOString(),
+        checkOut: new Date(checkOut).toISOString(),
+      });
+
+      if (!chargeResult.success) {
+        // Handle 3D Secure (SCA) challenge
+        if (chargeResult.requiresAction && chargeResult.clientSecret && stripe) {
+          const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(chargeResult.clientSecret);
+          
+          if (confirmError) {
+            throw new Error(confirmError.message || "Authentication failed");
+          }
+          
+          if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing') {
+             throw new Error("Payment failed or was cancelled");
+          }
+          
+          // Use the intent from the confirmation
+          chargeResult.paymentIntentId = paymentIntent.id;
+        } else {
+          throw new Error(chargeResult.error);
+        }
+      }
+
+      // 2. If charge succeeds, then record the booking
+      // We pass the real Stripe paymentIntentId from the charge action back to createBooking
       const bookingData = {
         locationId: bookingLocation.id,
         checkIn: new Date(checkIn),
@@ -434,6 +475,8 @@ function CheckoutContent() {
         taxes: quote!.taxes,
         fees: quote!.fees,
         paymentMethodId: selectedCardId,
+        paymentIntentId: chargeResult.paymentIntentId as string, // Real ID from Stripe
+        confirmed: chargeResult.status === 'succeeded',
         promoCode: promoApplied ? appliedPromotion?.code : undefined,
       };
 
@@ -446,7 +489,7 @@ function CheckoutContent() {
         });
         router.push(`/confirmation?code=${response.data.confirmationCode}`);
       } else {
-        throw new Error(response.error);
+        throw new Error(response.error || "Failed to finalize booking");
       }
     } catch (error: any) {
       toast({

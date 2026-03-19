@@ -11,9 +11,17 @@ import { Loader2, Clock, Calendar, MapPin, AlertTriangle, CheckCircle2, CreditCa
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MockCardForm } from "@/components/mock-card-form";
-
-
 import { useAuth } from "@/lib/auth-context";
+import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
+import { StripePaymentForm } from "@/components/stripe-payment-form";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { isStripeConfigured as isStripeActive } from "@/lib/stripe";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
+
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const isStripeConfigured = stripePublishableKey && stripePublishableKey.length > 0 && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
+const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : null;
 
 function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete: () => void }) {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -75,9 +83,59 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
         }
     };
 
-    const handleSavedCardSubmit = async () => {
-        if (!agreedToTerms || !selectedCardId) return;
-        await handlePaymentSuccess(`saved_${selectedCardId}`);
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
+
+    const handlePaymentIntentCreated = async () => {
+        if (!agreedToTerms) {
+            toast({ title: "Agreement Required", description: "You must agree to the terms to proceed.", variant: "destructive" });
+            return;
+        }
+
+        // 1. Saved Card Flow
+        if (selectedCardId && !useNewCard) {
+            setIsProcessing(true);
+            try {
+                const chargeResult = await chargeSavedCardAction({
+                    amount: overstayCharge,
+                    paymentMethodId: selectedCardId,
+                    locationId: booking.locationId,
+                    bookingId: booking.id,
+                    locationName: booking.location.name,
+                });
+
+                if (!chargeResult.success) throw new Error(chargeResult.error);
+
+                await handlePaymentSuccess(chargeResult.paymentIntentId as string);
+            } catch (err: any) {
+                toast({ title: "Payment Error", description: err.message || "Failed to charge saved card", variant: "destructive" });
+            } finally {
+                setIsProcessing(false);
+            }
+            return;
+        }
+
+        // 2. New Card Flow (Create Intent)
+        setIsProcessing(true);
+        try {
+            const result = await createPaymentIntentAction({
+                amount: overstayCharge,
+                locationId: booking.locationId,
+                locationName: booking.location.name,
+                guestEmail: booking.guestEmail,
+            });
+
+            if (!result.success) throw new Error(result.error);
+
+            if (result.clientSecret) {
+                setClientSecret(result.clientSecret);
+                setShowPaymentForm(true);
+            }
+        } catch (err: any) {
+            toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -91,7 +149,7 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
 
             <div className="space-y-6">
                 {/* Saved Cards Section */}
-                {isAuthenticated && savedCards.length > 0 && (
+                {isAuthenticated && savedCards.length > 0 && !showPaymentForm && (
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Your Saved Cards</label>
                         <div className="grid gap-3">
@@ -143,17 +201,32 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                     </div>
                 )}
 
-                {useNewCard ? (
+                {showPaymentForm && clientSecret && useNewCard ? (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-500">
-                        <MockCardForm
-                            onSuccess={handlePaymentSuccess}
-                            amount={overstayCharge}
-                            isSubmitting={isProcessing}
-                            setIsSubmitting={setIsProcessing}
-                            agreedToTerms={agreedToTerms}
-                            setAgreedToTerms={setAgreedToTerms}
-                            showWallet={true}
-                        />
+                        {!isStripeActive() ? (
+                            <MockCardForm
+                                onSuccess={handlePaymentSuccess}
+                                amount={overstayCharge}
+                                isSubmitting={isProcessing}
+                                setIsSubmitting={setIsProcessing}
+                                agreedToTerms={agreedToTerms}
+                                setAgreedToTerms={setAgreedToTerms}
+                                showWallet={true}
+                            />
+                        ) : (
+                                <StripeElementsWrapper clientSecret={clientSecret}>
+                                    <StripePaymentForm
+                                        clientSecret={clientSecret}
+                                        amount={overstayCharge}
+                                        onPaymentSuccess={handlePaymentSuccess}
+                                        onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
+                                        isSubmitting={isProcessing}
+                                        setIsSubmitting={setIsProcessing}
+                                        agreedToTerms={agreedToTerms}
+                                        setAgreedToTerms={setAgreedToTerms}
+                                    />
+                                </StripeElementsWrapper>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-6">
@@ -172,7 +245,7 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
 
                         <Button
                             className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-black hover:bg-zinc-900 rounded-2xl transition-all active:scale-[0.98]"
-                            onClick={handleSavedCardSubmit}
+                            onClick={handlePaymentIntentCreated}
                             disabled={isProcessing || !agreedToTerms}
                         >
                             {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}

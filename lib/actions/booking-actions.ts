@@ -241,6 +241,9 @@ export async function createBooking(data: any) {
       const confirmationCode = generateConfirmationCode();
 
       // f. Create Booking
+      const isMockPayment = !!data.isMock || (data.paymentIntentId?.startsWith("pi_mock_"));
+      const isConfirmed = !!data.confirmed || isMockPayment;
+      
       const booking = await (tx.booking as any).create({
         data: {
           userId,
@@ -259,7 +262,8 @@ export async function createBooking(data: any) {
           taxes: pricing.taxes,
           fees: pricing.fees,
           ownerEarnings: pricing.ownerEarnings,
-          status: BookingStatus.PENDING,
+          // Use explicit confirmation if provided (e.g. from server charge or stripe confirm)
+          status: isConfirmed ? BookingStatus.CONFIRMED : BookingStatus.PENDING,
           promoCode: (promotion as any) ? (promotion as any).code : null,
           promoDiscount: (pricing as any).discount,
           confirmationCode,
@@ -283,8 +287,8 @@ export async function createBooking(data: any) {
           amount: pricing.total,
           currency: "USD",
           provider: "STRIPE",
-          transactionId: data.paymentIntentId || `txn_saved_${Math.random().toString(36).substring(2, 15)}`,
-          status: "SUCCESS",
+          transactionId: data.paymentIntentId || `txn_init_${Math.random().toString(36).substring(2, 10)}`,
+          status: isConfirmed ? "SUCCESS" : "PENDING",
           paymentMethodId: paymentMethodId || null,
         }
       });
@@ -680,41 +684,31 @@ export async function updateBookingDates(
 
         // 2. CASE A: It's an extension (Price Increased)
         if (pricingData.isExtension && priceDifference > 0) {
+          const isMockPayment = !!(pricingData as any).isMock || ((pricingData as any).transactionId?.startsWith("pi_mock_"));
+          
+          const transactionId = pricingData.transactionId || (pricingData.paymentMethodId
+            ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
+            : `txn_mod_${Math.random().toString(36).substring(2, 10)}`);
+
           await tx.payment.create({
             data: {
               bookingId: booking.id,
               amount: priceDifference,
               currency: "USD",
               provider: "STRIPE",
-              transactionId: pricingData.transactionId || (pricingData.paymentMethodId
-                ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
-                : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
-              status: "SUCCESS",
+              transactionId: transactionId,
+              status: isMockPayment ? "SUCCESS" : "PENDING", 
               paymentMethodId: pricingData.paymentMethodId || null,
             }
           });
 
-          // Update Owner Wallet for extra earnings
-          // @ts-ignore - Prisma type inclusion issue in IDE
-          const ownerWallet = booking.location?.owner?.wallet;
-          const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
-
-          if (ownerWallet && extraEarnings > 0) {
-            await tx.wallet.update({
-              where: { id: ownerWallet.id },
-              data: { balance: { increment: extraEarnings } }
-            });
-
-            await tx.walletTransaction.create({
-              data: {
-                walletId: ownerWallet.id,
-                type: "CREDIT",
-                amount: extraEarnings,
-                description: `Extra earnings for modified booking ${booking.confirmationCode}`,
-                status: "SUCCESS",
-                reference: booking.id,
-              }
-            });
+          // Record as "Held" in totalBalance. Released only on check-out + payment success.
+          const { FinanceService } = await import("@/lib/finance-service");
+          await FinanceService.recordExtraEarnings(booking.id, priceDifference, 'EXTENSION', tx);
+          
+          // If mock, release immediately if booking is already COMPLETED (rare for extension but possible)
+          if (isMockPayment && booking.status === "COMPLETED") {
+             await FinanceService.creditEarnings(booking.id, tx);
           }
         }
         // 2. CASE B: It's a reduction (Price Decreased)

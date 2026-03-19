@@ -195,8 +195,10 @@ export function MockCardForm({
 
     setIsSubmitting(true);
     setTimeout(() => {
-      const mockId = "pi_mock_" + Math.random().toString(36).substring(7);
-      if (activeTab === "card") {
+      const isCard = activeTab === "card";
+      const mockId = (isCard ? "pm_mock_" : "pi_mock_") + Math.random().toString(36).substring(7);
+      
+      if (isCard) {
         onSuccess(mockId, {
           brand: cardBrand || "visa",
           last4: cardNumber.replace(/\s/g, "").slice(-4) || "4242",

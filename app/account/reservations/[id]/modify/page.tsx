@@ -20,7 +20,7 @@ import { isStripeConfigured } from "@/lib/stripe";
 import { MockCardForm } from "@/components/mock-card-form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
-import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { Plus } from "lucide-react";
 
 const isStripeActive = isStripeConfigured();
@@ -329,14 +329,32 @@ export default function ModifyReservationPage({
       return;
     }
 
+    if (!selectedMethodId || selectedMethodId === "new_card") {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select a valid saved card.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsPaymentSubmitting(true);
     try {
-      // For saved cards, we directly call updateBookingDates with the method ID
-      // The server will handle charging the saved card if it's integrated with Stripe
-      // For now, we simulate success or use the provided action logic
+      // 1. Charge the saved card via server action directly
+      const chargeResult = await chargeSavedCardAction({
+        amount: quote.totalPrice - reservation.totalPrice, // Charge the difference
+        paymentMethodId: selectedMethodId,
+        locationId: reservation.locationId,
+        bookingId: id,
+        checkIn: new Date(formData.checkIn).toISOString(),
+        checkOut: new Date(formData.checkOut).toISOString(),
+      });
 
-      const isMockPayment = selectedMethodId === "new_card" && !isStripeConfigured;
+      if (!chargeResult.success) {
+        throw new Error(chargeResult.error);
+      }
 
+      // 2. If charge succeeds, update the booking dates
       const dateResponse = await updateBookingDates(
         id,
         new Date(formData.checkIn),
@@ -348,8 +366,8 @@ export default function ModifyReservationPage({
           isExtension: needsPayment,
           promoCode: reservation?.promoCode || null,
           promoDiscount: quote.discount || 0,
-          paymentMethodId: isMockPayment ? undefined : selectedMethodId,
-          transactionId: isMockPayment ? `pi_mock_${Math.random().toString(36).substring(7)}` : undefined,
+          paymentMethodId: selectedMethodId,
+          transactionId: chargeResult.paymentIntentId as string, // Real ID from Stripe
         }
       );
 

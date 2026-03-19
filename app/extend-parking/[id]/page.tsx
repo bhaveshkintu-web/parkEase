@@ -6,10 +6,10 @@ import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getBookingDetails } from "@/lib/actions/booking-actions";
-import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { extendBookingAction, checkExtensionOverlapAction } from "@/lib/actions/extension-actions";
 import { formatCurrency, formatTime, formatDate } from "@/lib/data";
-import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking } from "lucide-react";
+import { Loader2, Clock, Calendar, MapPin, ChevronRight, AlertCircle, CheckCircle2, SquareParking, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
@@ -36,6 +36,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [overlapInfo, setOverlapInfo] = useState<{ hasOverlap: boolean; maxAllowedMinutes: number | null; nextBookingCheckIn?: Date } | null>(null);
+    const [savedMethods, setSavedMethods] = useState<any[]>([]);
 
     useEffect(() => {
         import("@/lib/actions/settings-actions").then(mod => {
@@ -57,6 +58,26 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                 });
             }
         });
+
+        // Fetch saved payment methods
+        const fetchMethods = async () => {
+            try {
+                const res = await fetch("/api/payment-methods");
+                if (res.ok) {
+                    const data = await res.json();
+                    setSavedMethods(data);
+                    if (data.length > 0) {
+                        const defaultCard = data.find((c: any) => c.isDefault) || data[0];
+                        setSelectedCardId(defaultCard?.id || null);
+                        setUseNewCard(false);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch saved payment methods", error);
+            }
+        };
+
+        fetchMethods();
     }, [booking.id]);
 
     const options = [
@@ -96,12 +117,40 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
         };
     });
 
+    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+    const [useNewCard, setUseNewCard] = useState(false);
+
     const handlePaymentIntentCreated = async () => {
         if (!selectedDuration) return;
 
         const option = enrichedOptions.find(o => o.minutes === selectedDuration);
         if (!option) return;
 
+        // If they chose a saved card, process immediately via server action
+        if (selectedCardId && !useNewCard) {
+             setIsProcessing(true);
+             try {
+                 const chargeResult = await chargeSavedCardAction({
+                     amount: option.price,
+                     paymentMethodId: selectedCardId,
+                     locationId: booking.locationId,
+                     bookingId: booking.id,
+                     locationName: booking.location.name,
+                 });
+
+                 if (!chargeResult.success) throw new Error(chargeResult.error);
+
+                 // Complete the extension with the actual payment intent ID
+                 await handleExtensionSuccess(chargeResult.paymentIntentId as string);
+             } catch (err: any) {
+                 toast({ title: "Payment Error", description: err.message || "Failed to charge saved card", variant: "destructive" });
+             } finally {
+                 setIsProcessing(false);
+             }
+             return;
+        }
+
+        // Otherwise build Intent for new card flow
         setIsProcessing(true);
         try {
             const result = await createPaymentIntentAction({
@@ -265,7 +314,61 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
 
                     <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Details</label>
-                        {showPaymentForm && clientSecret ? (
+
+                        {/* Saved Cards Selection */}
+                        {savedMethods.length > 0 && (
+                            <div className="space-y-3 mb-4">
+                                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Your Saved Cards</label>
+                                <div className="grid gap-3">
+                                    {savedMethods.map((card) => (
+                                        <div
+                                            key={card.id}
+                                            onClick={() => {
+                                                setSelectedCardId(card.id);
+                                                setUseNewCard(false);
+                                                setShowPaymentForm(false);
+                                            }}
+                                            className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                                selectedCardId === card.id && !useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-12 h-8 rounded flex items-center justify-center text-[10px] font-black text-white uppercase ${
+                                                    card.brand === 'visa' ? "bg-[#1A1F71]" :
+                                                    card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-700"
+                                                }`}>
+                                                    {card.brand}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm">•••• {card.last4}</p>
+                                                    <p className="text-[10px] text-muted-foreground font-medium uppercase">Expires {String(card.expiryMonth).padStart(2, '0')}/{card.expiryYear}</p>
+                                                </div>
+                                            </div>
+                                            {selectedCardId === card.id && !useNewCard && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                                        </div>
+                                    ))}
+                                    <div
+                                        onClick={() => {
+                                            setUseNewCard(true);
+                                            setSelectedCardId(null);
+                                        }}
+                                        className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                            useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                        }`}
+                                    >
+                                        <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
+                                            <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-sm">Use a new card / another payment method</p>
+                                        </div>
+                                        {useNewCard && <CheckCircle2 className="ml-auto w-5 h-5 text-primary" />}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {showPaymentForm && clientSecret && (useNewCard || savedMethods.length === 0) ? (
                             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                                 {!isStripeActive() ? (
                                     <MockCardForm
