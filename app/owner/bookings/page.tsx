@@ -1126,130 +1126,104 @@ export default function OwnerBookingsPage() {
                     <FileText className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mb-1.5">Confirmation Code</p>
-                    <p className="text-2xl font-black text-foreground tracking-tight leading-none">#{selectedBooking.confirmationCode}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mb-1.5">
+                      Confirmation Code
+                    </p>
+                    <p className="text-2xl font-black text-foreground tracking-tight leading-none">
+                      #{selectedBooking.confirmationCode}
+                    </p>
                   </div>
                 </div>
 
+                <div className="w-full max-w-4xl space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left Column: Customer & Vehicle */}
-                  <div className="space-y-8">
-                    {/* Customer Info */}
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <User className="w-3.5 h-3.5" />
-                        Customer Information
-                      </h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-12 h-12 border-2 border-background shadow-sm">
-                            <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
-                              {selectedBooking.guestInfo.firstName[0]}{selectedBooking.guestInfo.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="font-black text-foreground text-lg leading-tight">
-                              {selectedBooking.guestInfo.firstName} {selectedBooking.guestInfo.lastName}
-                            </p>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mt-1">
-                              <Mail className="w-3.5 h-3.5" />
-                              <span className="truncate">{selectedBooking.guestInfo.email}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-foreground bg-muted/40 p-2.5 rounded-lg w-fit">
-                          <Phone className="w-3.5 h-3.5 text-primary" />
-                          <span>{selectedBooking.guestInfo.phone}</span>
-                        </div>
-                      </div>
-                    </div>
+  <div className="space-y-4 h-full flex flex-col">
+    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+      <User className="w-3.5 h-3.5" />
+      Customer Information
+    </h4>
+    <div className="grid gap-4 flex-1">
 
-                    {/* Vehicle Info */}
-                    <div className="space-y-4 pt-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Car className="w-3.5 h-3.5" />
-                        Vehicle Information
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
-                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">Make/Model</p>
-                          <p className="font-bold text-sm truncate">{selectedBooking.vehicleInfo.make} {selectedBooking.vehicleInfo.model}</p>
-                        </div>
-                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-right">
-                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">Color</p>
-                          <p className="font-bold text-sm">{selectedBooking.vehicleInfo.color}</p>
-                        </div>
-                        <div className="col-span-2 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-xl p-3.5 flex flex-col items-center justify-center">
-                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">License Plate Number</p>
-                          <p className="text-2xl font-black text-primary tracking-tighter leading-none">{selectedBooking.vehicleInfo.licensePlate}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+      <div className="p-3.5 rounded-xl bg-muted/30 border border-border/50">
+        <p className="text-[9px] uppercase font-black text-muted-foreground mb-1">
+          Customer Name
+        </p>
 
-                  {/* Right Column: Parking & Payment */}
-                  <div className="space-y-8">
-                    {/* Parking Details */}
-                    <div className="space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5" />
-                        Parking Details
-                      </h4>
-                      <div className="space-y-4">
-                        <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-                          <p className="text-[9px] text-emerald-600/70 uppercase font-black mb-1">Verified Location</p>
-                          <p className="font-black text-foreground">{selectedBooking.location?.name}</p>
-                        </div>
-                        <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100/50">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-[9px] text-blue-600/70 uppercase font-black">Allocated Spot</p>
-                            {
-                              selectedBooking.status === "pending" || selectedBooking.status === "confirmed" ? 
-                              <Pencil
-                                className="h-3.5 w-3.5 cursor-pointer text-gray-600 hover:text-black"
-                                onClick={handleEditClick}
-                              /> : ''
-                            }
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Car className="w-4 h-4 text-blue-600" />
-                            <p className="font-black text-foreground">
-                              {selectedBooking.spotIdentifier || <span className="text-muted-foreground font-medium italic">Not Allocated Yet</span>}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                                <Calendar className="w-4 h-4 text-orange-500" />
-                              </div>
-                              <div>
-                                <p className="text-[9px] text-muted-foreground uppercase font-black">Check-in</p>
-                                <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkIn))}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                                  {new Date(selectedBooking.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                <Calendar className="w-4 h-4 text-blue-500" />
-                              </div>
-                              <div>
-                                <p className="text-[9px] text-muted-foreground uppercase font-black">Check-out</p>
-                                <p className="font-bold text-xs">{formatDate(new Date(selectedBooking.checkOut))}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                                  {new Date(selectedBooking.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} modal={false}>
+        <div className="flex items-center gap-3">
+          <Avatar className="w-10 h-10 border">
+            <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+              {selectedBooking.guestInfo.firstName[0]}{selectedBooking.guestInfo.lastName[0]}
+            </AvatarFallback>
+          </Avatar>
+
+          <div>
+            <p className="font-black text-foreground">
+              {selectedBooking.guestInfo.firstName} {selectedBooking.guestInfo.lastName}
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              {selectedBooking.guestInfo.email}
+            </p>
+          </div>
+      </div>
+      </div>
+
+      <div className="p-3.5 rounded-xl bg-muted/30 h-full flex flex-col justify-center self-start border border-border/50">        
+      <p className="text-[9px] uppercase font-black text-muted-foreground mb-1">
+          Phone Number
+        </p>
+
+        <div className="flex items-center gap-2">
+          <Phone className="w-4 h-4 text-primary" />
+          <p className="font-black text-foreground">
+            {selectedBooking.guestInfo.phone}
+          </p>
+        </div>
+      </div>
+      </div>
+  
+  </div>
+
+  <div className="space-y-4 h-full flex flex-col">
+    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+      <MapPin className="w-3.5 h-3.5" />
+      Parking Details
+    </h4>
+    <div className="grid gap-4 flex-1">
+      <div className="p-3.5 rounded-xl bg-muted/30 border border-border/50">
+        <p className="text-[9px] uppercase font-black text-muted-foreground mb-1">
+          Verified Location
+        </p>
+        <p className="font-black text-foreground">
+          {selectedBooking.location?.name}
+        </p>
+      </div>
+
+      <div className="p-3.5 rounded-xl bg-muted/30 h-full flex flex-col justify-center self-start border border-border/50">
+                <div className="flex justify-between mb-1">
+          <p className="text-[9px] uppercase font-black text-muted-foreground">
+            Allocated Spot
+          </p>
+
+          {(selectedBooking.status === "pending" ||
+            selectedBooking.status === "confirmed") && (
+            <Pencil
+              className="h-3.5 w-3.5 cursor-pointer"
+              onClick={handleEditClick}
+            />
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Car className="w-4 h-4 text-primary" />
+          <p className="font-black text-foreground">
+            {selectedBooking.spotIdentifier || "Not Allocated"}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} modal={false}>
                         <DialogContent className="sm:max-w-md">
                           <DialogHeader>
                             <DialogTitle>Select Parking Spot</DialogTitle>
@@ -1288,9 +1262,96 @@ export default function OwnerBookingsPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center p-3 rounded-xl bg-muted/30 border border-border/50 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-4 h-4 text-orange-500" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] uppercase font-black text-muted-foreground">
+                            Check-in
+                          </p>
+                          <p className="font-bold text-xs">
+                            {formatDate(new Date(selectedBooking.checkIn))}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(
+                              selectedBooking.checkIn
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Payment Summary */}
+                    <div className="flex items-center p-3 rounded-xl bg-muted/30 border border-border/50 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] uppercase font-black text-muted-foreground">
+                            Check-out
+                          </p>
+                          <p className="font-bold text-xs">
+                            {formatDate(new Date(selectedBooking.checkOut))}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(
+                              selectedBooking.checkOut
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full max-w-3xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* LEFT → Vehicle Info */}
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Car className="w-3.5 h-3.5" />
+                        Vehicle Information
+                      </h4>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">
+                            Make/Model
+                          </p>
+                          <p className="font-bold text-sm truncate">
+                            {selectedBooking.vehicleInfo.make}{" "}
+                            {selectedBooking.vehicleInfo.model}
+                          </p>
+                        </div>
+
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-right">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">
+                            Color
+                          </p>
+                          <p className="font-bold text-sm">
+                            {selectedBooking.vehicleInfo.color}
+                          </p>
+                        </div>
+
+                        <div className="col-span-2 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-xl p-3.5 flex flex-col items-center justify-center">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">
+                            License Plate Number
+                          </p>
+                          <p className="text-2xl font-black text-primary tracking-tighter leading-none">
+                            {selectedBooking.vehicleInfo.licensePlate}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-4">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                         <TrendingUp className="w-3.5 h-3.5" />
