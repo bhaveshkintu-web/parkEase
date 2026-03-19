@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { isSameDay } from "date-fns";
 import { getGracePeriod } from "./settings-actions";
+import { notifyCustomerSpotUpdated } from "../notifications";
 
 // Fallback for SpotStatus if prisma generate hasn't run yet
 enum SpotStatusLocal {
@@ -325,7 +326,11 @@ export async function checkSpotAvailability(
       return { 
         isAvailable: true, 
         message: `${emptySpots.length} empty spots available`,
-        availableCount: emptySpots.length 
+        availableCount: emptySpots.length,
+        availableSpots: emptySpots.map((s: any) => ({
+          id: s.id,
+          identifier: s.identifier,
+        })),
       };
     }
 
@@ -334,12 +339,105 @@ export async function checkSpotAvailability(
     return { 
       isAvailable: true, 
       message: `${validSpots.length} spots available with safe gaps`,
-      availableCount: validSpots.length 
+      availableCount: validSpots.length,
+      availableSpots: validSpots.map((s: any) => ({
+        id: s.id,
+        identifier: s.identifier,
+      })),
     };
 
   } catch (error) {
     console.error("Availability check failed:", error);
     return { isAvailable: false, message: "Failed to check availability.", availableCount: 0 };
+  }
+}
+
+// update allocated spot
+export async function updateAllocatedSpot(
+  bookingId: string,
+  spotId: string
+) {
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const gracePeriodMinutes = await getGracePeriod();
+      const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+      const now = new Date();
+
+      // 1. Get booking
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+      });
+
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+      // 2. Get spot
+      const spot = await tx.parkingSpot.findUnique({
+        where: { id: spotId },
+        include: {
+          bookings: {
+            where: {
+              status: { in: ["CONFIRMED", "PENDING"] },
+              checkOut: { gt: new Date(now.getTime() - gracePeriodMs) },
+            },
+          },
+        },
+      });
+
+      if (!spot) {
+        throw new Error("Spot not found");
+      }
+
+      // 3. Location check
+      if (spot.locationId !== booking.locationId) {
+        throw new Error("Invalid spot for this location");
+      }
+
+      // 4. Conflict check
+      const hasConflict = spot.bookings.some((b: any) => {
+        if (b.id === bookingId) return false;
+        const bCheckIn = new Date(b.checkIn);
+        const bCheckOut = new Date(b.checkOut);
+        return (
+          bCheckOut > booking.checkIn &&
+          bCheckIn < booking.checkOut
+        );
+      });
+
+      if (hasConflict) {
+        throw new Error("Spot not available for selected time");
+      }
+
+      // 5. Update booking
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          spotId: spot.id,
+          spotIdentifier: spot.identifier,
+        },
+      });
+
+      return updatedBooking;
+    });
+
+    // AFTER transaction commit
+    await notifyCustomerSpotUpdated(updated.id);
+
+    // Revalidate UI
+    revalidatePath("/owner/bookings");
+
+    return {
+      success: true,
+      message: "Spot updated successfully",
+      data: updated,
+    };
+  } catch (error: any) {
+    console.error("Update spot failed:", error);
+
+    return {
+      success: false,
+      error: error.message || "Failed to update spot",
+    };
   }
 }
 
