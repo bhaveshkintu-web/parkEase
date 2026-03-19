@@ -131,6 +131,38 @@ const GlobalStyle = Extension.create({
   },
 });
 
+// Helper function to format HTML with indentation and newlines
+const formatHtml = (html: string) => {
+  let formatted = "";
+  let indent = "";
+  const tab = "  "; // 2 spaces
+  
+  // Basic formatting by adding newlines between tags and cleaning up existing whitespace
+  const nl = html.replace(/>\s*</g, ">\n<").trim();
+  
+  const lines = nl.split("\n");
+  
+  lines.forEach((line) => {
+    // Check if it's a closing tag
+    if (line.match(/^\s*<\//)) {
+      indent = indent.substring(tab.length);
+    }
+    
+    formatted += indent + line + "\n";
+    
+    // Check if it's an opening tag and NOT self-closing
+    // We check for common block elements or any tag that doesn't close on the same line
+    const isOpeningTag = line.match(/^\s*<[^\/!][^>]*>$/);
+    const isSelfClosing = line.match(/<(img|br|hr|input|meta|link|area|base|col|embed|param|source|track|wbr)/i);
+    
+    if (isOpeningTag && !isSelfClosing && !line.includes("</")) {
+      indent += tab;
+    }
+  });
+  
+  return formatted.trim();
+};
+
 const CustomImage = TiptapImage.extend({
   addAttributes() {
     return {
@@ -201,7 +233,8 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 
       // Debounce state updates to prevent flushSync errors and redundant parent renders
       onUpdateTimeoutRef.current = setTimeout(() => {
-        setHtmlContent(html);
+        // Format the HTML for the code view
+        setHtmlContent(formatHtml(html));
         onChange(html);
       }, 50);
     },
@@ -426,7 +459,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     } else {
       // Switching from Visual to Code
       if (editor) {
-        setHtmlContent(editor.getHTML());
+        setHtmlContent(formatHtml(editor.getHTML()));
       }
     }
     setIsCodeView(!isCodeView);

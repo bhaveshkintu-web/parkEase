@@ -37,6 +37,7 @@ export enum NotificationType {
   NEW_BOOKING = "NEW_BOOKING",
   SESSION_EXPIRY_WARNING = "SESSION_EXPIRY_WARNING",
   BOOKING_REJECTED = "BOOKING_REJECTED",
+  SPOT_UPDATED = "SPOT_UPDATED",
 }
 
 export async function notifyAdminsOfBookingRequest(requestId: string) {
@@ -910,10 +911,10 @@ export async function sendSessionExpiryWarning(bookingId: string) {
       });
     }
 
-    console.log(`[Email Tracking] ✅ Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] Session expiry warning sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error("[Email Tracking] ❌ Failed to send session expiry warning for booking:", bookingId, error);
+    console.error("[Email Tracking] Failed to send session expiry warning for booking:", bookingId, error);
     return { success: false, error: "Failed to send email" };
   }
 }
@@ -985,10 +986,108 @@ export async function sendOverstayPaymentEmail(bookingId: string, overstayCharge
       `,
     });
 
-    console.log(`[Email Tracking] ✅ Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
+    console.log(`[Email Tracking] Overstay payment email sent to ${booking.guestEmail} for booking ${bookingId}`);
     return { success: true };
   } catch (error) {
-    console.error(`[Email Tracking] ❌ Failed to send overstay payment email for booking: ${bookingId}`, error);
+    console.error(`[Email Tracking] Failed to send overstay payment email for booking: ${bookingId}`, error);
     return { success: false, error: "Failed to send email" };
+  }
+}
+
+// Sends an allocated spot update by owner and email to customer.
+export async function notifyCustomerSpotUpdated(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        location: true,
+      },
+    });
+    if (!booking) {
+      console.log(`⚠️ Booking not found for ID ${bookingId}`);
+      return;
+    }
+    // Customer email comes from booking
+    const customerEmail = booking.guestEmail;
+    if (!customerEmail) {
+      console.log(`⚠️ Customer email missing for booking ${bookingId}`);
+      return;
+    }
+    console.log(`📧 Sending spot update email to ${customerEmail}`);
+    // Mail config
+    const port = Number(process.env.SMTP_PORT);
+    const secure = port === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const formatDateStr = (date: Date) => {
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    };
+
+    // ✉️ Send email
+    await transporter.sendMail({
+      from: `"ParkZipply Notifications" <${process.env.SMTP_USER}>`,
+      to: customerEmail,
+      subject: `Your Parking Spot Has Been Updated`,
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #2563eb;">Spot Updated</h2>
+
+          <p>Hello ${booking.guestFirstName},</p>
+
+          <p>Your parking spot has been updated by the owner.</p>
+
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Location:</strong> ${booking.location.name}</p>
+            <p style="margin: 0;"><strong>New Spot:</strong> ${booking.spotIdentifier || "Assigned soon"}</p>
+            <p style="margin: 0;"><strong>Check-in:</strong> ${formatDateStr(new Date(booking.checkIn))}</p>
+            <p style="margin: 0;"><strong>Check-out:</strong> ${formatDateStr(new Date(booking.checkOut))}</p>
+            <p style="margin: 0;"><strong>Confirmation Code:</strong> ${booking.confirmationCode}</p>
+          </div>
+
+          <p>Please use this updated spot during your visit.</p>
+
+          <a href="${getAppUrl()}/account/reservations" 
+             style="display: inline-block; background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+             View Booking
+          </a>
+
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 0.8em; color: #999;">&copy; ${new Date().getFullYear()} ParkZipply</p>
+        </div>
+      `,
+    });
+
+    // In-app notification (optional but recommended)
+    if (booking.userId) {
+      await NotificationService.create({
+        userId: booking.userId,
+        title: "Parking Spot Updated",
+        message: `Your parking spot has been updated to "${booking.spotIdentifier}".`,
+        type: NotificationType.SPOT_UPDATED,
+        metadata: {
+          bookingId: booking.id,
+        },
+      });
+    }
+
+    console.log(`Customer notified for booking ${bookingId}`);
+  } catch (error) {
+    console.error("Failed to notify customer:", error);
   }
 }

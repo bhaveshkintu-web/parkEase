@@ -30,3 +30,5 @@ ALTER TABLE "PaymentMethod" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;
 
 -- add enum value
 ALTER TYPE "NotificationType" ADD VALUE 'BOOKING_REJECTED';
+-- Enum Update
+ALTER TYPE "NotificationType" ADD VALUE 'SPOT_UPDATED';
