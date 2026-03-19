@@ -303,8 +303,21 @@ export async function getOwnerLocations(userId: string) {
       }
     });
 
-    console.log(`[Parking Action] ✅ Fetched ${locations.length} locations for owner associated with user ${userId}`);
-    return { success: true, data: locations };
+    const locationsWithStats = locations.map(loc => {
+      const reviewCount = loc.reviews.length;
+      const rating = reviewCount > 0
+        ? Number((loc.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewCount).toFixed(1))
+        : 0;
+
+      return {
+        ...loc,
+        reviewCount,
+        rating,
+      };
+    });
+
+    console.log(`[Parking Action] ✅ Fetched ${locationsWithStats.length} locations for owner associated with user ${userId}`);
+    return { success: true, data: locationsWithStats };
   } catch (error) {
     console.error(`[Parking Action Error] Failed to fetch owner locations for user ${userId}:`, error);
     return { success: false, error: "Internal server error" };
@@ -417,6 +430,10 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
       newAvailableSpots = Math.max(0, newTotalSpots - occupiedSpots);
     }
 
+    // Track protected spots outside the transaction so they can be returned without
+    // polluting the `rest` object (which gets spread into the Prisma update).
+    let protectedSpotsResult: string[] = [];
+
     const updatedLocation = await prisma.$transaction(async (tx) => {
       // 1. Sync Spots
       if (spotIdentifiers) {
@@ -467,26 +484,40 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
           !providedIds.includes(es.id) && !providedIdentifiers.includes(es.identifier)
         );
 
+        const protectedSpots: string[] = [];
+
         for (const spot of toRemove) {
-          if (spot._count.bookings === 0) {
+          // Check specifically for CURRENT or FUTURE bookings only.
+          // Historical (past/cancelled) bookings do NOT block deletion.
+          const activeFutureCount = await tx.booking.count({
+            where: {
+              spotId: spot.id,
+              status: { in: ["CONFIRMED", "PENDING"] as any },
+              checkOut: { gt: new Date() }
+            }
+          });
+
+          if (activeFutureCount === 0) {
+            // Safe to hard-delete — no active customers on this spot
             await (tx as any).parkingSpot.delete({ where: { id: spot.id } });
-          } else if (spot.status !== 'INACTIVE') {
-            await (tx as any).parkingSpot.update({
-              where: { id: spot.id },
-              data: { status: 'INACTIVE' }
-            });
+          } else {
+            // Protected — a real customer has a current or upcoming booking here.
+            // Leave the spot completely UNTOUCHED (do NOT change status).
+            protectedSpots.push(spot.identifier);
           }
         }
 
-        // Update total spots in rest data to match current identifier count for consistency
-        // Update total spots in rest data to match current identifier count for consistency
-        rest.totalSpots = providedSpots.length;
+        // Update total spots to count: provided spots + protected spots that couldn't be removed
+        rest.totalSpots = providedSpots.length + protectedSpots.length;
 
         // Final sanity check on availability based on DB after transaction mutations
         const spotCheck = await (tx as any).parkingSpot.findMany({ where: { locationId: id } });
         const activeCount = spotCheck.filter((s: any) => s.status === 'ACTIVE').length;
         const occupiedCount = Math.max(0, current.totalSpots - (current.availableSpots || 0));
         (rest as any).availableSpots = Math.max(0, activeCount - occupiedCount);
+
+        // Expose protected spots to the outer scope so they can be returned from the action
+        protectedSpotsResult = protectedSpots;
       }
 
       return await tx.parkingLocation.update({
@@ -513,7 +544,7 @@ export async function updateParkingLocation(id: string, data: OwnerLocationInput
     revalidatePath("/owner/locations");
     revalidatePath(`/owner/locations/${id}`);
 
-    return { success: true, data: updatedLocation };
+    return { success: true, data: updatedLocation, protectedSpots: protectedSpotsResult };
   } catch (error) {
     console.error("[Parking Error] Failed to update location:", id, error);
     return {

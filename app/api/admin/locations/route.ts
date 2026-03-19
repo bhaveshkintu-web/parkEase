@@ -55,13 +55,27 @@ export async function GET(req: NextRequest) {
             reviews: true,
           },
         },
+        reviews: true,
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    return NextResponse.json({ locations });
+    const locationsWithStats = locations.map(loc => {
+      const reviewCount = loc.reviews.length;
+      const rating = reviewCount > 0
+        ? Number((loc.reviews.reduce((acc: number, rev: any) => acc + rev.rating, 0) / reviewCount).toFixed(1))
+        : 0;
+
+      return {
+        ...loc,
+        reviewCount,
+        rating,
+      };
+    });
+
+    return NextResponse.json({ locations: locationsWithStats });
   } catch (error) {
     console.error("[ADMIN_LOCATIONS_GET]", error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
