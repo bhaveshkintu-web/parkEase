@@ -113,14 +113,14 @@ export function BookingWidget({ location, className }: BookingWidgetProps) {
   return (
     <div className={cn("rounded-xl border border-border bg-card p-6 shadow-lg", className)}>
       {/* Availability Status Banner */}
-      {(availability.status !== "available" || (liveAvailabilityResults && !liveAvailabilityResults.isAvailable)) && (
+      {liveAvailabilityResults && (
         <div className={cn(
           "mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
-          (availability.status === "soldout" || (liveAvailabilityResults && !liveAvailabilityResults.isAvailable))
-            ? "bg-destructive/10 text-destructive"
-            : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+      liveAvailabilityResults.isAvailable
+            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            : "bg-destructive/10 text-destructive"
         )}>
-          {availability.status === "soldout" ? (
+          {liveAvailabilityResults.isAvailable ? (
             <AlertCircle className="h-4 w-4 shrink-0" />
           ) : (
             <AlertTriangle className="h-4 w-4 shrink-0" />
