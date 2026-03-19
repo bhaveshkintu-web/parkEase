@@ -34,6 +34,8 @@ import {
 import { findBookingByLicensePlate, findBookingByConfirmationCode, resendBookingConfirmation } from "@/lib/actions/find-booking-actions";
 import { formatCurrency, formatDate } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
+import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
 
 type BookingResult = {
   id: string;
@@ -218,8 +220,10 @@ export default function FindBookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <main className="flex-grow py-12 px-4">
+        <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Find My Booking</h1>
@@ -503,6 +507,8 @@ export default function FindBookingPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </main>
+    <Footer />
+  </div>
   );
 }

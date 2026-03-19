@@ -494,6 +494,43 @@ export async function updateSpotStatus(spotId: string, status: "ACTIVE" | "INACT
 }
 
 /**
+ * Returns all spots for a location, each annotated with whether it has
+ * an active or future booking (status CONFIRMED/PENDING and checkOut in the future).
+ * Used by the UI as a pre-save check before reducing spot counts.
+ */
+export async function getSpotsWithBookingStatus(locationId: string) {
+  try {
+    const now = new Date();
+    const spots = await (prisma as any).parkingSpot.findMany({
+      where: { locationId },
+      include: {
+        bookings: {
+          where: {
+            status: { in: ["CONFIRMED", "PENDING"] },
+            checkOut: { gt: now }
+          },
+          select: { id: true }
+        }
+      },
+      orderBy: { identifier: "asc" }
+    });
+
+    return {
+      success: true,
+      data: spots.map((s: any) => ({
+        id: s.id,
+        identifier: s.identifier,
+        status: s.status,
+        hasActiveOrFutureBooking: s.bookings.length > 0
+      }))
+    };
+  } catch (error) {
+    console.error(`[Spot Action Error] Failed to get spots with booking status for ${locationId}:`, error);
+    return { success: false, error: "Failed to load spot booking status", data: [] };
+  }
+}
+
+/**
  * One-time migration for existing locations.
  */
 export async function migrateExistingLocations() {

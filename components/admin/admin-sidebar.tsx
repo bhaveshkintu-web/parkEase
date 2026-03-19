@@ -38,7 +38,7 @@ const systemAdminNav: NavSection[] = [
       { label: "All Users", href: "/admin/users", icon: Users },
       { label: "Owners", href: "/admin/owners", icon: Building2 },
       { label: "Owner Lead Approvals", href: "/admin/approvals/owners", icon: Building2 },
-      // { label: "Locations", href: "/admin/locations", icon: MapPin },
+      { label: "All Locations", href: "/admin/locations", icon: MapPin },
       { label: "Location Approvals", href: "/admin/approvals", icon: Shield },
       { label: "Reviews", href: "/admin/reviews", icon: MessageSquare },
     ],

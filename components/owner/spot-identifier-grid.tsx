@@ -7,7 +7,8 @@ import {
   Plus,
   AlertTriangle,
   Lock,
-  Search
+  Search,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ interface SpotIdentifierGridProps {
   identifiers: string[] | SpotData[];
   onChange: (identifiers: any[]) => void;
   lockedIdentifiers?: string[];
+  bookedIdentifiers?: string[];
   maxSpots?: number;
   locationId?: string;
 }
@@ -41,6 +43,7 @@ export function SpotIdentifierGrid({
   identifiers,
   onChange,
   lockedIdentifiers = [],
+  bookedIdentifiers = [],
   maxSpots = 200,
   locationId
 }: SpotIdentifierGridProps) {
@@ -217,6 +220,7 @@ export function SpotIdentifierGrid({
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar p-1">
         {filteredSpots.map(({ id, identifier, status, originalIndex }) => {
           const isLocked = lockedIdentifiers.includes(identifier) && identifier !== "";
+          const isBooked = bookedIdentifiers.includes(identifier);
           const isDuplicate = duplicates.has(originalIndex);
           const isEmpty = identifier.trim() === "";
           const isPersisted = !id.startsWith("temp-") && !id.startsWith("new-");
@@ -282,7 +286,22 @@ export function SpotIdentifierGrid({
                     {status}
                   </Badge>
 
-                  {!isLocked && (
+                  {isBooked && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="p-1 text-amber-500 cursor-default">
+                            <Calendar className="h-3.5 w-3.5" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Has active/future booking — protected</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
+                  {!isLocked && !isBooked && (
                     <button
                       onClick={() => handleRemove(originalIndex)}
                       className="p-1 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive transition-all"
