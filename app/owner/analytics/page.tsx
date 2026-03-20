@@ -184,6 +184,7 @@ export default function OwnerAnalyticsPage() {
     ];
   }, [metrics.occupancyRate]);
 
+  // ── Full dashboard ──
   const chartConfig = {
     bookings: { label: "Bookings", color: "hsl(221 83% 53%)" },
     checkIns: { label: "Check-ins", color: "hsl(142 76% 36%)" },
@@ -195,252 +196,191 @@ export default function OwnerAnalyticsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/owner">
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Analytics</h1>
-            <p className="text-muted-foreground mt-1">
-              Monitor your parking performance and insights
+    <div className="py-3 sm:py-6 space-y-5 sm:space-y-6 w-full overflow-x-hidden px-4 box-border">
+      {/* Header Row: back arrow + title only */}
+      <div className="flex items-center gap-2">
+        <Link href="/owner">
+          <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 -ml-1">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+        </Link>
+        <h1 className="text-[22px] font-bold text-foreground leading-tight tracking-tight">Analytics</h1>
+      </div>
+
+      {/* Full-width date selector row — centered on mobile */}
+      <Select value={timeRange} onValueChange={setTimeRange}>
+        <SelectTrigger className="w-full max-w-md mx-auto h-11 px-4 border border-border/30 bg-card rounded-xl shadow-sm text-sm font-medium gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+          <SelectValue placeholder="Period" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="7d">Last 7 days</SelectItem>
+          <SelectItem value="30d">Last 30 days</SelectItem>
+          <SelectItem value="90d">Last 90 days</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Metric Cards — single column stack on mobile, grid on wider screens */}
+      <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        {/* Total Slots */}
+        <div className="bg-card rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] ring-1 ring-border/15 flex items-center justify-between gap-4 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-amber-600">Total Slots</p>
+            <p className="text-[26px] font-bold text-foreground leading-snug mt-1">{metrics.totalSpots}</p>
+            <p className="text-sm mt-0.5">
+              <span className="text-green-600 font-semibold">{metrics.availableSpots}</span>
+              <span className="text-muted-foreground"> available</span>
             </p>
           </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <ParkingCircle className="w-6 h-6 text-blue-600" />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {/* Total Booked */}
+        <div className="bg-card rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] ring-1 ring-border/15 flex items-center justify-between gap-4 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-amber-600">Total Booked</p>
+            <p className="text-[26px] font-bold text-foreground leading-snug mt-1">{metrics.occupiedSpots}</p>
+            <p className="text-sm mt-0.5">
+              <span className={`font-semibold ${metrics.occupancyRate >= 70 ? "text-green-600" : "text-amber-500"}`}>{metrics.occupancyRate}%</span>
+              <span className="text-muted-foreground"> occupancy</span>
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center shrink-0">
+            <Car className="w-6 h-6 text-green-600" />
+          </div>
         </div>
+
+        {/* Remaining */}
+        <div className="bg-card rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] ring-1 ring-border/15 flex items-center justify-between gap-4 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-amber-600">Remaining</p>
+            <p className="text-[26px] font-bold text-foreground leading-snug mt-1">{metrics.availableSpots}</p>
+            <p className="text-sm mt-0.5 text-muted-foreground">{metrics.totalLocations} locations</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+            <MapPin className="w-6 h-6 text-amber-600" />
+          </div>
+        </div>
+
+        {/* Future Bookings */}
+        <div className="bg-card rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] ring-1 ring-border/15 flex items-center justify-between gap-4 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-amber-600">Future Bookings</p>
+            <p className="text-[26px] font-bold text-foreground leading-snug mt-1">{metrics.futureBookings}</p>
+            <p className="text-sm mt-0.5">
+              <span className="text-blue-600 font-semibold">{metrics.todayBookings}</span>
+              <span className="text-muted-foreground"> today</span>
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-6 h-6 text-purple-600" />
+          </div>
+        </div>
+
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Slots</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {metrics.totalSpots}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-green-600 text-sm font-medium">{metrics.availableSpots}</span>
-                  <span className="text-muted-foreground text-sm">available</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <ParkingCircle className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Booked</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {metrics.occupiedSpots}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className={`text-sm font-medium ${metrics.occupancyRate >= 70 ? "text-green-600" : "text-amber-600"}`}>
-                    {metrics.occupancyRate}%
-                  </span>
-                  <span className="text-muted-foreground text-sm">occupancy</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                <Car className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {metrics.availableSpots}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-muted-foreground text-sm">
-                    {metrics.totalLocations} locations
-                  </span>
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Future Bookings</p>
-                <p className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                  {metrics.futureBookings}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-blue-600 text-sm font-medium">{metrics.todayBookings}</span>
-                  <span className="text-muted-foreground text-sm">today</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                <CalendarDays className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Occupancy Overview + Booking Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Current Occupancy + Booking Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         {/* Occupancy Gauge */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Current Occupancy</CardTitle>
-            <CardDescription>Real-time parking utilization</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[200px] flex items-center justify-center">
-              <ChartContainer config={chartConfig} className="h-full w-full">
-                <RadialBarChart
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="60%"
-                  outerRadius="90%"
-                  data={occupancyRadialData}
-                  startAngle={180}
-                  endAngle={0}
-                >
-                  <RadialBar
-                    background
-                    dataKey="value"
-                    cornerRadius={10}
-                  />
-                </RadialBarChart>
-              </ChartContainer>
-            </div>
-            <div className="text-center -mt-8">
-              <p className="text-4xl font-bold text-foreground">{metrics.occupancyRate}%</p>
-              <p className="text-sm text-muted-foreground">
-                {metrics.occupiedSpots} of {metrics.totalSpots} spots occupied
+        <div className="bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] ring-1 ring-border/15 p-4">
+          <p className="text-base font-semibold text-foreground">Current Occupancy</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-3">Real-time parking utilization</p>
+
+          <div className="h-[190px] relative bg-muted/5 rounded-xl overflow-hidden">
+            <ChartContainer config={chartConfig} className="h-full w-full">
+              <RadialBarChart
+                cx="50%"
+                cy="75%"
+                innerRadius="80%"
+                outerRadius="110%"
+                data={occupancyRadialData}
+                startAngle={180}
+                endAngle={0}
+              >
+                <RadialBar background dataKey="value" cornerRadius={10} />
+              </RadialBarChart>
+            </ChartContainer>
+            <div className="absolute top-[62%] left-1/2 -translate-x-1/2 text-center w-full px-2">
+              <p className="text-[28px] font-bold text-foreground leading-tight">{metrics.occupancyRate}%</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                {metrics.occupiedSpots} of {metrics.totalSpots} spots
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{metrics.availableSpots}</p>
-                <p className="text-xs text-muted-foreground">Available</p>
-              </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{metrics.occupiedSpots}</p>
-                <p className="text-xs text-muted-foreground">Occupied</p>
-              </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 border border-green-100 rounded-xl overflow-hidden">
+              <p className="text-[11px] text-green-800 font-bold uppercase tracking-wide">Avail.</p>
+              <p className="text-lg font-bold text-green-600">{metrics.availableSpots}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center justify-between px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-xl overflow-hidden">
+              <p className="text-[11px] text-blue-800 font-bold uppercase tracking-wide">Occup.</p>
+              <p className="text-lg font-bold text-blue-600">{metrics.occupiedSpots}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Booking Status */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle>Booking Status Overview</CardTitle>
-            <CardDescription>Current reservation status breakdown</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{metrics.confirmedBookings}</p>
-                <p className="text-sm text-muted-foreground">Confirmed</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-2">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{metrics.pendingBookings}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-2">
-                  <XCircle className="w-5 h-5 text-red-600" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{metrics.cancelledBookings}</p>
-                <p className="text-sm text-muted-foreground">Cancelled</p>
-              </div>
-            </div>
+        <div className="bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] ring-1 ring-border/15 p-4 overflow-hidden lg:col-span-2">
+          <p className="text-base font-semibold text-foreground">Booking Status Overview</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-4">Current reservation status breakdown</p>
 
-            {/* Progress Bars */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-muted-foreground">Confirmation Rate</span>
-                  <span className="font-medium text-foreground">
-                    {metrics.totalBookings > 0
-                      ? Math.round((metrics.confirmedBookings / metrics.totalBookings) * 100)
-                      : 0}%
-                  </span>
+          <div className="space-y-2 mb-5">
+            {[
+              { label: "Confirmed", icon: <CheckCircle className="w-4 h-4 text-green-600" />, count: metrics.confirmedBookings, bg: "bg-green-50", border: "border-green-100" },
+              { label: "Pending",   icon: <AlertCircle className="w-4 h-4 text-amber-600" />, count: metrics.pendingBookings,   bg: "bg-amber-50", border: "border-amber-100" },
+              { label: "Cancelled", icon: <XCircle     className="w-4 h-4 text-red-500"   />, count: metrics.cancelledBookings, bg: "bg-red-50",   border: "border-red-100" },
+            ].map(({ label, icon, count, bg, border }) => (
+              <div key={label} className={`flex items-center justify-between px-3 py-2.5 ${bg} border ${border} rounded-xl overflow-hidden`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="shrink-0">{icon}</span>
+                  <span className="text-sm font-medium text-foreground truncate">{label}</span>
                 </div>
-                <Progress
-                  value={metrics.totalBookings > 0 ? (metrics.confirmedBookings / metrics.totalBookings) * 100 : 0}
-                  className="h-2"
-                />
+                <span className="text-base font-bold text-foreground shrink-0 ml-2">{count}</span>
               </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-muted-foreground">Cancellation Rate</span>
-                  <span className="font-medium text-foreground">
-                    {metrics.totalBookings > 0
-                      ? Math.round((metrics.cancelledBookings / metrics.totalBookings) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <Progress
-                  value={metrics.totalBookings > 0 ? (metrics.cancelledBookings / metrics.totalBookings) * 100 : 0}
-                  className="h-2 [&>div]:bg-red-500"
-                />
+            ))}
+          </div>
+
+          {/* Progress Bars */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-muted-foreground font-medium">Confirmation Rate</span>
+                <span className="font-semibold text-foreground">
+                  {metrics.totalBookings > 0 ? Math.round((metrics.confirmedBookings / metrics.totalBookings) * 100) : 0}%
+                </span>
               </div>
+              <Progress value={metrics.totalBookings > 0 ? (metrics.confirmedBookings / metrics.totalBookings) * 100 : 0} className="h-2" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-muted-foreground font-medium">Cancellation Rate</span>
+                <span className="font-semibold text-foreground">
+                  {metrics.totalBookings > 0 ? Math.round((metrics.cancelledBookings / metrics.totalBookings) * 100) : 0}%
+                </span>
+              </div>
+              <Progress value={metrics.totalBookings > 0 ? (metrics.cancelledBookings / metrics.totalBookings) * 100 : 0} className="h-2 [&>div]:bg-red-500" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Charts Tabs */}
       <Tabs defaultValue="bookings" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="bookings">Booking Trends</TabsTrigger>
-          <TabsTrigger value="hourly">Hourly Occupancy</TabsTrigger>
-          <TabsTrigger value="locations">Location Performance</TabsTrigger>
+        <TabsList className="flex w-full justify-start overflow-x-auto no-scrollbar bg-transparent h-auto p-0 gap-2 border-0">
+          <TabsTrigger value="bookings" className="data-[state=active]:bg-muted/80 data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent text-muted-foreground rounded-full px-4 py-2 text-[13px] font-medium transition-all shrink-0">Booking Trends</TabsTrigger>
+          <TabsTrigger value="hourly" className="data-[state=active]:bg-muted/80 data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent text-muted-foreground rounded-full px-4 py-2 text-[13px] font-medium transition-all shrink-0">Hourly Occupancy</TabsTrigger>
+          <TabsTrigger value="locations" className="data-[state=active]:bg-muted/80 data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent text-muted-foreground rounded-full px-4 py-2 text-[13px] font-medium transition-all shrink-0">Locations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="bookings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Trends</CardTitle>
-              <CardDescription>Daily bookings, check-ins, and check-outs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[350px] w-full">
+          <div className="bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] ring-1 ring-border/15 p-4">
+            <p className="text-base font-semibold text-foreground">Booking Trends</p>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-3">Daily bookings, check-ins, and check-outs</p>
+            <ChartContainer config={chartConfig} className="h-[200px] sm:h-[320px] w-full shrink-1">
                 <AreaChart data={bookingTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="bookingsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -457,10 +397,9 @@ export default function OwnerAnalyticsPage() {
                     dataKey="date"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    interval="preserveStartEnd"
+                    tick={{ fontSize: 10 }}
+                    minTickGap={20}
                   />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area
                     type="monotone"
@@ -485,46 +424,36 @@ export default function OwnerAnalyticsPage() {
                   />
                 </AreaChart>
               </ChartContainer>
-              <div className="flex justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4 px-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-sm text-muted-foreground">Bookings</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Bookings</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-sm text-muted-foreground">Check-ins</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Check-ins</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-3 h-3 rounded-full bg-purple-500" />
-                  <span className="text-sm text-muted-foreground">Check-outs</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Check-outs</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="hourly">
-          <Card>
-            <CardHeader>
-              <CardTitle>Hourly Occupancy Pattern</CardTitle>
-              <CardDescription>Average occupancy rate throughout the day</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[350px] w-full">
+          <div className="bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] ring-1 ring-border/15 p-4 box-border w-full">
+            <p className="text-base font-semibold text-foreground">Hourly Occupancy Pattern</p>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-3">Average occupancy rate throughout the day</p>
+            <ChartContainer config={chartConfig} className="h-[220px] sm:h-[300px] w-full shrink-1">
                 <BarChart data={hourlyOccupancy} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis
                     dataKey="hour"
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 11 }}
-                    interval={2}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => `${value}%`}
+                    tick={{ fontSize: 9 }}
+                    minTickGap={20}
                   />
                   <ChartTooltip
                     content={({ active, payload }) => {
@@ -547,33 +476,29 @@ export default function OwnerAnalyticsPage() {
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              </ChartContainer>
-              <div className="grid grid-cols-3 gap-4 mt-6">
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <p className="text-lg font-bold text-foreground">7AM - 10AM</p>
-                  <p className="text-sm text-muted-foreground">Morning Peak</p>
-                </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <p className="text-lg font-bold text-foreground">4PM - 7PM</p>
-                  <p className="text-sm text-muted-foreground">Evening Peak</p>
-                </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <p className="text-lg font-bold text-foreground">10PM - 5AM</p>
-                  <p className="text-sm text-muted-foreground">Low Traffic</p>
-                </div>
+            </ChartContainer>
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="text-center p-2.5 bg-blue-50 border border-blue-100 rounded-xl">
+                <p className="text-sm font-bold text-foreground">7AM–10AM</p>
+                <p className="text-[11px] text-muted-foreground">Morning Peak</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-center p-2.5 bg-amber-50 border border-amber-100 rounded-xl">
+                <p className="text-sm font-bold text-foreground">4PM–7PM</p>
+                <p className="text-[11px] text-muted-foreground">Evening Peak</p>
+              </div>
+              <div className="text-center p-2.5 bg-muted/50 rounded-xl">
+                <p className="text-sm font-bold text-foreground">10PM–5AM</p>
+                <p className="text-[11px] text-muted-foreground">Low Traffic</p>
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="locations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Location Performance</CardTitle>
-              <CardDescription>Compare performance across your parking locations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
+          <div className="bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06)] ring-1 ring-border/15 p-4 box-border w-full">
+            <p className="text-base font-semibold text-foreground">Location Performance</p>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-3">Compare performance across your parking locations</p>
+            <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
@@ -626,15 +551,14 @@ export default function OwnerAnalyticsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
       {/* Watchmen Activity Summary */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="w-full box-border">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <CardTitle>Watchmen Overview</CardTitle>
             <CardDescription>Staff activity and performance summary</CardDescription>
@@ -645,27 +569,27 @@ export default function OwnerAnalyticsPage() {
             </Button>
           </Link>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-3xl font-bold text-foreground">{metrics.totalWatchmen}</p>
-              <p className="text-sm text-muted-foreground">Total Staff</p>
+        <CardContent className="p-4 sm:p-6 text-center sm:text-left">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-2xl flex flex-col justify-center">
+              <p className="text-2xl lg:text-3xl font-bold text-foreground">{metrics.totalWatchmen}</p>
+              <p className="text-xs sm:text-sm mt-1 text-muted-foreground break-words">Total Staff</p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-3xl font-bold text-green-600">{metrics.activeWatchmen}</p>
-              <p className="text-sm text-muted-foreground">Active Now</p>
+            <div className="text-center p-3 sm:p-4 bg-green-50 rounded-2xl flex flex-col justify-center">
+              <p className="text-2xl lg:text-3xl font-bold text-green-600">{metrics.activeWatchmen}</p>
+              <p className="text-xs sm:text-sm mt-1 text-muted-foreground break-words">Active Now</p>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-3xl font-bold text-blue-600">
+            <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-2xl flex flex-col justify-center">
+              <p className="text-2xl lg:text-3xl font-bold text-blue-600">
                 {watchmen.reduce((sum, w) => sum + w.todayCheckIns, 0)}
               </p>
-              <p className="text-sm text-muted-foreground">Today's Check-ins</p>
+              <p className="text-xs sm:text-sm mt-1 text-muted-foreground break-words">Check-ins</p>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-3xl font-bold text-purple-600">
+            <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-2xl flex flex-col justify-center">
+              <p className="text-2xl lg:text-3xl font-bold text-purple-600">
                 {watchmen.reduce((sum, w) => sum + w.todayCheckOuts, 0)}
               </p>
-              <p className="text-sm text-muted-foreground">Today's Check-outs</p>
+              <p className="text-xs sm:text-sm mt-1 text-muted-foreground break-words">Check-outs</p>
             </div>
           </div>
 

@@ -408,21 +408,21 @@ export default function ContentManagementPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 px-4 py-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 w-full overflow-x-hidden px-4 sm:px-6 md:px-8 box-border min-w-0 py-6 pb-24">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon" className="hover:bg-muted rounded-full">
+      <div className="flex flex-col gap-6 w-full min-w-0 relative">
+        <div className="relative w-full flex items-center justify-center min-w-0 h-10">
+          <Link href="/admin" className="absolute left-0 top-1/2 -translate-y-1/2">
+            <Button variant="ghost" size="icon" className="hover:bg-muted rounded-full shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Content Management</h1>
-            <p className="text-muted-foreground">Shape your website's story and information</p>
+          <div className="text-center w-full px-12 min-w-0">
+            <h1 className="text-[22px] sm:text-3xl font-extrabold text-foreground tracking-tight truncate sm:whitespace-normal leading-tight">Content Management</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate sm:whitespace-normal mt-0.5">Shape your website's story and information</p>
           </div>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="sm:h-11 px-6 shadow-lg shadow-primary/20">
+        <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto sm:h-11 px-6 shadow-lg bg-[#00a87e] hover:bg-[#00966f] text-white rounded-lg">
           <Plus className="w-5 h-5 mr-2" />
           New Page
         </Button>
@@ -431,50 +431,50 @@ export default function ContentManagementPage() {
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-card shadow-sm border-border/50 hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center border border-success/20">
-                <Globe className="w-6 h-6 text-success" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-success/10 flex items-center justify-center border border-success/20 flex-shrink-0">
+                <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Published</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Published</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-foreground">{publishedCount}</p>
-                  <p className="text-xs text-muted-foreground font-normal">Active Pages</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{publishedCount}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-normal truncate">Active Pages</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card shadow-sm border-border/50 hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-warning/10 flex items-center justify-center border border-warning/20">
-                <FileText className="w-6 h-6 text-warning" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-warning/10 flex items-center justify-center border border-warning/20 flex-shrink-0">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Drafts</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Drafts</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-foreground">{draftCount}</p>
-                  <p className="text-xs text-muted-foreground font-normal">In Progress</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{draftCount}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-normal truncate">In Progress</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card shadow-sm border-border/50 hover:shadow-md transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center border border-border">
-                <EyeOff className="w-6 h-6 text-muted-foreground" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-muted flex items-center justify-center border border-border flex-shrink-0">
+                <EyeOff className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Archived</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Archived</p>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {cmsPages.filter((p) => p.status === "ARCHIVED").length}
                   </p>
-                  <p className="text-xs text-muted-foreground font-normal">Hidden</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-normal truncate">Hidden</p>
                 </div>
               </div>
             </div>
@@ -483,13 +483,13 @@ export default function ContentManagementPage() {
       </div>
 
       {/* Pages List */}
-      <Card className="border-border/50 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
-        <Tabs defaultValue="all" className="w-full">
-          <div className="px-6 py-4 bg-muted/30 border-b border-border/40">
-            <TabsList className="bg-background/50 border h-11 p-1 rounded-xl items-stretch">
+      <Card className="border-border/50 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm min-w-0 w-full mb-8">
+        <Tabs defaultValue="all" className="w-full min-w-0">
+          <div className="px-4 sm:px-6 py-4 bg-muted/30 border-b border-border/40 overflow-x-auto no-scrollbar w-full min-w-0">
+            <TabsList className="bg-background/50 border h-11 p-1 rounded-xl flex items-stretch w-max mx-auto sm:mx-0">
               <TabsTrigger
                 value="all"
-                className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
+                className="rounded-lg px-4 sm:px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
               >
                 <div className="flex items-center gap-2.5">
                   <span className="font-semibold text-sm">All Pages</span>
@@ -503,7 +503,7 @@ export default function ContentManagementPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="PUBLISHED"
-                className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
+                className="rounded-lg px-4 sm:px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
               >
                 <div className="flex items-center gap-2.5">
                   <span className="font-semibold text-sm">Published</span>
@@ -517,7 +517,7 @@ export default function ContentManagementPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="DRAFT"
-                className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
+                className="rounded-lg px-4 sm:px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-200 focus-visible:ring-0 focus-visible:outline-none border-none"
               >
                 <div className="flex items-center gap-2.5">
                   <span className="font-semibold text-sm">Drafts</span>
