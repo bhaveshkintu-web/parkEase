@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const newPaymentMethod = await prisma.paymentMethod.create({
+    const newPaymentMethod = await (prisma.paymentMethod as any).create({
       data: {
         userId: session.user.id,
         brand: finalBrand,
@@ -115,9 +115,48 @@ export async function POST(req: NextRequest) {
         expiryMonth: finalExpMonth,
         expiryYear: finalExpYear,
         cardholderName: cardholderName || "Card Holder",
+        stripeMethodId: finalMethodId,
         isDefault: shouldBeDefault,
       },
     });
+
+    // CRITICAL: If this was a Stripe setup, ensure user has stripeCustomerId saved
+    // This fixes the "No payment profile found" error for future charges
+    if (isStripeSetup && paymentMethodId) {
+       const user = await prisma.user.findUnique({
+         where: { id: session.user.id },
+         select: { stripeCustomerId: true }
+       });
+
+       if (!user?.stripeCustomerId) {
+         const { getStripe } = await import("@/lib/stripe");
+         const stripe = getStripe();
+         if (stripe) {
+            const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+            if (pm.customer) {
+               await prisma.user.update({
+                 where: { id: session.user.id },
+                 data: { stripeCustomerId: pm.customer as string }
+               });
+               console.log(`[PAYMENT_METHODS] ✅ Synced stripeCustomerId ${pm.customer} for user ${session.user.id}`);
+            }
+         }
+       }
+    } else if (!isStripeSetup && paymentMethodId && paymentMethodId.startsWith("pm_mock_")) {
+        // For mock cards, also assign a dummy customer ID if missing
+        const user = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { stripeCustomerId: true }
+        });
+
+        if (!user?.stripeCustomerId) {
+           await prisma.user.update({
+             where: { id: session.user.id },
+             data: { stripeCustomerId: "cus_mock_" + Math.random().toString(36).substring(7) }
+           });
+           console.log(`[PAYMENT_METHODS] ✅ Assigned mock stripeCustomerId for user ${session.user.id}`);
+        }
+     }
 
     return NextResponse.json(newPaymentMethod);
   } catch (error: any) {

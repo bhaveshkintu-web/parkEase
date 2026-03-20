@@ -173,21 +173,17 @@ export class FinanceService {
       const userId = booking.location.owner.userId;
 
       // 1. Check if already fully credited (idempotency)
-      const existingTx = await prismaClient.walletTransaction.findFirst({
-        where: { reference: bookingId, type: "EARNED" as any, status: "COMPLETED" }
+      // 1. Check if already fully credited (idempotency)
+      let totalAlreadyEarned = 0;
+      const txSum = await prismaClient.walletTransaction.aggregate({
+        where: { walletId: ownerId, reference: bookingId, type: "EARNED" as any, status: "COMPLETED" },
+        _sum: { amount: true }
       });
+      totalAlreadyEarned = txSum._sum.amount || 0;
 
-      if (existingTx) {
-          // If already has an EARNED transaction, check if it covers the current total price
-          const txSum = await prismaClient.walletTransaction.aggregate({
-            where: { walletId: ownerId, reference: bookingId, type: "EARNED" as any, status: "COMPLETED" },
-            _sum: { amount: true }
-          });
-          
-          if (txSum._sum.amount && Math.abs(txSum._sum.amount - booking.totalPrice) < 1) {
-              console.log(`Booking ${bookingId} already fully settled.`);
-              return;
-          }
+      if (totalAlreadyEarned > 0 && Math.abs(totalAlreadyEarned - booking.totalPrice) < 0.1) {
+          console.log(`Booking ${bookingId} already fully settled.`);
+          return;
       }
 
       // Safety: Only release if vehicle has actually checked out OR it's a manual cleanup
@@ -204,24 +200,39 @@ export class FinanceService {
 
         if (!wallet) throw new Error("Owner wallet not found");
 
-        // 2. Calculate platform commission on the FULL total
-        const totalGross = booking.totalPrice;
+        // 2. NEW: Only sum up payments that are actually SUCCESSFUL
+        const payments = await tx.payment.findMany({
+          where: { bookingId, status: "SUCCESS" }
+        });
+
+        if (payments.length === 0) {
+          console.warn(`[Finance Service] Postponing credit for ${booking.confirmationCode}: No SUCCESSful payments found yet.`);
+          return;
+        }
+
+        const confirmedGross = payments.reduce((acc: number, p: any) => acc + p.amount, 0);
         
-        // Use pre-calculated ownerEarnings from booking if available, otherwise calculate
-        let netEarnings: number;
-        let platformCommission: number;
-        let commissionDetails = "Platform Commission";
+        // 3. Check what needs to be released (partial release support)
+        const amountToReleaseGross = Math.max(0, confirmedGross - totalAlreadyEarned);
 
+        if (amountToReleaseGross < 0.01) {
+           console.log(`[Finance Service] No new funds to release for booking ${booking.confirmationCode}`);
+           return;
+        }
+
+        // 4. Calculate commission for this SPECIFIC portion
         const commissionInfo = await this.calculateCommission(bookingId);
-        platformCommission = commissionInfo.amount;
-        netEarnings = parseFloat((totalGross - platformCommission).toFixed(2));
-        commissionDetails = commissionInfo.details;
+        const totalGross = booking.totalPrice || confirmedGross;
+        const commissionDetails = commissionInfo.details;
+        
+        const platformCommission = parseFloat((amountToReleaseGross * (commissionInfo.amount / totalGross)).toFixed(2));
+        const netEarnings = parseFloat((amountToReleaseGross - platformCommission).toFixed(2));
 
-        // 3. Decrement totalBalance, Increment available balance
+        // 5. Decrement totalBalance (held funds) and Increment available balance
         await (tx.wallet as any).update({
           where: { id: wallet.id },
           data: {
-            totalBalance: { decrement: totalGross },
+            totalBalance: { decrement: amountToReleaseGross },
             balance: { increment: netEarnings }
           }
         });
@@ -232,13 +243,13 @@ export class FinanceService {
             walletId: wallet.id,
             type: "EARNED" as any,
             amount: netEarnings,
-            description: `Total earnings released for booking ${booking.confirmationCode} (incl. extras)`,
+            description: `Earnings released for booking ${booking.confirmationCode} (${amountToReleaseGross > totalGross / 2 ? 'Full/Main' : 'Extension'})`,
             status: "COMPLETED",
             reference: bookingId
           }
         });
 
-        // 5. Create COMMISSION transaction (deduction record for owner)
+        // 5. Create COMMISSION transaction
         await (tx.walletTransaction as any).create({
           data: {
             walletId: wallet.id,

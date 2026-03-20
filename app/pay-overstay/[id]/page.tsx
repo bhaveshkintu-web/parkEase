@@ -7,13 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { payOverstayAction, getOverstaySessionAction } from "@/lib/actions/overstay-actions";
 import { formatCurrency, formatTime, formatDate } from "@/lib/data";
-import { Loader2, Clock, Calendar, MapPin, AlertTriangle, CheckCircle2, CreditCard } from "lucide-react";
+import { Loader2, Clock, Calendar, MapPin, AlertTriangle, CheckCircle2, CreditCard, Lock, PlusCircle, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MockCardForm } from "@/components/mock-card-form";
-
-
 import { useAuth } from "@/lib/auth-context";
+import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
+import { StripePaymentForm } from "@/components/stripe-payment-form";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { isStripeConfigured as isStripeActive } from "@/lib/stripe";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
+
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const isStripeConfigured = stripePublishableKey && stripePublishableKey.length > 0 && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
+const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : null;
 
 function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete: () => void }) {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -75,9 +86,59 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
         }
     };
 
-    const handleSavedCardSubmit = async () => {
-        if (!agreedToTerms || !selectedCardId) return;
-        await handlePaymentSuccess(`saved_${selectedCardId}`);
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
+
+    const handlePaymentIntentCreated = async () => {
+        if (!agreedToTerms) {
+            toast({ title: "Agreement Required", description: "You must agree to the terms to proceed.", variant: "destructive" });
+            return;
+        }
+
+        // 1. Saved Card Flow
+        if (selectedCardId && !useNewCard) {
+            setIsProcessing(true);
+            try {
+                const chargeResult = await chargeSavedCardAction({
+                    amount: overstayCharge,
+                    paymentMethodId: selectedCardId,
+                    locationId: booking.locationId,
+                    bookingId: booking.id,
+                    locationName: booking.location.name,
+                });
+
+                if (!chargeResult.success) throw new Error(chargeResult.error);
+
+                await handlePaymentSuccess(chargeResult.paymentIntentId as string);
+            } catch (err: any) {
+                toast({ title: "Payment Error", description: err.message || "Failed to charge saved card", variant: "destructive" });
+            } finally {
+                setIsProcessing(false);
+            }
+            return;
+        }
+
+        // 2. New Card Flow (Create Intent)
+        setIsProcessing(true);
+        try {
+            const result = await createPaymentIntentAction({
+                amount: overstayCharge,
+                locationId: booking.locationId,
+                locationName: booking.location.name,
+                guestEmail: booking.guestEmail,
+            });
+
+            if (!result.success) throw new Error(result.error);
+
+            if (result.clientSecret) {
+                setClientSecret(result.clientSecret);
+                setShowPaymentForm(true);
+            }
+        } catch (err: any) {
+            toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -92,8 +153,14 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
             <div className="space-y-6">
                 {/* Saved Cards Section */}
                 {isAuthenticated && savedCards.length > 0 && (
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Your Saved Cards</label>
+                    <div className="space-y-4 mb-8">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5" /> 
+                                <span>Your Saved Cards</span>
+                            </div>
+                            <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 tracking-widest">SECURE</span>
+                        </label>
                         <div className="grid gap-3">
                             {savedCards.map((card) => (
                                 <div
@@ -101,26 +168,35 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                                     onClick={() => {
                                         setSelectedCardId(card.id);
                                         setUseNewCard(false);
+                                        setShowPaymentForm(false);
                                     }}
                                     className={cn(
-                                        "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all",
-                                        selectedCardId === card.id && !useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                        "flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300",
+                                        selectedCardId === card.id && !useNewCard 
+                                            ? "border-primary bg-primary/[0.03] shadow-md shadow-primary/5 scale-[1.01]" 
+                                            : "border-border/50 bg-card hover:border-primary/20 hover:bg-slate-50/50"
                                     )}
                                 >
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-5">
                                         <div className={cn(
-                                            "w-12 h-8 rounded flex items-center justify-center text-[10px] font-black text-white uppercase",
+                                            "w-14 h-9 rounded-lg flex items-center justify-center text-[10px] font-black text-white uppercase shadow-inner relative overflow-hidden",
                                             card.brand === 'visa' ? "bg-[#1A1F71]" :
-                                                card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-700"
+                                            card.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-800"
                                         )}>
                                             {card.brand}
+                                            <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-sm">•••• {card.last4}</p>
-                                            <p className="text-[10px] text-muted-foreground font-medium uppercase italic">Expires {String(card.expiryMonth).padStart(2, '0')}/{card.expiryYear}</p>
+                                            <p className="font-black text-slate-800 text-sm tracking-tight capitalize">•••• {card.last4}</p>
+                                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Expires {String(card.expiryMonth).padStart(2, '0')}/{card.expiryYear}</p>
                                         </div>
                                     </div>
-                                    {selectedCardId === card.id && !useNewCard && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                                    <div className={cn(
+                                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                        selectedCardId === card.id && !useNewCard ? "border-primary bg-primary" : "border-border"
+                                    )}>
+                                        {selectedCardId === card.id && !useNewCard && <Check className="w-4 h-4 text-white" />}
+                                    </div>
                                 </div>
                             ))}
                             <div
@@ -129,54 +205,107 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                                     setUseNewCard(true);
                                 }}
                                 className={cn(
-                                    "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                                    useNewCard ? "border-primary bg-primary/[0.02]" : "border-border hover:border-primary/20"
+                                    "flex items-center gap-5 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300",
+                                    useNewCard 
+                                        ? "border-primary bg-primary/[0.03] scale-[1.01]" 
+                                        : "border-border/60 bg-slate-50/20 hover:border-primary/40 hover:bg-slate-50/50"
                                 )}
                             >
-                                <div className="w-12 h-8 rounded bg-muted flex items-center justify-center font-bold text-lg">
-                                    +
+                                <div className="w-14 h-9 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
+                                     <PlusCircle className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
                                 </div>
-                                <p className="font-bold text-sm">Use a new card</p>
-                                {useNewCard && <CheckCircle2 className="ml-auto w-5 h-5 text-primary" />}
+                                <div className="flex-1">
+                                    <p className="font-black text-slate-800 text-sm tracking-tight">Use a new card / another method</p>
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Select your preferred payment option below</p>
+                                </div>
+                                <div className={cn(
+                                    "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                    useNewCard ? "border-primary bg-primary" : "border-border"
+                                )}>
+                                    {useNewCard && <Check className="w-4 h-4 text-white" />}
+                                </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {useNewCard ? (
+                {showPaymentForm && clientSecret && useNewCard ? (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-500">
-                        <MockCardForm
-                            onSuccess={handlePaymentSuccess}
-                            amount={overstayCharge}
-                            isSubmitting={isProcessing}
-                            setIsSubmitting={setIsProcessing}
-                            agreedToTerms={agreedToTerms}
-                            setAgreedToTerms={setAgreedToTerms}
-                            showWallet={true}
-                        />
+                        {!isStripeActive() || clientSecret.startsWith("mock_") ? (
+                            <MockCardForm
+                                onSuccess={handlePaymentSuccess}
+                                amount={overstayCharge}
+                                isSubmitting={isProcessing}
+                                setIsSubmitting={setIsProcessing}
+                                agreedToTerms={agreedToTerms}
+                                setAgreedToTerms={setAgreedToTerms}
+                                showWallet={true}
+                            />
+                        ) : (
+                            <StripeElementsWrapper clientSecret={clientSecret}>
+                                <StripePaymentForm
+                                    clientSecret={clientSecret}
+                                    amount={overstayCharge}
+                                    onPaymentSuccess={handlePaymentSuccess}
+                                    onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
+                                    isSubmitting={isProcessing}
+                                    setIsSubmitting={setIsProcessing}
+                                    agreedToTerms={agreedToTerms}
+                                    setAgreedToTerms={setAgreedToTerms}
+                                />
+                            </StripeElementsWrapper>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                checked={agreedToTerms}
-                                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                            />
-                            <label htmlFor="terms" className="flex-1 block text-[11px] font-medium text-muted-foreground leading-tight cursor-pointer">
-                                I agree to the <span className="text-primary underline font-bold">Terms of Service</span> and <span className="text-primary underline font-bold">Cancellation Policy</span>.
-                            </label>
+                        <div className={cn(
+                            "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+                            agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+                        )}>
+                            <div className="pt-0.5">
+                                <Checkbox
+                                    id="terms"
+                                    checked={agreedToTerms}
+                                    onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                                    className="w-5 h-5 rounded-md"
+                                />
+                            </div>
+                            <Label htmlFor="terms" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
+                                <span>
+                                    I agree to the{" "}
+                                    <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
+                                        Terms
+                                    </Link>{" "}
+                                    and{" "}
+                                    <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                                        Cancellation Policy
+                                    </Link>
+                                    . I understand my booking is subject to availability.
+                                </span>
+                            </Label>
                         </div>
 
                         <Button
-                            className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-black hover:bg-zinc-900 rounded-2xl transition-all active:scale-[0.98]"
-                            onClick={handleSavedCardSubmit}
+                            className={cn(
+                                "w-full h-16 text-xl font-black uppercase tracking-[0.2em] shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-2xl group",
+                                (agreedToTerms || (!selectedCardId || useNewCard))
+                                    ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
+                                    : "opacity-40 grayscale"
+                            )}
+                            onClick={handlePaymentIntentCreated}
                             disabled={isProcessing || !agreedToTerms}
                         >
-                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CreditCard className="w-5 h-5 mr-2" />}
-                            Pay {formatCurrency(overstayCharge)}
+                            {isProcessing ? (
+                                <div className="flex items-center gap-4">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <span className="animate-pulse">Processing...</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full relative">
+                                    <span className="drop-shadow-sm truncate px-8 leading-none">Pay {formatCurrency(overstayCharge)} Now</span>
+                                    <Lock className="absolute right-4 h-6 w-6 opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all scale-90 group-hover:scale-100" />
+                                </div>
+                            )}
                         </Button>
                     </div>
                 )}

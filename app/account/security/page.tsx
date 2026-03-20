@@ -97,19 +97,19 @@ export default function SecurityPage() {
 
   // Security preferences state
   const [securitySettings, setSecuritySettings] = useState({
-    loginAlerts: user?.preferences?.security?.loginAlerts ?? true,
-    loginAlertEmail: user?.preferences?.security?.loginAlertEmail ?? true,
-    loginAlertSms: user?.preferences?.security?.loginAlertSms ?? false,
-    sessionTimeout: user?.preferences?.security?.sessionTimeout ?? 30,
-    requirePasswordForSensitive: user?.preferences?.security?.requirePasswordForSensitive ?? true,
+    loginAlerts: (user?.preferences as any)?.security?.loginAlerts ?? true,
+    loginAlertEmail: (user?.preferences as any)?.security?.loginAlertEmail ?? true,
+    loginAlertSms: (user?.preferences as any)?.security?.loginAlertSms ?? false,
+    sessionTimeout: (user?.preferences as any)?.security?.sessionTimeout ?? 30,
+    requirePasswordForSensitive: (user?.preferences as any)?.security?.requirePasswordForSensitive ?? true,
   });
 
   // Two-factor authentication state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(
-    user?.preferences?.security?.twoFactorEnabled ?? false
+    (user?.preferences as any)?.security?.twoFactorEnabled ?? false
   );
   const [twoFactorMethod, setTwoFactorMethod] = useState<"authenticator" | "sms" | "email" | undefined>(
-    user?.preferences?.security?.twoFactorMethod
+    (user?.preferences as any)?.security?.twoFactorMethod
   );
   const [twoFactorDialogOpen, setTwoFactorDialogOpen] = useState(false);
   const [twoFactorSetupStep, setTwoFactorSetupStep] = useState<"method" | "setup" | "verify">("method");
@@ -571,8 +571,8 @@ export default function SecurityPage() {
                   <div>
                     <p className="font-medium">Password last changed</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.preferences?.security?.passwordLastChanged
-                        ? formatDate(user.preferences.security.passwordLastChanged)
+                      {(user.preferences as any)?.security?.passwordLastChanged
+                        ? formatDate((user.preferences as any).security.passwordLastChanged)
                         : "Never changed"}
                     </p>
                   </div>
