@@ -14,7 +14,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface StripePaymentFormProps {
   onPaymentSuccess: (paymentIntentId: string) => void;
   onPaymentError: (error: string) => void;
-  clientSecret: string;
+  /** Legacy mode: clientSecret already exists (extend, overstay, modify). */
+  clientSecret?: string;
+  /** Deferred mode: called on submit to create the PaymentIntent. Returns clientSecret. */
+  onCreateIntent?: () => Promise<string>;
   amount: number;
   isSubmitting: boolean;
   setIsSubmitting: (value: boolean) => void;
@@ -26,6 +29,7 @@ export function StripePaymentForm({
   onPaymentSuccess,
   onPaymentError,
   clientSecret,
+  onCreateIntent,
   amount,
   isSubmitting,
   setIsSubmitting,
@@ -57,13 +61,81 @@ export function StripePaymentForm({
     setError(null);
 
     try {
+      // ── DEFERRED MODE (checkout new-card flow) ────────────────────────────
+      // No clientSecret exists yet. We validate the card details locally first,
+      // then create the PaymentIntent on the server, then confirm — all in one
+      // step. This means NO Stripe entry is created until the customer clicks Pay.
+      if (onCreateIntent) {
+        // 1. Validate card fields locally (no network call to Stripe yet)
+        const { error: submitError } = await elements.submit();
+        if (submitError) {
+          setError(submitError.message || "Card validation failed.");
+          onPaymentError(submitError.message || "Card validation failed");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 2. Create PaymentIntent on our server (THIS is when Stripe entry appears)
+        let secret: string;
+        try {
+          secret = await onCreateIntent();
+        } catch (err: any) {
+          setError(err.message || "Failed to initialize payment. Please try again.");
+          onPaymentError(err.message || "Failed to initialize payment");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 3. Confirm payment with the newly created secret
+        const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          clientSecret: secret,
+          confirmParams: { 
+            return_url: `${window.location.origin}/checkout/success`,
+            payment_method_data: {
+              billing_details: {
+                address: {
+                  country: 'US'
+                }
+              }
+            }
+          },
+          redirect: "if_required",
+        });
+
+
+        if (confirmError) {
+          setError(confirmError.message || "Payment failed. Please try again.");
+          onPaymentError(confirmError.message || "Payment failed");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (paymentIntent?.status === "succeeded" || paymentIntent?.status === "processing") {
+          onPaymentSuccess(paymentIntent.id);
+        } else {
+          setError("Payment was not completed. Please try again.");
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
+      // ── LEGACY MODE (extend, overstay, modify — clientSecret already exists) ─
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/checkout/success`,
+          payment_method_data: {
+            billing_details: {
+              address: {
+                country: 'US'
+              }
+            }
+          }
         },
         redirect: "if_required",
       });
+
 
       if (stripeError) {
         setError(stripeError.message || "Payment failed. Please try again.");
