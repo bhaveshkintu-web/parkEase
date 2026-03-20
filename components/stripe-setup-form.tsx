@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PaymentElement,
   useStripe,
@@ -27,6 +27,17 @@ export function StripeSetupForm({
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  // Safety timeout: force isReady=true after 6s if onReady hasn't fired.
+  // Prevents permanent spinner when Stripe's iframe is slow or delayed.
+  useEffect(() => {
+    if (isReady) return;
+    const timeout = setTimeout(() => {
+      console.warn("[StripeSetupForm] onReady not fired after 6s — forcing ready state.");
+      setIsReady(true);
+    }, 6000);
+    return () => clearTimeout(timeout);
+  }, [isReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,21 +118,25 @@ export function StripeSetupForm({
           <p className="text-sm text-muted-foreground font-bold">Initializing Connection...</p>
         </div>
       ) : (
-        <div className={cn("transition-all duration-500", !isReady && "opacity-0 h-0 overflow-hidden")}>
-          <PaymentElement
-            options={{ layout: "tabs" }}
-            onReady={() => setIsReady(true)}
-            onChange={(e) => {
-              if (e.complete) setError(null);
-            }}
-          />
-        </div>
-      )}
-
-      {!isReady && stripe && elements && (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground font-bold">Loading Secure Fields...</p>
+        // IMPORTANT: PaymentElement must have real dimensions at all times.
+        // h-0/overflow-hidden collapses the iframe and prevents onReady from firing.
+        // Use overlay spinner pattern instead.
+        <div className="relative">
+          {!isReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center py-12 space-y-4 z-10 bg-background/80">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground font-bold">Loading Secure Fields...</p>
+            </div>
+          )}
+          <div className={cn("transition-opacity duration-500", !isReady && "opacity-0")}>
+            <PaymentElement
+              options={{ layout: "tabs" }}
+              onReady={() => setIsReady(true)}
+              onChange={(e) => {
+                if (e.complete) setError(null);
+              }}
+            />
+          </div>
         </div>
       )}
 

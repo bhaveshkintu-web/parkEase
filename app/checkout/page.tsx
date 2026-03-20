@@ -106,8 +106,11 @@ function CheckoutContent() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   // Stripe state
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  // Stripe state — no longer needed for new card flow (handled by deferred pattern)
+  // but kept clientSecret for SCA fallback in handleSavedCardPayment if needed locally.
+  // Actually, handleSavedCardPayment uses chargeSavedCardAction which returns its own secret.
+  // So we can remove these.
+
 
   // Guest Info initialized from context or user session
   const [firstName, setFirstName] = useState(contextGuestInfo?.firstName || "");
@@ -131,9 +134,11 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (isStripeActive) {
-      loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!).then(setStripe);
+      import("@stripe/stripe-js").then(({ loadStripe }) => {
+        loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!).then(setStripe);
+      });
     }
-  }, []);
+  }, [isStripeActive]);
 
   // Optimized completeness check – check BOTH local state AND context state (for initial labels)
   const isGuestInfoComplete = !!((firstName || contextGuestInfo?.firstName) && (lastName || contextGuestInfo?.lastName) && (email || contextGuestInfo?.email) && (phone || contextGuestInfo?.phone));
@@ -302,57 +307,12 @@ function CheckoutContent() {
   const finalPrice = calculateFinalPrice();
 
   // Create PaymentIntent when user reaches payment step
-  const createPaymentIntentForCheckout = async () => {
-    if (!bookingLocation || !quote) return;
+  // Deleted createPaymentIntentForCheckout function as it's now handled by onCreateIntent callback in the form
 
-    try {
-      const result = await createPaymentIntentAction({
-        amount: finalPrice,
-        locationId: bookingLocation.id,
-        locationName: bookingLocation.name,
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
-        guestEmail: email,
-      });
-
-      if (result.success) {
-        setClientSecret(result.clientSecret ?? null);
-        setPaymentIntentId(result.paymentIntentId ?? null);
-      } else {
-        console.error("Payment setup error:", result.error);
-        toast({
-          title: "Payment Setup Failed",
-          description: result.error || "Could not initialize payment. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error("Payment setup action error:", error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to set up payment. Please check your connection or log in again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Create PaymentIntent when moving to payment step
-  useEffect(() => {
-    if (step === 3) {
-      // Don't redirect if we're still loading the auth state
-      if (isAuthLoading) return;
+  // Removed useEffect that created PaymentIntent on step 3 — now deferred to button click
 
-      if (!isAuthenticated) {
-        const currentUrl = window.location.pathname + window.location.search;
-        router.push(`/auth/guest-login?returnUrl=${encodeURIComponent(currentUrl)}`);
-        return;
-      }
-
-      if (!clientSecret && isGuestInfoComplete && isVehicleInfoComplete) {
-        createPaymentIntentForCheckout();
-      }
-    }
-  }, [step, isAuthenticated, isAuthLoading, router, isGuestInfoComplete, isVehicleInfoComplete]);
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -373,12 +333,11 @@ function CheckoutContent() {
       if (res.ok && data.success) {
         setAppliedPromotion(data.promotion);
         setPromoApplied(true);
-        // Reset clientSecret to regenerate with new amount
-        setClientSecret(null);
         toast({
           title: "Promo Applied",
           description: `Code ${data.promotion.code} has been applied!`,
         });
+
       } else {
         toast({
           title: "Invalid Code",
@@ -823,7 +782,7 @@ function CheckoutContent() {
                 <AccordionItem value="step-3" className="rounded-xl border border-border bg-card">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${selectedCardId || clientSecret ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${selectedCardId || step > 3 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                         }`}>
                         <CreditCard className="h-4 w-4" />
                       </div>
@@ -906,19 +865,15 @@ function CheckoutContent() {
                               agreedToTerms={agreedToTerms}
                               setAgreedToTerms={setAgreedToTerms}
                             />
-                          ) : clientSecret && clientSecret.startsWith("mock_") ? (
-                            <MockCardForm
-                              onSuccess={(pi) => handlePaymentSuccess(pi)}
-                              amount={finalPrice}
-                              isSubmitting={isSubmitting}
-                              setIsSubmitting={setIsSubmitting}
-                              agreedToTerms={agreedToTerms}
-                              setAgreedToTerms={setAgreedToTerms}
-                            />
-                          ) : clientSecret ? (
-                            <StripeElementsWrapper clientSecret={clientSecret}>
+                          ) : isStripeActive ? (
+                            <StripeElementsWrapper 
+                              mode="payment"
+                              amount={Math.round(finalPrice * 100)}
+                              currency="usd"
+                              setupFutureUsage={isAuthenticated ? "off_session" : undefined}
+                            >
+
                               <StripePaymentForm
-                                clientSecret={clientSecret}
                                 amount={finalPrice}
                                 onPaymentSuccess={handlePaymentSuccess}
                                 onPaymentError={handlePaymentError}
@@ -926,12 +881,25 @@ function CheckoutContent() {
                                 setIsSubmitting={setIsSubmitting}
                                 agreedToTerms={agreedToTerms}
                                 setAgreedToTerms={setAgreedToTerms}
+                                onCreateIntent={async () => {
+                                  // This is ONLY called when user clicks standard Stripe "Pay Now" button
+                                  const result = await createPaymentIntentAction({
+                                    amount: finalPrice,
+                                    locationId: bookingLocation.id,
+                                    locationName: bookingLocation.name,
+                                    checkIn: checkIn.toISOString(),
+                                    checkOut: checkOut.toISOString(),
+                                    guestEmail: email,
+                                  });
+                                  if (!result.success) throw new Error(result.error);
+                                  return result.clientSecret!;
+                                }}
                               />
                             </StripeElementsWrapper>
                           ) : (
                             <div className="flex items-center justify-center py-12 bg-muted/20 rounded-xl border-2 border-dashed">
                               <Loader2 className="h-6 w-6 animate-spin text-primary mr-3" />
-                              <span className="text-sm font-bold text-muted-foreground">Initializing secure payment...</span>
+                              <span className="text-sm font-bold text-muted-foreground">Stripe is not configured...</span>
                             </div>
                           )}
                         </div>
@@ -1057,11 +1025,11 @@ function CheckoutContent() {
                         if (promo.id) {
                           setAppliedPromotion(promo);
                           setPromoApplied(true);
-                          setClientSecret(null); // Force regenerate payment intent
                           toast({
                             title: "Promo Applied",
                             description: `Code ${promo.code} has been applied!`,
                           });
+
                         } else {
                           // If it's just a manual code string
                           setPromoCode(promo.code);
@@ -1072,11 +1040,11 @@ function CheckoutContent() {
                         setAppliedPromotion(null);
                         setPromoApplied(false);
                         setPromoCode("");
-                        setClientSecret(null);
                         toast({
                           title: "Promo Removed",
                           description: "The promotion has been removed.",
                         });
+
                       }}
                     />
                   </div>
