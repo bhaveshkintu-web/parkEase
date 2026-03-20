@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PaymentElement,
   useStripe,
@@ -36,6 +36,18 @@ export function StripePaymentForm({
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  // Safety timeout: if onReady hasn't fired after 6s, assume it's ready.
+  // This can happen when Stripe's iframe loads but the event is delayed
+  // (e.g., on slower connections or certain regional configurations).
+  useEffect(() => {
+    if (isReady) return;
+    const timeout = setTimeout(() => {
+      console.warn("[StripePaymentForm] onReady not fired after 6s — forcing ready state.");
+      setIsReady(true);
+    }, 6000);
+    return () => clearTimeout(timeout);
+  }, [isReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,47 +107,43 @@ export function StripePaymentForm({
       </div>
 
         <div className="space-y-4">
-        {!stripe || !elements ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground font-bold">Initializing Connection...</p>
-          </div>
-        ) : (
-          <div className={cn("transition-all duration-500", !isReady && "opacity-0 h-0 overflow-hidden")}>
-            <PaymentElement
-              options={{ 
-                layout: "tabs",
-                wallets: {
-                  applePay: "never",
-                  googlePay: "never",
-                  link: "never"
-                },
-                terms: {
-                  card: "never"
-                },
-                fields: {
-                  billingDetails: {
-                    address: {
-                      country: 'never'
-                    }
-                  }
-                }
-              }}
-              onReady={() => setIsReady(true)}
-              onChange={(e) => {
-                if (e.complete) setError(null);
-              }}
-            />
-          </div>
-        )}
-
-        {!isReady && stripe && elements && (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Loading Payment Options...</p>
-          </div>
-        )}
-      </div>
+          {!stripe || !elements ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground font-bold">Initializing Connection...</p>
+            </div>
+          ) : (
+            // IMPORTANT: The PaymentElement MUST always have real dimensions in the DOM.
+            // Using h-0/overflow-hidden collapses the Stripe iframe to zero size,
+            // which prevents Stripe's SDK from firing the `onReady` event.
+            // We use a relative container with a spinner overlay instead.
+            <div className="relative">
+              {!isReady && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center py-12 space-y-4 z-10 bg-background/80">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Loading Payment Options...</p>
+                </div>
+              )}
+              <div className={cn("transition-opacity duration-500", !isReady && "opacity-0")}>
+                <PaymentElement
+                  options={{
+                    layout: "tabs",
+                    terms: { card: "never" },
+                    fields: {
+                      billingDetails: {
+                        address: { country: "never" },
+                      },
+                    },
+                  }}
+                  onReady={() => setIsReady(true)}
+                  onChange={(e) => {
+                    if (e.complete) setError(null);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
       {error && (
         <div className="flex items-center gap-2 rounded-xl bg-destructive/5 p-4 text-sm text-destructive border border-destructive/10 animate-in zoom-in-95 duration-200">
