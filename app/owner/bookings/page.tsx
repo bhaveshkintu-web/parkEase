@@ -1322,7 +1322,7 @@ export default function OwnerBookingsPage() {
                       </h4>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
                           <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">
                             Make/Model
                           </p>
@@ -1332,13 +1332,13 @@ export default function OwnerBookingsPage() {
                           </p>
                         </div>
 
-                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-right">
+                        <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
                           <p className="text-[9px] text-muted-foreground uppercase font-black mb-1">
                             Color
                           </p>
                           <p className="font-bold text-sm">
-                            {selectedBooking.vehicleInfo.color}
-                          </p>
+                            {selectedBooking.vehicleInfo.color ? selectedBooking.vehicleInfo.color : <p>-</p>}
+                            </p>                      
                         </div>
 
                         <div className="col-span-2 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-xl p-3.5 flex flex-col items-center justify-center">
