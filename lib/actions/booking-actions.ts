@@ -241,6 +241,9 @@ export async function createBooking(data: any) {
       const confirmationCode = generateConfirmationCode();
 
       // f. Create Booking
+      const isMockPayment = !!data.isMock || (data.paymentIntentId?.startsWith("pi_mock_"));
+      const isConfirmed = !!data.confirmed || isMockPayment;
+      
       const booking = await (tx.booking as any).create({
         data: {
           userId,
@@ -259,7 +262,8 @@ export async function createBooking(data: any) {
           taxes: pricing.taxes,
           fees: pricing.fees,
           ownerEarnings: pricing.ownerEarnings,
-          status: BookingStatus.PENDING,
+          // Use explicit confirmation if provided (e.g. from server charge or stripe confirm)
+          status: isConfirmed ? BookingStatus.CONFIRMED : BookingStatus.PENDING,
           promoCode: (promotion as any) ? (promotion as any).code : null,
           promoDiscount: (pricing as any).discount,
           confirmationCode,
@@ -283,8 +287,8 @@ export async function createBooking(data: any) {
           amount: pricing.total,
           currency: "USD",
           provider: "STRIPE",
-          transactionId: data.paymentIntentId || `txn_saved_${Math.random().toString(36).substring(2, 15)}`,
-          status: "SUCCESS",
+          transactionId: data.paymentIntentId || `txn_init_${Math.random().toString(36).substring(2, 10)}`,
+          status: isConfirmed ? "SUCCESS" : "PENDING",
           paymentMethodId: paymentMethodId || null,
         }
       });
@@ -656,6 +660,7 @@ export async function updateBookingDates(
         checkOut,
         spotId: finalSpotId,
         spotIdentifier: finalSpotIdentifier,
+        status: BookingStatus.CONFIRMED,
       };
 
       if (pricingData) {
@@ -680,41 +685,31 @@ export async function updateBookingDates(
 
         // 2. CASE A: It's an extension (Price Increased)
         if (pricingData.isExtension && priceDifference > 0) {
+          const isMockPayment = !!(pricingData as any).isMock || ((pricingData as any).transactionId?.startsWith("pi_mock_"));
+          
+          const transactionId = pricingData.transactionId || (pricingData.paymentMethodId
+            ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
+            : `txn_mod_${Math.random().toString(36).substring(2, 10)}`);
+
           await tx.payment.create({
             data: {
               bookingId: booking.id,
               amount: priceDifference,
               currency: "USD",
               provider: "STRIPE",
-              transactionId: pricingData.transactionId || (pricingData.paymentMethodId
-                ? `txn_saved_${Math.random().toString(36).substring(2, 12)}`
-                : `txn_mod_${Math.random().toString(36).substring(2, 10)}`),
-              status: "SUCCESS",
+              transactionId: transactionId,
+              status: (isMockPayment || (pricingData.transactionId && pricingData.transactionId.startsWith('pi_'))) ? "SUCCESS" : "PENDING", 
               paymentMethodId: pricingData.paymentMethodId || null,
             }
           });
 
-          // Update Owner Wallet for extra earnings
-          // @ts-ignore - Prisma type inclusion issue in IDE
-          const ownerWallet = booking.location?.owner?.wallet;
-          const extraEarnings = ownerEarnings - Number(booking.ownerEarnings || 0);
-
-          if (ownerWallet && extraEarnings > 0) {
-            await tx.wallet.update({
-              where: { id: ownerWallet.id },
-              data: { balance: { increment: extraEarnings } }
-            });
-
-            await tx.walletTransaction.create({
-              data: {
-                walletId: ownerWallet.id,
-                type: "CREDIT",
-                amount: extraEarnings,
-                description: `Extra earnings for modified booking ${booking.confirmationCode}`,
-                status: "SUCCESS",
-                reference: booking.id,
-              }
-            });
+          // Record as "Held" in totalBalance. Released only on check-out + payment success.
+          const { FinanceService } = await import("@/lib/finance-service");
+          await FinanceService.recordExtraEarnings(booking.id, priceDifference, 'EXTENSION', tx);
+          
+          // If mock, release immediately if booking is already COMPLETED (rare for extension but possible)
+          if (isMockPayment && booking.status === "COMPLETED") {
+             await FinanceService.creditEarnings(booking.id, tx);
           }
         }
         // 2. CASE B: It's a reduction (Price Decreased)
@@ -906,7 +901,12 @@ export async function rejectBooking(bookingId: string, reason: string) {
     const result = await prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({
         where: { id: bookingId },
-        include: { location: true }
+        include: { 
+          location: true,
+          payments: {
+            where: { status: "SUCCESS" }
+          }
+        }
       });
 
       if (!booking) throw new Error("Booking not found");
@@ -929,8 +929,54 @@ export async function rejectBooking(bookingId: string, reason: string) {
         });
       }
 
+      // 3. Automated Refund Logic
+      const successfulPayment = booking.payments[0]; // Get the first successful payment
+      if (successfulPayment) {
+        const refundAmount = successfulPayment.amount;
+
+        // a. Create Refund Request for Admin
+        await tx.refundRequest.create({
+          data: {
+            bookingId,
+            amount: refundAmount,
+            reason: "Owner rejected paid booking",
+            description: `Auto-generated refund request because owner rejected a paid booking. \nRejection Reason: ${reason}. \nOriginal Price: ${booking.totalPrice}`,
+            status: "PENDING",
+            approvedAmount: refundAmount,
+          },
+        });
+
+        // The wallet deduction is handled by FinanceService.processRefundDeduction 
+        // which is called from the admin's refund approval API route.
+      }
+
       return updatedBooking;
     });
+
+    // --- Out of Transaction Side Effects ---
+    
+    // 1. Notify Admins if it's a refund case
+    const bookingWithPayments = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { payments: { where: { status: "SUCCESS" } } }
+    });
+
+    if (bookingWithPayments?.payments.length && bookingWithPayments.payments.length > 0) {
+      const { NotificationService, NotificationType } = await import("@/lib/notifications");
+      
+      await NotificationService.notifyAdmins({
+        title: "New Refund Ticket: Owner Rejection",
+        message: `A booking rejection triggered an auto-refund request for ${bookingWithPayments.confirmationCode}`,
+        type: NotificationType.REFUND_REQUESTED as any,
+        metadata: { bookingId: bookingId }
+      }).catch(err => console.error("Failed to notify admins of auto-refund:", err));
+
+      // 2. Notify Customer (Rejection + Refund Initiation)
+      const { notifyCustomerOfRejection } = await import("@/lib/notifications");
+      notifyCustomerOfRejection(bookingId).catch(err => 
+        console.error("Failed to notify customer of rejection:", err)
+      );
+    }
 
     revalidatePath("/owner/bookings");
     revalidatePath("/account/reservations");

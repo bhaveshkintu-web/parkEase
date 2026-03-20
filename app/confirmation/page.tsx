@@ -56,20 +56,51 @@ function ConfirmationContent() {
   }, []);
 
   useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
     async function fetchBooking() {
       if (!code) {
         setIsLoading(false);
         return;
       }
 
-      const response = await getBookingByConfirmationCode(code);
-      if (response.success && response.data) {
-        setBooking(response.data);
+      try {
+        const response = await getBookingByConfirmationCode(code);
+        if (response.success && response.data) {
+          setBooking(response.data);
+          
+          // If booking is confirmed, we can stop polling
+          if (response.data.status === "CONFIRMED") {
+            setIsLoading(false);
+            if (pollInterval) clearInterval(pollInterval);
+          } else {
+            // Keep loading state if it's still pending on the first load
+            setIsLoading(false);
+          }
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching booking:", error);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
+
     fetchBooking();
-  }, [code]);
+
+    // Set up polling if booking is not yet confirmed
+    pollInterval = setInterval(() => {
+      if (code && (!booking || booking.status === "PENDING")) {
+        fetchBooking();
+      } else if (booking?.status === "CONFIRMED") {
+        clearInterval(pollInterval);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [code, booking?.status]);
 
   const handleCopyCode = async () => {
     if (!code) return;
@@ -246,17 +277,33 @@ Visit our website at parkzipply.com for help.
 
       <main className="flex-1">
         <div className="container px-4 py-8 md:py-12">
-          {/* Success Header */}
+          {/* Status Header */}
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <CheckCircle className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
-              Reservation Confirmed!
-            </h1>
-            <p className="text-muted-foreground">
-              Your parking spot has been reserved. A confirmation email has been sent to your inbox.
-            </p>
+            {booking?.status === "PENDING" ? (
+              <>
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                  <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                </div>
+                <h1 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
+                  Verifying Your Payment...
+                </h1>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  We're finalizing your reservation with Stripe. This usually takes just a few seconds. Please stay on this page.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <CheckCircle className="h-8 w-8 text-primary" />
+                </div>
+                <h1 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
+                  Reservation Confirmed!
+                </h1>
+                <p className="text-muted-foreground">
+                  Your parking spot has been reserved. A confirmation email has been sent to your inbox.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="mx-auto max-w-3xl space-y-6">

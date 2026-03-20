@@ -38,7 +38,7 @@ export async function getActiveCommissionRule(bookingType: string = "all") {
       orderBy: { priority: "desc" },
       take: 1,
     });
-    
+
     return rules[0] || null;
   } catch (error) {
     console.error("GET_ACTIVE_COMMISSION_RULE_ERROR:", error);
@@ -52,29 +52,29 @@ export async function calculateCommission(
 ): Promise<CommissionResult | null> {
   try {
     const rule = await getActiveCommissionRule(bookingType);
-    
+
     if (!rule) {
       return null;
     }
-    
+
     // Check minimum booking value
     if (rule.minBookingValue && bookingAmount < rule.minBookingValue) {
       return null;
     }
-    
+
     let commissionAmount: number;
-    
+
     if (rule.type === "percentage") {
       commissionAmount = (bookingAmount * rule.value) / 100;
     } else {
       commissionAmount = rule.value;
     }
-    
+
     // Apply max commission cap if set
     if (rule.maxCommission && commissionAmount > rule.maxCommission) {
       commissionAmount = rule.maxCommission;
     }
-    
+
     return {
       ruleId: rule.id,
       ruleName: rule.name,
@@ -102,7 +102,7 @@ export async function addCommissionRule(data: any, adminId?: string) {
         isActive: data.isActive ?? true,
       },
     });
-    
+
     // Audit log
     if (adminId) {
       await prisma.settingsAuditLog.create({
@@ -116,7 +116,7 @@ export async function addCommissionRule(data: any, adminId?: string) {
         },
       });
     }
-    
+
     revalidatePath("/admin/commissions");
     revalidatePath("/admin/settings");
     return { success: true, rule };
@@ -129,7 +129,7 @@ export async function addCommissionRule(data: any, adminId?: string) {
 export async function updateCommissionRule(id: string, data: any, adminId?: string) {
   try {
     const existing = await prisma.commissionRule.findUnique({ where: { id } });
-    
+
     const rule = await prisma.commissionRule.update({
       where: { id },
       data: {
@@ -140,7 +140,7 @@ export async function updateCommissionRule(id: string, data: any, adminId?: stri
         priority: data.priority !== undefined ? Number(data.priority) : undefined,
       },
     });
-    
+
     // Audit log
     if (adminId) {
       await prisma.settingsAuditLog.create({
@@ -154,7 +154,7 @@ export async function updateCommissionRule(id: string, data: any, adminId?: stri
         },
       });
     }
-    
+
     revalidatePath("/admin/commissions");
     revalidatePath("/admin/settings");
     return { success: true, rule };
@@ -167,11 +167,11 @@ export async function updateCommissionRule(id: string, data: any, adminId?: stri
 export async function deleteCommissionRule(id: string, adminId?: string) {
   try {
     const existing = await prisma.commissionRule.findUnique({ where: { id } });
-    
+
     await prisma.commissionRule.delete({
       where: { id },
     });
-    
+
     // Audit log
     if (adminId) {
       await prisma.settingsAuditLog.create({
@@ -185,7 +185,7 @@ export async function deleteCommissionRule(id: string, adminId?: string) {
         },
       });
     }
-    
+
     revalidatePath("/admin/commissions");
     revalidatePath("/admin/settings");
     return { success: true };

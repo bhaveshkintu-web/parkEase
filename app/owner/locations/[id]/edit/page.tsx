@@ -57,7 +57,7 @@ import { airports } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { getParkingLocationById, updateParkingLocation } from "@/lib/actions/parking-actions";
 import { SpotIdentifierGrid } from "@/components/owner/spot-identifier-grid";
-import { generateSpotIdentifiers } from "@/lib/actions/spot-actions";
+import { generateSpotIdentifiers, getSpotsWithBookingStatus } from "@/lib/actions/spot-actions";
 
 const amenityOptions = [
   { id: "covered", label: "Covered Parking", icon: Car },
@@ -181,6 +181,9 @@ export default function OwnerEditLocationPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [airportOpen, setAirportOpen] = useState(false);
+  // Identifiers of spots that have active/future bookings (cannot be deleted)
+  const [bookedIdentifiers, setBookedIdentifiers] = useState<string[]>([]);
+  const [blockingSpots, setBlockingSpots] = useState<string[]>([]);
 
   // Address fetching states
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
@@ -240,6 +243,15 @@ export default function OwnerEditLocationPage() {
           // Ensure identifiers match the total count immediately
           spotIdentifiers: syncSpotList(loadedTotalSpots, loadedSpots),
         });
+
+        // Load booking status for each spot to know which are protected
+        const statusResult = await getSpotsWithBookingStatus(locationId);
+        if (statusResult.success && statusResult.data) {
+          const booked = statusResult.data
+            .filter((s: any) => s.hasActiveOrFutureBooking)
+            .map((s: any) => s.identifier);
+          setBookedIdentifiers(booked);
+        }
       } else {
         toast({
           title: "Error",
@@ -261,12 +273,25 @@ export default function OwnerEditLocationPage() {
 
       // Bi-directional sync
       if (field === "totalSpots") {
-        const total = parseInt(value as string);
-        if (!isNaN(total)) {
-          newState.spotIdentifiers = syncSpotList(total, prev.spotIdentifiers);
+        const newTotal = parseInt(value as string);
+        const oldTotal = prev.spotIdentifiers.length;
+        if (!isNaN(newTotal)) {
+          newState.spotIdentifiers = syncSpotList(newTotal, prev.spotIdentifiers);
+
+          // Check if any spots being removed are protected (have active/future bookings)
+          if (newTotal < oldTotal) {
+            const slotsToRemove = prev.spotIdentifiers.slice(newTotal);
+            const blocked = slotsToRemove
+              .map(s => typeof s === "string" ? s : s.identifier)
+              .filter(id => bookedIdentifiers.includes(id));
+            setBlockingSpots(blocked);
+          } else {
+            setBlockingSpots([]);
+          }
         }
       } else if (field === "spotIdentifiers") {
         newState.totalSpots = String((value as any[]).length);
+        setBlockingSpots([]);
       }
 
       return newState;
@@ -275,7 +300,7 @@ export default function OwnerEditLocationPage() {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-  }, [errors]);
+  }, [errors, bookedIdentifiers]);
 
   // Safety fallback to ensure UI state doesn\'t drift
   useEffect(() => {
@@ -393,10 +418,18 @@ export default function OwnerEditLocationPage() {
       const result = await updateParkingLocation(locationId, locationData);
 
       if (result.success) {
-        toast({
-          title: "Success",
-          description: "Location updated successfully",
-        });
+        const protectedSpots = (result as any).protectedSpots as string[];
+        if (protectedSpots && protectedSpots.length > 0) {
+          toast({
+            title: "Saved with restrictions",
+            description: `${protectedSpots.length} spot(s) (${protectedSpots.join(", ")}) could not be removed because they have active or future bookings.`,
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Location updated successfully",
+          });
+        }
         router.push(`/owner/locations/${locationId}`);
       } else {
         const errorDetails = (result as any).details ? JSON.stringify((result as any).details) : result.error;
@@ -445,7 +478,7 @@ export default function OwnerEditLocationPage() {
               <Link href={`/owner/locations/${locationId}`}>
                 <Button variant="outline">Cancel</Button>
               </Link>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
+              <Button onClick={handleSubmit} disabled={isSubmitting || blockingSpots.length > 0}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>
@@ -645,11 +678,25 @@ export default function OwnerEditLocationPage() {
                 lockedIdentifiers={formData.spotIdentifiers
                   .filter((s: any) => s._count?.bookings > 0)
                   .map((s: any) => s.identifier)}
+                bookedIdentifiers={bookedIdentifiers}
                 maxSpots={parseInt(formData.totalSpots) || 500}
                 locationId={locationId}
               />
 
-              {formData.spotIdentifiers.length !== parseInt(formData.totalSpots) && formData.totalSpots && (
+              {blockingSpots.length > 0 && (
+                <Alert variant="destructive" className="py-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Cannot Reduce Spots</AlertTitle>
+                  <AlertDescription>
+                    The following spots cannot be removed because they have active or future bookings:{" "}
+                    <strong>{blockingSpots.join(", ")}</strong>.
+                    <br />
+                    Please wait until these bookings are completed or manually remove other free spots from the grid.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {blockingSpots.length === 0 && formData.spotIdentifiers.length !== parseInt(formData.totalSpots) && formData.totalSpots && (
                 <Alert variant="destructive" className="py-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">

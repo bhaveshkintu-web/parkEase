@@ -27,3 +27,16 @@ CREATE INDEX "Wallet_type_idx" ON "Wallet"("type");
 
 -- AlterTable
 ALTER TABLE "PaymentMethod" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;
+
+-- add enum value
+ALTER TYPE "NotificationType" ADD VALUE 'BOOKING_REJECTED';
+-- Enum Update
+ALTER TYPE "NotificationType" ADD VALUE 'SPOT_UPDATED';
+
+-- AlterTable
+ALTER TABLE "PaymentMethod"
+ADD COLUMN "stripeMethodId" TEXT;
+
+-- AlterTable
+ALTER TABLE "User"
+ADD COLUMN "stripeCustomerId" TEXT;

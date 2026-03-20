@@ -27,6 +27,7 @@ model User {
   resetTokenExpiry  DateTime?
   guestConvertedAt  DateTime?
   isGuest           Boolean           @default(false)
+  stripeCustomerId  String?
   moderatedReviews  AdminReview[]
   bookings          Booking[]
   processedBookings BookingRequest[]  @relation("ProcessedBy")
@@ -422,6 +423,7 @@ model PaymentMethod {
   isDefault      Boolean   @default(false)
   createdAt      DateTime  @default(now())
   cardholderName String?
+  stripeMethodId String?
   isActive       Boolean   @default(true)
   payments       Payment[]
   user           User      @relation(fields: [userId], references: [id])
@@ -826,4 +828,6 @@ enum NotificationType {
   REFUND_DEDUCTION
   NEW_BOOKING
   SESSION_EXPIRY_WARNING
+  BOOKING_REJECTED
+  SPOT_UPDATED
 }

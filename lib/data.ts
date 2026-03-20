@@ -13,12 +13,12 @@ export const destinations: Destination[] = [
 
 export const airports: Airport[] = [
   { code: "LAX", name: "Los Angeles International Airport", city: "Los Angeles", state: "CA", image: "/airports/la.jpeg" },
-  { code: "JFK", name: "John F. Kennedy International Airport", city: "New York", state: "NY", image: "/airports/JFK.jpg" },
+  { code: "JFK", name: "John F. Kennedy International Airport", city: "New York", state: "NY", image: "/airports/jfk.jpg" },
   { code: "ORD", name: "O'Hare International Airport", city: "Chicago", state: "IL", image: "/airports/ord.jpg" },
-  { code: "DFW", name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX", image: "/airports/DFW.jpg" },
-  { code: "SFO", name: "San Francisco International Airport", city: "San Francisco", state: "CA", image: "/airports/SFO.jpg" },
-  { code: "MIA", name: "Miami International Airport", city: "Miami", state: "FL", image: "/airports/MIA.jpeg" },
-  { code: "SEA", name: "Seattle-Tacomo International Airport", city: "Seattle", state: "WA", image: "/airports/SEA.jpg" },
+  { code: "DFW", name: "Dallas/Fort Worth International Airport", city: "Dallas", state: "TX", image: "/airports/dfw.jpg" },
+  { code: "SFO", name: "San Francisco International Airport", city: "San Francisco", state: "CA", image: "/airports/sfo.jpg" },
+  { code: "MIA", name: "Miami International Airport", city: "Miami", state: "FL", image: "/airports/mia.jpeg" },
+  { code: "SEA", name: "Seattle-Tacomo International Airport", city: "Seattle", state: "WA", image: "/airports/sea.jpg" },
   { code: "ATL", name: "Hartsfield-Jackson Atlanta International Airport", city: "Atlanta", state: "GA", image: "/airports/atl.jpg" },
   { code: "PHL", name: "Philadelphia International Airport", city: "Philadelphia", state: "PA", image: "/airports/phl.jpg" },
   { code: "BOS", name: "Boston Logan International Airport", city: "Boston", state: "MA", image: "/airports/bos.jpg" },

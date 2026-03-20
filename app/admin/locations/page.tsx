@@ -24,12 +24,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Search,
   MapPin,
   Star,
   Loader2,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Wrench,
 } from "lucide-react";
+import {
+  updateLocationStatus,
+  deleteLocation as removeLocation
+} from "@/lib/actions/parking-actions";
 import { useToast } from "@/hooks/use-toast";
 
 interface Location {
@@ -40,6 +56,7 @@ interface Location {
   status: string;
   pricePerDay: number;
   rating: number;
+  reviewCount: number;
   airportCode: string | null;
   owner: {
     businessName: string;
@@ -62,27 +79,58 @@ export default function AdminLocationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
   const fetchLocations = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const response = await fetch("/api/admin/locations");
-      if (response.ok) {
-        const data = await response.json();
-        setLocations(data.locations || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch locations:", error);
+      if (!response.ok) throw new Error("Failed to fetch locations");
+      const data = await response.json();
+      setLocations(data.locations || []);
+    } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to load locations",
+        description: "Could not load locations",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const handleStatusUpdate = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const result = await updateLocationStatus(id, newStatus);
+    if (result.success) {
+      toast({ title: `Location ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'}` });
+      fetchLocations();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handleMaintenance = async (id: string) => {
+    const result = await updateLocationStatus(id, "MAINTENANCE");
+    if (result.success) {
+      toast({ title: "Location set to maintenance" });
+      fetchLocations();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this location?")) {
+      const result = await removeLocation(id);
+      if (result.success) {
+        toast({ title: "Location deleted" });
+        fetchLocations();
+      } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      }
     }
   };
 
@@ -170,19 +218,20 @@ export default function AdminLocationsPage() {
                 <TableHead>Rating</TableHead>
                 <TableHead>Bookings</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredLocations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No locations found</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedLocations.map((location) => (
-                  <TableRow key={location.id}>
+                  <TableRow key={location.id} className="group">
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{location.name}</p>
@@ -208,7 +257,8 @@ export default function AdminLocationsPage() {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                        <span>{location.rating?.toFixed(1) || "0.0"}</span>
+                        <span>{(location.rating || 0).toFixed(1)}</span>
+                        <span className="text-muted-foreground text-xs">({location.reviewCount || 0})</span>
                       </div>
                     </TableCell>
                     <TableCell>{location._count?.bookings || 0}</TableCell>
@@ -216,15 +266,64 @@ export default function AdminLocationsPage() {
                       <Badge
                         variant="outline"
                         className={
-                          location.status === "active"
+                          location.status === "ACTIVE"
                             ? "bg-green-50 text-green-700 border-green-200"
-                            : location.status === "pending"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-muted text-muted-foreground"
+                            : location.status === "PENDING"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : location.status === "MAINTENANCE"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-muted text-muted-foreground"
                         }
                       >
                         {location.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/locations/${location.id}`} className="flex items-center">
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusUpdate(location.id, location.status)}
+                            disabled={location.status === "PENDING"}
+                          >
+                            {location.status === "ACTIVE" ? (
+                              <>
+                                <ToggleLeft className="w-4 h-4 mr-2" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <ToggleRight className="w-4 h-4 mr-2" />
+                                Activate
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleMaintenance(location.id)}
+                            disabled={location.status === "MAINTENANCE"}
+                          >
+                            <Wrench className="w-4 h-4 mr-2" />
+                            Maintenance
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(location.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

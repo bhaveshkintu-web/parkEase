@@ -480,3 +480,27 @@ export async function getPlatformCommissionRate(): Promise<number> {
   const rate = await getSetting("booking.defaultCommissionRate");
   return typeof rate === "number" ? rate : 15;
 }
+
+// ===== Stripe Debugging =====
+export async function getStripeConfigStatus() {
+  const { isStripeConfigured, getStripePublishableKey } = await import("@/lib/stripe");
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim() || "";
+  const publishableKey = getStripePublishableKey();
+
+  const issues: string[] = [];
+  if (!secretKey) issues.push("Secret Key is missing");
+  else if (secretKey.toLowerCase().includes("your_secret_key")) issues.push("Secret Key is a placeholder");
+
+  if (!publishableKey) issues.push("Publishable Key is missing");
+  else if (publishableKey.toLowerCase().includes("your_publishable_key")) issues.push("Publishable Key is a placeholder");
+  else if (!publishableKey.startsWith("pk_")) issues.push("Publishable Key does not start with 'pk_'");
+  else if (publishableKey.length < 20) issues.push("Publishable Key is too short");
+
+  const isConfigured = isStripeConfigured();
+  return {
+    isConfigured,
+    mode: isConfigured ? (secretKey.startsWith("sk_live_") ? "LIVE" : "TEST") : "MOCK",
+    issues,
+    publishableKeySnippet: publishableKey ? `${publishableKey.substring(0, 7)}...` : null
+  };
+}

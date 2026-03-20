@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X, CreditCard, Calendar, Settings2, PlusCircle, Info, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Loader2, Car, Save, Clock, AlertCircle, Lock, X, CreditCard, Calendar, Settings2, PlusCircle, Info, ShieldCheck, CheckCircle2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate, calculateQuote } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +20,7 @@ import { isStripeConfigured } from "@/lib/stripe";
 import { MockCardForm } from "@/components/mock-card-form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
-import { createPaymentIntentAction } from "@/lib/actions/stripe-actions";
+import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { Plus } from "lucide-react";
 
 const isStripeActive = isStripeConfigured();
@@ -329,14 +329,32 @@ export default function ModifyReservationPage({
       return;
     }
 
+    if (!selectedMethodId || selectedMethodId === "new_card") {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select a valid saved card.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsPaymentSubmitting(true);
     try {
-      // For saved cards, we directly call updateBookingDates with the method ID
-      // The server will handle charging the saved card if it's integrated with Stripe
-      // For now, we simulate success or use the provided action logic
+      // 1. Charge the saved card via server action directly
+      const chargeResult = await chargeSavedCardAction({
+        amount: quote.totalPrice - reservation.totalPrice, // Charge the difference
+        paymentMethodId: selectedMethodId,
+        locationId: reservation.locationId,
+        bookingId: id,
+        checkIn: new Date(formData.checkIn).toISOString(),
+        checkOut: new Date(formData.checkOut).toISOString(),
+      });
 
-      const isMockPayment = selectedMethodId === "new_card" && !isStripeConfigured;
+      if (!chargeResult.success) {
+        throw new Error(chargeResult.error);
+      }
 
+      // 2. If charge succeeds, update the booking dates
       const dateResponse = await updateBookingDates(
         id,
         new Date(formData.checkIn),
@@ -348,8 +366,8 @@ export default function ModifyReservationPage({
           isExtension: needsPayment,
           promoCode: reservation?.promoCode || null,
           promoDiscount: quote.discount || 0,
-          paymentMethodId: isMockPayment ? undefined : selectedMethodId,
-          transactionId: isMockPayment ? `pi_mock_${Math.random().toString(36).substring(7)}` : undefined,
+          paymentMethodId: selectedMethodId,
+          transactionId: chargeResult.paymentIntentId as string, // Real ID from Stripe
         }
       );
 
@@ -600,68 +618,83 @@ export default function ModifyReservationPage({
               <CardContent className="space-y-6">
                 {/* YOUR SAVED CARDS Section */}
                 {paymentMethods.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" />
-                      Your Saved Cards
-                    </h3>
-
-                    <RadioGroup
-                      value={selectedMethodId}
-                      onValueChange={setSelectedMethodId}
-                      className="grid gap-3"
-                    >
-                      {paymentMethods.map((method) => (
-                        <div
-                          key={method.id}
-                          className={cn(
-                            "flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer",
-                            selectedMethodId === method.id
-                              ? "border-primary bg-primary/5 ring-4 ring-primary/10"
-                              : "border-border bg-background hover:border-muted-foreground/30"
-                          )}
-                          onClick={() => setSelectedMethodId(method.id)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <RadioGroupItem value={method.id} id={method.id} className="sr-only" />
-                            <div className="h-10 w-14 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black uppercase text-slate-500 border border-slate-200 shadow-inner">
-                              {method.brand}
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">•••• •••• •••• {method.last4}</p>
-                              <p className="text-xs text-muted-foreground">Expires {method.expiryMonth}/{method.expiryYear}</p>
-                            </div>
-                          </div>
-                          {method.isDefault && (
-                            <span className="text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                              Default
-                            </span>
-                          )}
+                    <div className="space-y-4 mb-8">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-3.5 h-3.5" /> 
+                          <span>Your Saved Cards</span>
                         </div>
-                      ))}
+                        <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 tracking-widest">SECURE</span>
+                      </label>
 
-                      <div
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer",
-                          selectedMethodId === "new_card"
-                            ? "border-primary bg-primary/5 ring-4 ring-primary/10"
-                            : "border-border bg-background hover:border-muted-foreground/30"
-                        )}
-                        onClick={() => setSelectedMethodId("new_card")}
+                      <RadioGroup
+                        value={selectedMethodId}
+                        onValueChange={setSelectedMethodId}
+                        className="grid gap-3"
                       >
-                        <div className="flex items-center gap-4">
-                          <RadioGroupItem value="new_card" id="new_card" className="sr-only" />
-                          <div className="h-10 w-14 rounded-lg bg-slate-50 flex items-center justify-center text-primary border border-slate-200">
-                            <Plus className="w-5 h-5" />
+                        {paymentMethods.map((method) => (
+                          <div
+                            key={method.id}
+                            onClick={() => {
+                              setSelectedMethodId(method.id);
+                            }}
+                            className={cn(
+                              "flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300",
+                              selectedMethodId === method.id 
+                                ? "border-primary bg-primary/[0.03] shadow-md shadow-primary/5 scale-[1.01]" 
+                                : "border-border/50 bg-card hover:border-primary/20 hover:bg-slate-50/50"
+                            )}
+                          >
+                            <div className="flex items-center gap-5">
+                              <RadioGroupItem value={method.id} id={method.id} className="sr-only" />
+                              <div className={cn(
+                                "w-14 h-9 rounded-lg flex items-center justify-center text-[10px] font-black text-white uppercase shadow-inner relative overflow-hidden",
+                                method.brand === 'visa' ? "bg-[#1A1F71]" :
+                                method.brand === 'mastercard' ? "bg-[#EB001B]" : "bg-slate-800"
+                              )}>
+                                {method.brand}
+                                <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4" />
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-800 text-sm tracking-tight capitalize">•••• {method.last4}</p>
+                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Expires {method.expiryMonth}/{method.expiryYear}</p>
+                              </div>
+                            </div>
+                            <div className={cn(
+                              "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                              selectedMethodId === method.id ? "border-primary bg-primary" : "border-border"
+                            )}>
+                              {selectedMethodId === method.id && <Check className="w-4 h-4 text-white" />}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-sm">Use a new card / another payment method</p>
-                            <p className="text-xs text-muted-foreground">Select your preferred payment option below</p>
+                        ))}
+
+                        <div
+                          onClick={() => setSelectedMethodId("new_card")}
+                          className={cn(
+                            "flex items-center gap-5 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300",
+                            selectedMethodId === "new_card" 
+                              ? "border-primary bg-primary/[0.03] scale-[1.01]" 
+                              : "border-border/60 bg-slate-50/20 hover:border-primary/40 hover:bg-slate-50/50"
+                          )}
+                        >
+                          <div className="w-14 h-9 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
+                             <PlusCircle className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <RadioGroupItem value="new_card" id="new_card" className="sr-only" />
+                            <p className="font-black text-slate-800 text-sm tracking-tight">Use a new card / another method</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">Select your preferred payment option below</p>
+                          </div>
+                          <div className={cn(
+                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                            selectedMethodId === "new_card" ? "border-primary bg-primary" : "border-border"
+                          )}>
+                            {selectedMethodId === "new_card" && <Check className="w-4 h-4 text-white" />}
                           </div>
                         </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
+                      </RadioGroup>
+                    </div>
                 )}
 
                 {/* Demo Mode UI or Stripe Elements */}
@@ -669,7 +702,7 @@ export default function ModifyReservationPage({
                   <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
                     {paymentMethods.length > 0 && <div className="border-t pt-4" />}
 
-                    {!isStripeActive ? (
+                    {!isStripeActive || (clientSecret && clientSecret.startsWith("mock_")) ? (
                       <MockCardForm
                         onSuccess={handlePaymentSuccess}
                         amount={priceDifference}
@@ -706,23 +739,29 @@ export default function ModifyReservationPage({
                   </div>
                 ) : (
                   <div className="space-y-4 py-4 animate-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-slate-50/50">
-                      <Checkbox
-                        id="terms-saved"
-                        checked={agreedToTerms}
-                        onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                      />
+                    <div className={cn(
+                      "flex items-start gap-4 p-5 rounded-2xl border-2 transition-colors",
+                      agreedToTerms ? "border-primary/20 bg-primary/5 shadow-inner" : "border-border/50 bg-slate-50/50"
+                    )}>
+                      <div className="pt-0.5">
+                        <Checkbox
+                          id="terms-saved"
+                          checked={agreedToTerms}
+                          onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                          className="w-5 h-5 rounded-md"
+                        />
+                      </div>
                       <Label htmlFor="terms-saved" className="flex-1 block text-sm text-muted-foreground leading-relaxed cursor-pointer select-none">
                         <span>
                           I agree to the{" "}
-                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                          <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">
                             Terms
                           </Link>{" "}
                           and{" "}
-                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-medium">
-                            Policy
+                          <Link href="/cancellation-policy" target="_blank" className="text-primary hover:underline font-bold">
+                            Cancellation Policy
                           </Link>
-                          . I understand that my reservation is subject to availability.
+                          . I understand my reservation is subject to availability.
                         </span>
                       </Label>
                     </div>
@@ -731,22 +770,24 @@ export default function ModifyReservationPage({
                       type="button"
                       onClick={handleSavedCardSubmit}
                       className={cn(
-                        "w-full h-14 font-black text-lg transition-all duration-300",
-                        "hover:scale-[1.01] active:scale-[0.98] rounded-xl group"
+                        "w-full h-16 text-xl font-black uppercase tracking-[0.2em] shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] rounded-2xl group",
+                        agreedToTerms
+                          ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
+                          : "opacity-40 grayscale"
                       )}
                       disabled={isPaymentSubmitting || !agreedToTerms}
                     >
                       {isPaymentSubmitting ? (
-                        <div className="flex items-center gap-3">
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          <span className="uppercase tracking-widest">Processing...</span>
+                        <div className="flex items-center gap-4">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span className="animate-pulse">Processing...</span>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center w-full relative">
-                          <span className="uppercase tracking-widest font-black">
+                          <span className="drop-shadow-sm truncate px-8 leading-none">
                             Pay {formatCurrency(priceDifference)} & Save Changes
                           </span>
-                          <Lock className="absolute right-0 h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                          <Lock className="absolute right-4 h-6 w-6 opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all scale-90 group-hover:scale-100" />
                         </div>
                       )}
                     </Button>
