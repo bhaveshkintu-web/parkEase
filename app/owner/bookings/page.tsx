@@ -1337,8 +1337,8 @@ export default function OwnerBookingsPage() {
                             Color
                           </p>
                           <p className="font-bold text-sm">
-                            {selectedBooking.vehicleInfo.color ? selectedBooking.vehicleInfo.color : <p>-</p>}
-                            </p>                      
+                            {selectedBooking.vehicleInfo.color || "-"}
+                          </p>                      
                         </div>
 
                         <div className="col-span-2 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-xl p-3.5 flex flex-col items-center justify-center">

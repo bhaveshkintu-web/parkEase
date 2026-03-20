@@ -104,7 +104,6 @@ function CheckoutContent() {
   const [appliedPromotion, setAppliedPromotion] = useState<any>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [hasAutoAdvanced, setHasAutoAdvanced] = useState(false);
 
   // Stripe state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -223,14 +222,7 @@ function CheckoutContent() {
     }
   }, [make, model, color, licensePlate, updateContextVehicleInfo, hasHydrated]);
 
-  // Auto-advance to Step 3 if returning authenticated and steps 1 & 2 are complete
-  // Uses a one-time trigger to avoid fighting manual user navigation
-  useEffect(() => {
-    if (isInitialized && isGuestInfoComplete && isVehicleInfoComplete && isAuthenticated && step < 3 && !hasAutoAdvanced) {
-      setStep(3);
-      setHasAutoAdvanced(true);
-    }
-  }, [isInitialized, isGuestInfoComplete, isVehicleInfoComplete, isAuthenticated, step, hasAutoAdvanced, router]);
+
 
   useEffect(() => {
     if (isAuthenticated && user) {
