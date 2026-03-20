@@ -24,6 +24,10 @@ interface BookingContextType extends BookingState {
   setParkingType: (type: "airport" | "hourly" | "monthly") => void;
   clearBooking: () => void;
   minBookingDuration: number;
+  taxRate: number;
+  serviceFee: number;
+  isInitialized: boolean;
+  clearBookingData: () => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -57,7 +61,7 @@ const loadBookingState = (): BookingState => {
   }
 
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       return {
@@ -67,7 +71,7 @@ const loadBookingState = (): BookingState => {
       };
     }
   } catch (error) {
-    console.error("Failed to load booking state from session storage:", error);
+    console.error("Failed to load booking state from local storage:", error);
   }
 
   return {
@@ -86,9 +90,9 @@ const saveBookingState = (state: BookingState) => {
   if (typeof window === "undefined") return;
 
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
-    console.error("Failed to save booking state to session storage:", error);
+    console.error("Failed to save booking state to local storage:", error);
   }
 };
 
@@ -117,48 +121,44 @@ export function BookingProvider({
   const [isMounted, setIsMounted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [minBookingDuration, setMinBookingDuration] = useState(120);
+  const [taxRate, setTaxRate] = useState(12);
+  const [serviceFee, setServiceFee] = useState(5.99);
 
-  // Set isMounted on first client-side effect
+  // Consolidated Initialization: Storage + Settings
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    const initialize = async () => {
+      setIsMounted(true);
 
-  useEffect(() => {
-    const fetchDuration = async () => {
+      // 1. Load from storage
       try {
-        const settings = await getGeneralSettings();
-        if (settings.minBookingDuration) {
-          setMinBookingDuration(settings.minBookingDuration);
-        }
-      } catch (error) {
-        console.error("Failed to fetch min duration setting:", error);
-      }
-    };
-    fetchDuration();
-  }, []);
-
-  // Load from session storage only on client mount
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const loadFromStorage = () => {
-      try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          setState({
+          setState(prev => ({
+            ...prev,
             ...parsed,
             checkIn: new Date(parsed.checkIn),
             checkOut: new Date(parsed.checkOut),
-          });
+          }));
         }
       } catch (error) {
-        console.error("Failed to load booking state from session storage:", error);
+        console.error("Failed to load booking state from local storage:", error);
       }
+
+      // 2. Load fresh settings
+      try {
+        const settings = await getGeneralSettings();
+        if (settings.minBookingDuration) setMinBookingDuration(settings.minBookingDuration);
+        if (settings.taxRate) setTaxRate(settings.taxRate);
+        if (settings.serviceFee) setServiceFee(settings.serviceFee);
+      } catch (error) {
+        console.error("Failed to fetch settings during init:", error);
+      }
+
       setIsInitialized(true);
     };
 
-    loadFromStorage();
+    initialize();
   }, []);
 
   useEffect(() => {
@@ -218,14 +218,23 @@ export function BookingProvider({
     };
     setState(newState);
 
-    // Also clear from session storage
+    // Also clear from local storage
     if (typeof window !== "undefined") {
       try {
-        sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
-        console.error("Failed to clear booking state from session storage:", error);
+        console.error("Failed to clear booking state from local storage:", error);
       }
     }
+  }, []);
+
+  const clearBookingData = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      guestInfo: null,
+      vehicleInfo: null,
+    }));
+    localStorage.removeItem('booking_state');
   }, []);
 
   const contextValue = useMemo(() => ({
@@ -239,7 +248,11 @@ export function BookingProvider({
     setParkingType,
     clearBooking,
     minBookingDuration,
-  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking, minBookingDuration]);
+    taxRate,
+    serviceFee,
+    isInitialized,
+    clearBookingData,
+  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking, minBookingDuration, taxRate, serviceFee, isInitialized, clearBookingData]);
 
   return (
     <BookingContext.Provider value={contextValue}>

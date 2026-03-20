@@ -230,50 +230,57 @@ export function DataTable<T>({
             <div
               key={index}
               className={cn(
-                "p-4 border rounded-lg bg-card",
-                onRowClick && "cursor-pointer hover:bg-muted/50"
+                "w-full p-4 border rounded-xl bg-white shadow-sm ring-1 ring-border/20 mb-4 transition-all overflow-hidden",
+                onRowClick && "cursor-pointer active:scale-[0.99] hover:bg-muted/10"
               )}
               onClick={() => onRowClick?.(item)}
             >
-              <div className="space-y-2">
+              <div className="space-y-3.5">
                 {columns
                   .filter((col) => !col.hideOnMobile)
                   .map((column) => (
                     <div
                       key={column.key}
-                      className="flex items-center justify-between gap-2"
+                      className="flex items-start justify-between gap-2 w-full"
                     >
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground shrink-0 pt-0.5">
                         {column.header}
                       </span>
-                      <span className="text-sm font-medium text-right">
+                      <div className="text-[13px] font-semibold text-foreground text-right break-words min-w-0">
                         {column.render
                           ? column.render(item)
                           : ((item as any)[column.key] as React.ReactNode)}
-                      </span>
+                      </div>
                     </div>
                   ))}
               </div>
               {actions && (() => {
                 const itemActions = typeof actions === 'function' ? actions(item) : actions;
                 return itemActions.length > 0 ? (
-                  <div
-                    className="flex gap-2 mt-3 pt-3 border-t"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {itemActions.map((action, i) => (
-                      <Button
-                        key={i}
-                        variant={action.variant === "destructive" ? "destructive" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                        disabled={action.disabled}
-                        onClick={() => action.onClick(item)}
-                      >
-                        {action.icon}
-                        {action.label}
-                      </Button>
-                    ))}
+                  <div className="mt-3 pt-3 border-t border-border/10">
+                    <div
+                      className="flex flex-wrap gap-1.5 w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {itemActions.map((action, i) => (
+                        <Button
+                          key={i}
+                          variant={action.variant === "destructive" ? "destructive" : "outline"}
+                          size="sm"
+                          className={cn(
+                            "h-8 px-2.5 gap-1 rounded-lg text-[11px] font-semibold flex-1 min-w-fit",
+                            action.variant === "destructive"
+                              ? "bg-destructive hover:bg-destructive/90 text-white border-transparent"
+                              : "bg-background text-foreground hover:bg-muted"
+                          )}
+                          disabled={action.disabled}
+                          onClick={() => action.onClick(item)}
+                        >
+                          {action.icon && React.cloneElement(action.icon as React.ReactElement<any>, { className: "w-3.5 h-3.5 shrink-0" })}
+                          <span className="whitespace-nowrap">{action.label}</span>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 ) : null;
               })()}
@@ -345,9 +352,11 @@ export function DataTable<T>({
 export function StatusBadge({
   status,
   variant,
+  className,
 }: {
   status: string;
   variant?: "success" | "warning" | "error" | "info" | "default";
+  className?: string;
 }) {
   const variantStyles = {
     success: "bg-green-50 text-green-700 border-green-200",
@@ -358,7 +367,7 @@ export function StatusBadge({
   };
 
   return (
-    <Badge variant="outline" className={cn(variantStyles[variant || "default"])}>
+    <Badge variant="outline" className={cn(variantStyles[variant || "default"], className)}>
       {status}
     </Badge>
   );

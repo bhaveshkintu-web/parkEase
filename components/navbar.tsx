@@ -265,6 +265,22 @@ export function Navbar() {
                         <Heart className="h-5 w-5" />
                         Favorites
                       </Link>
+                      <Link
+                        href="/account/vehicles"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <Car className="h-5 w-5" />
+                        Vehicles
+                      </Link>
+                      <Link
+                        href="/account/payments"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <CreditCard className="h-5 w-5" />
+                        Payment Methods
+                      </Link>
                       {(user.role.toLowerCase() === "admin" ||
                         user.role.toLowerCase() === "owner" ||
                         user.role.toLowerCase() === "watchman") && (

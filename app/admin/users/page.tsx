@@ -8,6 +8,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { PaginationFooter } from "@/components/ui/pagination-footer";
 import { Button } from "@/components/ui/button";
@@ -200,45 +201,65 @@ export default function AdminUsersPage() {
             Manage all platform users, roles, and permissions
           </p>
         </div>
-        <Button onClick={() => setIsAddUserOpen(true)}>
+        <Button onClick={() => setIsAddUserOpen(true)} className="w-full sm:w-auto shadow-lg shadow-primary/20">
           <UserPlus className="mr-2 h-4 w-4" />
           Add User
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Users</CardDescription>
-            <CardTitle className="text-3xl">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-1 px-3 pt-3 sm:px-4 sm:pt-4 flex flex-row items-center justify-between space-y-0">
+            <CardDescription className="text-xs sm:text-sm font-medium">Total Users</CardDescription>
+            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+              <span className="text-muted-foreground text-xs">#</span>
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {counts?.totalUsers || ((!loading && pagination?.total) || "-")}
             </CardTitle>
-          </CardHeader>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Active Users</CardDescription>
-            <CardTitle className="text-3xl text-primary">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-1 px-4 pt-4 flex flex-row items-center justify-between space-y-0">
+            <CardDescription className="text-xs sm:text-sm font-medium">Active Users</CardDescription>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-primary">
                 {counts?.activeUsers || "-"}
             </CardTitle>
-          </CardHeader>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Owners</CardDescription>
-            <CardTitle className="text-3xl">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-1 px-4 pt-4 flex flex-row items-center justify-between space-y-0">
+            <CardDescription className="text-xs sm:text-sm font-medium">Owners</CardDescription>
+            <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-secondary" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {counts?.ownersCount || "-"}
             </CardTitle>
-          </CardHeader>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Suspended</CardDescription>
-            <CardTitle className="text-3xl text-destructive">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-1 px-4 pt-4 flex flex-row items-center justify-between space-y-0">
+            <CardDescription className="text-xs sm:text-sm font-medium">Suspended</CardDescription>
+            <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-destructive">
                 {counts?.suspendedUsers || "-"}
             </CardTitle>
-          </CardHeader>
+          </CardContent>
         </Card>
       </div>
 

@@ -243,44 +243,46 @@ function BookingDistributionChart({
         <CardDescription>Distribution of parking types</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] flex items-center">
+        <div className="h-auto lg:h-[300px] flex flex-col sm:flex-row items-center gap-6">
           {totalBookings === 0 ? (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <div className="w-full h-full min-h-[200px] flex items-center justify-center text-muted-foreground">
               No booking data available for the selected period
             </div>
           ) : (
             <>
-              <ResponsiveContainer width="60%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number, name: string) => [`${value}%`, name]}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "12px",
-                    }}
-                  />
-                  <Legend content={() => null} />
-                  <text>
-                    <CustomLabel viewBox={{ cx: 100, cy: 150 }} value={totalBookings} />
-                  </text>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-3 flex-1">
+              <div className="w-full sm:w-[60%] h-[240px] sm:h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number, name: string) => [`${value}%`, name]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "12px",
+                      }}
+                    />
+                    <Legend content={() => null} />
+                    <text>
+                      <CustomLabel viewBox={{ cx: 100, cy: 150 }} value={totalBookings} />
+                    </text>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3 flex-1 w-full">
                 {data.map((item) => (
                   <div key={item.name} className="flex items-center gap-3">
                     <div
@@ -353,8 +355,8 @@ function TopLocationsTable({
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">Location</th>
                   <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Bookings</th>
-                  <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Revenue</th>
-                  <th className="text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Occupancy</th>
+                  <th className="hidden sm:table-cell text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Revenue</th>
+                  <th className="hidden lg:table-cell text-right py-3 px-4 font-semibold text-muted-foreground text-sm">Occupancy</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,10 +381,10 @@ function TopLocationsTable({
                     <td className="text-right py-4 px-4 font-medium">
                       {location.bookings.toLocaleString()}
                     </td>
-                    <td className="text-right py-4 px-4 font-medium text-emerald-600 dark:text-emerald-400">
+                    <td className="hidden sm:table-cell text-right py-4 px-4 font-medium text-emerald-600 dark:text-emerald-400">
                       ${location.revenue.toLocaleString()}
                     </td>
-                    <td className="text-right py-4 px-4">
+                    <td className="hidden lg:table-cell text-right py-4 px-4">
                       <div className="flex items-center justify-end gap-3">
                         <Progress value={location.occupancy} className="w-20 h-2" />
                         <span className="text-sm font-medium w-12 text-right">{location.occupancy}%</span>

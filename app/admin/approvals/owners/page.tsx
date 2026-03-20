@@ -179,45 +179,41 @@ export default function OwnerApprovalsPage() {
             <p className="text-muted-foreground">Review and approve new partner inquiries</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchLeads} disabled={isLoading} className="bg-transparent">
-            <Clock className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
-            Refresh
+        <div className="flex items-center gap-1.5 w-full overflow-hidden">
+          <Button variant="outline" size="icon" onClick={fetchLeads} disabled={isLoading} className="bg-transparent h-9 w-9 flex-shrink-0 border-slate-200">
+            <Clock className={cn("w-4 h-4", isLoading && "animate-spin")} />
           </Button>
-          <Badge variant="outline" className="py-1.5">
-            <Clock className="w-3 h-3 mr-1" />
+          <Badge variant="outline" className="h-9 px-1 sm:px-3 flex-1 min-w-0 justify-center text-[10px] sm:text-xs text-slate-600 border-slate-200 bg-white truncate">
             {pendingCount} Pending
           </Badge>
-          <Badge variant="outline" className="py-1.5 text-green-600 border-green-200">
-            <CheckCircle className="w-3 h-3 mr-1" />
+          <Badge variant="outline" className="h-9 px-1 sm:px-3 flex-1 min-w-0 justify-center text-[10px] sm:text-xs text-emerald-600 border-green-200 bg-emerald-50/30 truncate">
             {approvedCount} Approved
           </Badge>
-          <Badge variant="outline" className="py-1.5 text-red-600 border-red-200">
-            <XCircle className="w-3 h-3 mr-1" />
+          <Badge variant="outline" className="h-9 px-1 sm:px-3 flex-1 min-w-0 justify-center text-[10px] sm:text-xs text-rose-600 border-red-200 bg-rose-50/30 truncate">
             {rejectedCount} Rejected
           </Badge>
         </div>
       </div>
 
-      {/* Filters & Search - Styled like Refund Processing */}
-      <Card className="border-none shadow-sm bg-white">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Filters & Search - Tight Single Row Layout */}
+      <Card className="border-none shadow-sm bg-white overflow-hidden rounded-xl">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <Input
                 placeholder="Search by name, business or email..."
-                className="pl-10 h-10 border-slate-200"
+                className="pl-10 h-10 border-slate-100 bg-slate-50/50 rounded-lg text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-              <TabsList className="bg-slate-100 h-10 w-full md:w-auto">
-                <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
-                <TabsTrigger value="approved">Approved ({approvedCount})</TabsTrigger>
-                <TabsTrigger value="rejected">Rejected ({rejectedCount})</TabsTrigger>
-                <TabsTrigger value="all">All ({leads.length})</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="bg-slate-100/80 p-1 rounded-xl h-11 flex items-stretch w-full gap-1">
+                <TabsTrigger value="pending" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">Pending ({pendingCount})</TabsTrigger>
+                <TabsTrigger value="approved" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">Approved ({approvedCount})</TabsTrigger>
+                <TabsTrigger value="rejected" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">Rejected ({rejectedCount})</TabsTrigger>
+                <TabsTrigger value="all" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">All ({leads.length})</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
