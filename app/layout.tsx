@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   title: 'ParkZipply | Find & Reserve Parking Near Airports, Events & More',
   description: 'Book affordable airport parking, event parking, and daily parking spots. Compare prices, read reviews, and reserve your spot in seconds.',
   generator: 'v0.app',
+  manifest: '/manifest.json',
+  themeColor: '#000000',
   icons: {
     icon: [
       {
