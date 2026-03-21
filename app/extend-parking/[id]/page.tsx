@@ -21,8 +21,6 @@ import { MockCardForm } from "@/components/mock-card-form";
 import { StripeElementsWrapper } from "@/components/stripe-elements-wrapper";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { isStripeConfigured as isStripeActive } from "@/lib/stripe";
-import { useAuth } from "@/lib/auth-context";
-
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const isStripeConfigured = stripePublishableKey && stripePublishableKey.length > 0 && !stripePublishableKey.includes("YOUR_PUBLISHABLE_KEY");
@@ -31,9 +29,7 @@ const stripePromise = isStripeConfigured ? loadStripe(stripePublishableKey) : nu
 function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (newCheckOut: string) => void }) {
     const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
     const [isCustomMode, setIsCustomMode] = useState(false);
-    const { isAuthenticated } = useAuth();
     const [customHours, setCustomHours] = useState(0.5); // in 0.5-hr steps
-
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false);
     const { toast } = useToast();
@@ -41,7 +37,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
     const [serviceFee, setServiceFee] = useState(5.99);
 
     const [agreedToTerms, setAgreedToTerms] = useState(false);
-
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [overlapInfo, setOverlapInfo] = useState<{ hasOverlap: boolean; maxAllowedMinutes: number | null; nextBookingCheckIn?: Date } | null>(null);
     const [savedMethods, setSavedMethods] = useState<any[]>([]);
@@ -128,7 +124,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
     const [useNewCard, setUseNewCard] = useState(false);
 
-    const handleExtendClick = async () => {
+    const handlePaymentIntentCreated = async () => {
         if (!selectedDuration) return;
 
         const option = enrichedOptions.find(o => o.minutes === selectedDuration);
@@ -158,10 +154,28 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
              return;
         }
 
-        // Otherwise show payment UI for deferred intent creation
-        setShowPaymentForm(true);
-    };
+        // Otherwise build Intent for new card flow
+        setIsProcessing(true);
+        try {
+            const result = await createPaymentIntentAction({
+                amount: option.price,
+                locationId: booking.locationId,
+                locationName: booking.location.name,
+                guestEmail: booking.guestEmail,
+            });
 
+            if (!result.success) throw new Error(result.error);
+
+            if (result.clientSecret) {
+                setClientSecret(result.clientSecret);
+                setShowPaymentForm(true);
+            }
+        } catch (err: any) {
+            toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     const handleExtensionSuccess = async (paymentIntentId: string) => {
         if (!selectedDuration) return;
@@ -381,9 +395,9 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                             </div>
                         )}
 
-                        {showPaymentForm && (useNewCard || savedMethods.length === 0) ? (
+                        {showPaymentForm && clientSecret && (useNewCard || savedMethods.length === 0) ? (
                             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                {!isStripeActive() ? (
+                                {!isStripeActive() || clientSecret.startsWith("mock_") ? (
                                     <MockCardForm
                                         onSuccess={handleExtensionSuccess}
                                         amount={enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0}
@@ -393,14 +407,9 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                         setAgreedToTerms={setAgreedToTerms}
                                     />
                                 ) : (
-                                    <StripeElementsWrapper 
-                                        mode="payment"
-                                        amount={Math.round((enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0) * 100)}
-                                        currency="usd"
-                                        setupFutureUsage={isAuthenticated ? "off_session" : undefined}
-                                    >
-
+                                    <StripeElementsWrapper clientSecret={clientSecret}>
                                         <StripePaymentForm
+                                            clientSecret={clientSecret}
                                             amount={enrichedOptions.find(o => o.minutes === selectedDuration)?.price || 0}
                                             onPaymentSuccess={handleExtensionSuccess}
                                             onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
@@ -408,17 +417,6 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                             setIsSubmitting={setIsPaymentSubmitting}
                                             agreedToTerms={agreedToTerms}
                                             setAgreedToTerms={setAgreedToTerms}
-                                            onCreateIntent={async () => {
-                                                const option = enrichedOptions.find(o => o.minutes === selectedDuration);
-                                                const result = await createPaymentIntentAction({
-                                                    amount: option?.price || 0,
-                                                    locationId: booking.locationId,
-                                                    locationName: booking.location.name,
-                                                    guestEmail: booking.guestEmail,
-                                                });
-                                                if (!result.success) throw new Error(result.error);
-                                                return result.clientSecret!;
-                                            }}
                                         />
                                     </StripeElementsWrapper>
                                 )}
@@ -461,7 +459,7 @@ function ExtensionForm({ booking, onComplete }: { booking: any, onComplete: (new
                                             ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
                                             : "opacity-40 grayscale"
                                     )}
-                                    onClick={handleExtendClick}
+                                    onClick={handlePaymentIntentCreated}
                                     disabled={isProcessing || (selectedCardId && !useNewCard && !agreedToTerms) || (overlapInfo?.hasOverlap && overlapInfo.maxAllowedMinutes !== null && selectedDuration! > overlapInfo.maxAllowedMinutes)}
                                 >
                                     {isProcessing ? (

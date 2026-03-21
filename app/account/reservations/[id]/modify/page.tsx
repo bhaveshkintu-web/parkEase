@@ -22,8 +22,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { createPaymentIntentAction, chargeSavedCardAction } from "@/lib/actions/stripe-actions";
 import { Plus } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-
 
 const isStripeActive = isStripeConfigured();
 
@@ -43,8 +41,6 @@ export default function ModifyReservationPage({
   const id = resolvedParams.id;
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -62,7 +58,7 @@ export default function ModifyReservationPage({
   const [quote, setQuote] = React.useState<any>(null);
   const [originalPrice, setOriginalPrice] = React.useState(0);
   const [showPayment, setShowPayment] = React.useState(false);
-
+  const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [isModifiable, setIsModifiable] = React.useState(true);
   const [modificationGap, setModificationGap] = React.useState(120);
   const [minBookingDuration, setMinBookingDuration] = React.useState(120);
@@ -209,6 +205,7 @@ export default function ModifyReservationPage({
       setQuote(newQuote);
 
       // Reset payment state if price changes
+      setClientSecret(null);
       setShowPayment(false);
 
     } catch (error) {
@@ -250,13 +247,26 @@ export default function ModifyReservationPage({
 
     setIsSaving(true);
     try {
-      // 1. If payment is needed and not yet authorized/completed, show payment UI
-      if (needsPayment && !showPayment) {
-        setShowPayment(true);
-        setIsSaving(false);
-        return;
-      }
+      // 1. If payment is needed and not yet completed, set up Stripe
+      if (needsPayment && !showPayment && !clientSecret) {
+        const paymentResponse = await createPaymentIntentAction({
+          amount: priceDifference,
+          locationId: reservation.locationId,
+          locationName: reservation.location.name,
+          checkIn: formData.checkIn,
+          checkOut: formData.checkOut,
+          guestEmail: reservation.guestEmail,
+        });
 
+        if (paymentResponse.success && paymentResponse.clientSecret) {
+          setClientSecret(paymentResponse.clientSecret);
+          setShowPayment(true);
+          setIsSaving(false);
+          return;
+        } else {
+          throw new Error(paymentResponse.error || "Failed to initialize payment");
+        }
+      }
 
       // 2. Update Vehicle Info (Always update)
       const vehicleResponse = await updateBookingVehicle(id, {
@@ -597,7 +607,7 @@ export default function ModifyReservationPage({
             </Card>
           )}
 
-          {showPayment && (
+          {showPayment && clientSecret && (
             <Card className="border-primary bg-primary/5">
               <CardHeader>
                 <CardTitle className="text-lg">Payment Required</CardTitle>
@@ -692,7 +702,7 @@ export default function ModifyReservationPage({
                   <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
                     {paymentMethods.length > 0 && <div className="border-t pt-4" />}
 
-                    {!isStripeActive ? (
+                    {!isStripeActive || (clientSecret && clientSecret.startsWith("mock_")) ? (
                       <MockCardForm
                         onSuccess={handlePaymentSuccess}
                         amount={priceDifference}
@@ -701,36 +711,30 @@ export default function ModifyReservationPage({
                         agreedToTerms={agreedToTerms}
                         setAgreedToTerms={setAgreedToTerms}
                       />
-                    ) : (
-                      <StripeElementsWrapper 
-                        mode="payment"
-                        amount={Math.round(priceDifference * 100)}
-                        currency="usd"
-                        setupFutureUsage={isAuthenticated ? "off_session" : undefined}
-                      >
-
+                    ) : clientSecret ? (
+                      <StripeElementsWrapper clientSecret={clientSecret}>
                         <StripePaymentForm
+                          clientSecret={clientSecret}
                           amount={priceDifference}
                           onPaymentSuccess={handlePaymentSuccess}
-                          onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
+                          onPaymentError={(err) => {
+                            toast({
+                              title: "Payment Error",
+                              description: err,
+                              variant: "destructive",
+                            });
+                          }}
                           isSubmitting={isPaymentSubmitting}
                           setIsSubmitting={setIsPaymentSubmitting}
                           agreedToTerms={agreedToTerms}
                           setAgreedToTerms={setAgreedToTerms}
-                          onCreateIntent={async () => {
-                            const result = await createPaymentIntentAction({
-                              amount: priceDifference,
-                              locationId: reservation.locationId,
-                              locationName: reservation.location.name,
-                              checkIn: formData.checkIn,
-                              checkOut: formData.checkOut,
-                              guestEmail: reservation.guestEmail,
-                            });
-                            if (!result.success) throw new Error(result.error);
-                            return result.clientSecret!;
-                          }}
                         />
                       </StripeElementsWrapper>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Initializing Secure Payment...</p>
+                      </div>
                     )}
                   </div>
                 ) : (
