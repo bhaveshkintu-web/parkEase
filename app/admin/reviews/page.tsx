@@ -331,9 +331,9 @@ export default function AdminReviewsPage() {
         {/* Filters and Search */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative flex-1 min-w-[240px] max-w-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-1 items-center gap-2">
+                <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search reviews..."
@@ -342,70 +342,79 @@ export default function AdminReviewsPage() {
                     className="pl-9"
                   />
                 </div>
-                <div className="flex flex-wrap gap-2 flex-1">
-                  <Select
-                    value={ownerFilter}
-                    onValueChange={(val) => {
-                      setOwnerFilter(val);
-                      setLocationFilter("all"); // Reset location when owner changes
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-[160px]">
-                      <SelectValue placeholder="All Owners" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Owners (All)</SelectItem>
-                      {owners.map(owner => (
-                        <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Select
+                  value={ownerFilter}
+                  onValueChange={(val) => {
+                    setOwnerFilter(val);
+                    setLocationFilter("all"); // Reset location when owner changes
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Owners" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Owners</SelectItem>
+                    {owners.map(owner => (
+                      <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                  <Select
-                    value={airportFilter}
-                    onValueChange={(val) => {
-                      setAirportFilter(val);
-                      setLocationFilter("all");
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-[140px]">
-                      <SelectValue placeholder="All Airports" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Airports (All)</SelectItem>
-                      {allAirports.map(airport => (
-                        <SelectItem key={airport} value={airport}>{airport}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Select
+                  value={airportFilter}
+                  onValueChange={(val) => {
+                    setAirportFilter(val);
+                    setLocationFilter("all");
+                  }}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="All Airports" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Airports</SelectItem>
+                    {allAirports.map(airport => (
+                      <SelectItem key={airport} value={airport}>{airport}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[130px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Status (All)</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="flagged">Flagged</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                  <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                    <SelectTrigger className="w-full sm:w-[130px]">
-                      <SelectValue placeholder="Rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Ratings (All)</SelectItem>
-                      <SelectItem value="5">5 Stars</SelectItem>
-                      <SelectItem value="4">4 Stars</SelectItem>
-                      <SelectItem value="3">3 Stars</SelectItem>
-                      <SelectItem value="2">2 Stars</SelectItem>
-                      <SelectItem value="1">1 Star</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Ratings</SelectItem>
+                    <SelectItem value="5">5 Stars</SelectItem>
+                    <SelectItem value="4">4 Stars</SelectItem>
+                    <SelectItem value="3">3 Stars</SelectItem>
+                    <SelectItem value="2">2 Stars</SelectItem>
+                    <SelectItem value="1">1 Star</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {selectedReviews.length > 0 && (
@@ -443,10 +452,10 @@ export default function AdminReviewsPage() {
                       />
                     </th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Review</th>
-                    <th className="hidden lg:table-cell p-4 text-left text-sm font-medium text-muted-foreground">Location</th>
-                    <th className="hidden sm:table-cell p-4 text-left text-sm font-medium text-muted-foreground">Rating</th>
+                    <th className="p-4 text-left text-sm font-medium text-muted-foreground">Location</th>
+                    <th className="p-4 text-left text-sm font-medium text-muted-foreground">Rating</th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Status</th>
-                    <th className="hidden md:table-cell p-4 text-left text-sm font-medium text-muted-foreground">Date</th>
+                    <th className="p-4 text-left text-sm font-medium text-muted-foreground">Date</th>
                     <th className="p-4 text-left text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
@@ -468,10 +477,10 @@ export default function AdminReviewsPage() {
                           )}
                         </div>
                       </td>
-                      <td className="hidden lg:table-cell p-4">
+                      <td className="p-4">
                         <span className="text-sm font-medium text-foreground">{review.locationName}</span>
                       </td>
-                      <td className="hidden sm:table-cell p-4">
+                      <td className="p-4">
                         <div className="flex items-center gap-1">
                           {[...Array(5)].map((_, i) => (
                             <Star
@@ -483,7 +492,7 @@ export default function AdminReviewsPage() {
                         </div>
                       </td>
                       <td className="p-4">{getStatusBadge(review.status)}</td>
-                      <td className="hidden md:table-cell p-4 text-sm text-muted-foreground">
+                      <td className="p-4 text-sm text-muted-foreground">
                         {new Date(review.date).toLocaleDateString()}
                       </td>
                       <td className="p-4">

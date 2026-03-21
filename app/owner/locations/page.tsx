@@ -247,46 +247,46 @@ export default function OwnerLocationsPage() {
   ];
 
   return (
-    <div className="py-2 sm:py-4 space-y-6 max-w-[100vw] overflow-x-hidden">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">My Locations</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">My Locations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage your parking locations and pricing
           </p>
         </div>
-        <Link href="/owner/locations/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
+        <Link href="/owner/locations/new">
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Location
           </Button>
         </Link>
       </div>
 
-      {/* Stats Cards - 1 col mobile, 2 tablet, 4 desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="border-none shadow-sm bg-card ring-1 ring-border/20 transition-all hover:shadow-md">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider font-semibold">Total Locations</CardDescription>
-            <CardTitle className="text-2xl sm:text-3xl font-bold">{counts.total}</CardTitle>
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Locations</CardDescription>
+            <CardTitle className="text-3xl">{counts.total}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="border-none shadow-sm bg-card ring-1 ring-border/20 transition-all hover:shadow-md">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider font-semibold">Active</CardDescription>
-            <CardTitle className="text-2xl sm:text-3xl text-primary font-bold">{counts.active}</CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-3xl text-primary">{counts.active}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="border-none shadow-sm bg-card ring-1 ring-border/20 transition-all hover:shadow-md">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider font-semibold">In Maintenance</CardDescription>
-            <CardTitle className="text-2xl sm:text-3xl text-amber-600 font-bold">{counts.maintenance}</CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>In Maintenance</CardDescription>
+            <CardTitle className="text-3xl text-amber-600">{counts.maintenance}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="border-none shadow-sm bg-card ring-1 ring-border/20 transition-all hover:shadow-md">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider font-semibold">Total Revenue</CardDescription>
-            <CardTitle className="text-2xl sm:text-3xl font-bold">{formatCurrency(counts.revenue)}</CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Revenue</CardDescription>
+            <CardTitle className="text-3xl">{formatCurrency(counts.revenue)}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -324,15 +324,17 @@ export default function OwnerLocationsPage() {
       </Card>
 
       {/* Locations Table */}
-      <div className="md:border md:rounded-lg md:bg-card md:overflow-hidden">
-        <DataTable
-          data={filteredLocations}
-          columns={columns}
-          actions={getActions}
-          emptyMessage="No locations found"
-          onRowClick={(item) => router.push(`/owner/locations/${item.id}`)}
-        />
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          <DataTable
+            data={filteredLocations}
+            columns={columns}
+            actions={getActions}
+            emptyMessage="No locations found"
+            onRowClick={(item) => router.push(`/owner/locations/${item.id}`)}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

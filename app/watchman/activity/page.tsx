@@ -770,18 +770,18 @@ export default function WatchmanActivityPage() {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-slate-100/80 p-1 rounded-xl h-11 flex items-stretch w-full gap-1">
-            <TabsTrigger value="activity" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">
-              <Activity className="w-3.5 h-3.5 mr-1 hidden xs:inline-block" />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="activity" className="flex-1 sm:flex-none">
+              <Activity className="w-4 h-4 mr-2" />
               Activity Log
             </TabsTrigger>
-            <TabsTrigger value="time" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">
-              <Timer className="w-3.5 h-3.5 mr-1 hidden xs:inline-block" />
-              Car Tracking
+            <TabsTrigger value="time" className="flex-1 sm:flex-none">
+              <Timer className="w-4 h-4 mr-2" />
+              Car Time Tracking
             </TabsTrigger>
-            <TabsTrigger value="shifts" className="flex-1 px-1 text-[10px] sm:text-xs font-medium rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm truncate">
-              <Calendar className="w-3.5 h-3.5 mr-1 hidden xs:inline-block" />
+            <TabsTrigger value="shifts" className="flex-1 sm:flex-none">
+              <Calendar className="w-4 h-4 mr-2" />
               Shift History
             </TabsTrigger>
           </TabsList>

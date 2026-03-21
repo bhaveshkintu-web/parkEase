@@ -32,13 +32,13 @@ export function PaginationFooter({
   });
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-border gap-4">
-      <p className="text-sm text-muted-foreground order-2 sm:order-1 text-center sm:text-left">
+    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border flex-wrap gap-2">
+      <p className="text-sm text-muted-foreground">
         Showing <span className="font-medium">{from}</span>–
         <span className="font-medium">{to}</span> of{" "}
         <span className="font-medium">{totalItems}</span> results
       </p>
-      <div className="flex items-center gap-1 order-1 sm:order-2">
+      <div className="flex items-center gap-1">
         <Button
           variant="outline"
           size="sm"

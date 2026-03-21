@@ -295,151 +295,141 @@ export default function OwnerWalletPage() {
     : 0;
 
   return (
-    <div className="py-2 sm:py-6 space-y-6 max-w-[100vw] overflow-x-hidden">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Wallet</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Wallet</h1>
+          <p className="text-muted-foreground mt-1">
             Manage your earnings and withdrawals
           </p>
         </div>
-
-        {/* Action Buttons - stacked full-width on mobile, inline on desktop */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2">
           {!wallet?.owner?.accountNumber && (
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto h-10 sm:h-11 px-4 text-sm"
-              onClick={() => setIsBankDialogOpen(true)}
-            >
-              <Building className="w-4 h-4 mr-2 shrink-0" />
+            <Button variant="outline" size="lg" onClick={() => setIsBankDialogOpen(true)}>
+              <Building className="w-4 h-4 mr-2" />
               Link Bank Account
             </Button>
           )}
-          <Button
-            className="w-full sm:w-auto h-10 sm:h-11 px-4 text-sm bg-teal-600 hover:bg-teal-700 shadow"
-            onClick={() => setIsWithdrawDialogOpen(true)}
-          >
-            <Download className="w-4 h-4 mr-2 shrink-0" />
-            Withdraw Funds
-          </Button>
-        </div>
-      </div>
-
-      {/* Withdraw Dialog */}
-      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Withdraw Funds</DialogTitle>
-            <DialogDescription>
-              Transfer funds to your linked bank account
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-              <p className="text-xs font-medium text-primary uppercase tracking-wider">Available Balance</p>
-              <p className="text-3xl font-bold text-foreground mt-1">
-                {formatCurrency(walletBalance)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Withdrawal Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="0.00"
-                  className="pl-8 h-12 text-lg"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  max={walletBalance}
-                />
-              </div>
-              <div className="flex gap-2">
-                {[25, 50].map((percent) => (
-                  <Button
-                    key={percent}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() =>
-                      setWithdrawAmount(((walletBalance * percent) / 100).toFixed(2))
-                    }
-                  >
-                    {percent}%
-                  </Button>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setWithdrawAmount(walletBalance.toFixed(2))}
-                >
-                  Max
-                </Button>
-              </div>
-            </div>
-            <Card className="bg-muted/30 border-dashed">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Building className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground text-sm">
-                        {wallet?.owner?.bankName || "Linked Bank"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {wallet?.owner?.accountNumber ? `****${wallet.owner.accountNumber.slice(-4)}` : "No account linked"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-8 text-primary"
-                    onClick={() => {
-                      setIsWithdrawDialogOpen(false);
-                      setIsBankDialogOpen(true);
-                    }}
-                  >
-                    {wallet?.owner?.accountNumber ? "Edit" : "Link"}
-                  </Button>
+          <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="shadow-lg">
+                <Download className="w-4 h-4 mr-2" />
+                Withdraw Funds
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Withdraw Funds</DialogTitle>
+                <DialogDescription>
+                  Transfer funds to your linked bank account
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-xs font-medium text-primary uppercase tracking-wider">Available Balance</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {formatCurrency(walletBalance)}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsWithdrawDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleWithdraw}
-              className="min-w-[120px]"
-              disabled={
-                isWithdrawing ||
-                !withdrawAmount ||
-                parseFloat(withdrawAmount) <= 0 ||
-                parseFloat(withdrawAmount) > walletBalance
-              }
-            >
-              {isWithdrawing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                `Withdraw ${withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ""}`
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Withdrawal Amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="0.00"
+                      className="pl-8 h-12 text-lg"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      max={walletBalance}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {[25, 50].map((percent) => (
+                      <Button
+                        key={percent}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          setWithdrawAmount(((walletBalance * percent) / 100).toFixed(2))
+                        }
+                      >
+                        {percent}%
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setWithdrawAmount(walletBalance.toFixed(2))}
+                    >
+                      Max
+                    </Button>
+                  </div>
+                </div>
+                <Card className="bg-muted/30 border-dashed">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Building className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">
+                            {wallet?.owner?.bankName || "Linked Bank"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {wallet?.owner?.accountNumber ? `****${wallet.owner.accountNumber.slice(-4)}` : "No account linked"}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8 text-primary"
+                        onClick={() => {
+                          setIsWithdrawDialogOpen(false);
+                          setIsBankDialogOpen(true);
+                        }}
+                      >
+                        {wallet?.owner?.accountNumber ? "Edit" : "Link"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsWithdrawDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleWithdraw}
+                  className="min-w-[120px]"
+                  disabled={
+                    isWithdrawing ||
+                    !withdrawAmount ||
+                    parseFloat(withdrawAmount) <= 0 ||
+                    parseFloat(withdrawAmount) > walletBalance
+                  }
+                >
+                  {isWithdrawing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    `Withdraw ${withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ""}`
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      {/* Bank Details Dialog */}
-      <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
+        {/* Bank Details Dialog */}
+        <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Bank Account Details</DialogTitle>
@@ -499,7 +489,7 @@ export default function OwnerWalletPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
+      </div>
 
       {/* Summary Cards */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -508,9 +498,9 @@ export default function OwnerWalletPage() {
             <TrendingUp className="w-5 h-5 text-primary" />
             Financial Overview
           </h2>
-          <p className="text-xs text-muted-foreground italic mt-0.5">
+          <p className="text-sm text-muted-foreground italic">
             {dateRange.from && dateRange.to ? (
-              <>Showing data from {format(dateRange.from as Date, "PP")} to {format(dateRange.to as Date, "PP")}</>
+              <>Showing data from {format(dateRange.from, "PP")} to {format(dateRange.to, "PP")}</>
             ) : "Showing lifetime data"}
           </p>
         </div>
@@ -552,7 +542,7 @@ export default function OwnerWalletPage() {
                   mode="range"
                   defaultMonth={dateRange.from}
                   selected={{ from: dateRange.from, to: dateRange.to }}
-                  onSelect={(rangeItem: any) => setDateRange({ from: rangeItem?.from, to: rangeItem?.to })}
+                  onSelect={(range: any) => setDateRange({ from: range?.from, to: range?.to })}
                   numberOfMonths={2}
                 />
               </PopoverContent>
@@ -561,8 +551,7 @@ export default function OwnerWalletPage() {
         </div>
       </div>
 
-      {/* Summary Cards - 1 col mobile, 2 col tablet, 4 col desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Balance"
           value={formatCurrency(wallet?.lifetimeEarnings || 0)}
@@ -600,17 +589,17 @@ export default function OwnerWalletPage() {
         <CardHeader className="border-b pb-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
-              <TabsList className="bg-muted/50 w-full sm:w-auto">
-                <TabsTrigger value="transactions" className="flex-1">Transactions</TabsTrigger>
-                <TabsTrigger value="withdrawals" className="flex-1">Withdrawals</TabsTrigger>
+              <TabsList className="bg-muted/50">
+                <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
               </TabsList>
 
               {activeTab === "transactions" && (
                 <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by reference..."
-                    className="pl-9 h-11 sm:h-10"
+                    className="pl-9"
                     value={txFilters.search}
                     onChange={(e) => setTxFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
                   />
@@ -630,60 +619,54 @@ export default function OwnerWalletPage() {
                 transactions.map((tx: any) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between px-4 py-3 sm:px-6 hover:bg-muted/50 transition-colors gap-3"
+                    className="flex items-center justify-between p-4 sm:px-6 hover:bg-muted/50 transition-colors"
                   >
-                    {/* Left: icon + details */}
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center gap-4 min-w-0">
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          tx.amount < 0
-                            ? "bg-red-50"
-                            : tx.type === "CREDIT" || tx.type === "EARNED" || tx.type === "REFUND"
-                              ? "bg-green-100"
-                              : tx.type === "DEPOSITED"
-                                ? "bg-blue-100"
-                                : tx.type === "COMMISSION"
-                                  ? "bg-amber-100"
-                                  : "bg-red-50"
-                        }`}
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${tx.amount < 0
+                          ? "bg-red-50"
+                          : tx.type === "CREDIT" || tx.type === "EARNED" || tx.type === "REFUND"
+                            ? "bg-green-100"
+                            : tx.type === "DEPOSITED"
+                              ? "bg-blue-100"
+                              : tx.type === "COMMISSION"
+                                ? "bg-amber-100"
+                                : "bg-red-50"
+                          }`}
                       >
                         {getTransactionIcon(tx.type, tx.amount)}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-foreground text-xs sm:text-sm leading-snug line-clamp-2 break-words">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground text-sm truncate">
                           {tx.type === "COMMISSION" && wallet?.commissionRate && !tx.description.includes("%")
                             ? `${tx.description.replace("(Platform Commission)", "")} (Platform Commission ${wallet.commissionRate}%)`
                             : tx.description}
                         </p>
-                        <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-0.5">
-                          <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono uppercase text-muted-foreground tracking-tight">
-                            {tx.reference ? tx.reference.slice(0, 14) + (tx.reference.length > 14 ? "…" : "") : "N/A"}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono uppercase text-muted-foreground tracking-tighter">
+                            Ref: {tx.reference || "N/A"}
                           </span>
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            · {formatDate(tx.createdAt)}
+                          <span className="text-xs text-muted-foreground">
+                            • {formatDate(tx.createdAt)}
                           </span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Right: amount + badge */}
-                    <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                    <div className="text-right flex-shrink-0 ml-4">
                       <p
-                        className={`font-bold text-sm sm:text-base whitespace-nowrap ${
-                          tx.amount < 0 || tx.type === "COMMISSION"
-                            ? "text-foreground"
-                            : tx.type === "CREDIT" || tx.type === "DEPOSITED"
+                        className={`font-bold text-lg ${tx.amount < 0
+                          ? "text-foreground"
+                          : tx.type === "CREDIT" || tx.type === "EARNED" || tx.type === "REFUND"
+                            ? "text-green-600"
+                            : tx.type === "DEPOSITED"
                               ? "text-blue-600"
-                              : tx.type === "EARNED" || tx.type === "REFUND"
-                                ? "text-emerald-600"
-                                : "text-foreground"
-                        }`}
+                              : "text-foreground"
+                          }`}
                       >
                         {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
                       </p>
                       <StatusBadge
                         status={tx.status}
-                        className="text-[10px] px-1.5 py-0"
                         variant={
                           tx.status.toLowerCase() === "completed"
                             ? "success"
@@ -700,9 +683,11 @@ export default function OwnerWalletPage() {
           )}
 
           {activeTab === "transactions" && txMeta.totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t text-sm text-muted-foreground">
-              <p className="shrink-0">
-                Showing {(txMeta.page - 1) * txFilters.limit + 1}–{Math.min(txMeta.page * txFilters.limit, txMeta.total)} of {txMeta.total}
+            <div className="flex items-center justify-between gap-4 flex-wrap p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {(txMeta.page - 1) * txFilters.limit + 1} to{" "}
+                {Math.min(txMeta.page * txFilters.limit, txMeta.total)} of{" "}
+                {txMeta.total} results
               </p>
               <div className="flex items-center gap-2">
                 <Button

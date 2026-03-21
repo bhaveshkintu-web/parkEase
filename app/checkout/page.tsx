@@ -75,11 +75,7 @@ function CheckoutContent() {
     vehicleInfo: contextVehicleInfo,
     setGuestInfo: updateContextGuestInfo,
     setVehicleInfo: updateContextVehicleInfo,
-    minBookingDuration,
-    taxRate: pricingTaxRate,
-    serviceFee: pricingServiceFee,
-    isInitialized,
-    clearBookingData
+    minBookingDuration
   } = useBooking();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
@@ -93,6 +89,18 @@ function CheckoutContent() {
   };
 
   const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
+  const [isLoading, setIsLoading] = useState(!contextLocation);
+
+  // Always fetch FRESH pricing settings on mount — context value may be stale from app init
+  const [pricingTaxRate, setPricingTaxRate] = useState(12);
+  const [pricingServiceFee, setPricingServiceFee] = useState(5.99);
+  useEffect(() => {
+    getGeneralSettings().then((s) => {
+      setPricingTaxRate(s.taxRate ?? 12);
+      setPricingServiceFee(s.serviceFee ?? 5.99);
+    }).catch(console.error);
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Saved Cards
@@ -103,7 +111,6 @@ function CheckoutContent() {
   const [promoApplied, setPromoApplied] = useState(false);
   const [appliedPromotion, setAppliedPromotion] = useState<any>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
-  const [hasHydrated, setHasHydrated] = useState(false);
 
   // Stripe state
   // Stripe state — no longer needed for new card flow (handled by deferred pattern)
@@ -140,14 +147,11 @@ function CheckoutContent() {
     }
   }, [isStripeActive]);
 
-  // Optimized completeness check – check BOTH local state AND context state (for initial labels)
-  const isGuestInfoComplete = !!((firstName || contextGuestInfo?.firstName) && (lastName || contextGuestInfo?.lastName) && (email || contextGuestInfo?.email) && (phone || contextGuestInfo?.phone));
-  const isVehicleInfoComplete = !!((make || contextVehicleInfo?.make) && (model || contextVehicleInfo?.model) && (licensePlate || contextVehicleInfo?.licensePlate));
+  const isGuestInfoComplete = firstName && lastName && email && phone;
+  const isVehicleInfoComplete = make && model && licensePlate;
   const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
 
   useEffect(() => {
-    if (!isInitialized) return;
-
     if (!contextLocation) {
       toast({
         title: "No location selected",
@@ -169,10 +173,8 @@ function CheckoutContent() {
       return;
     }
 
-    if (bookingLocation !== contextLocation) {
-      setBookingLocation(contextLocation);
-    }
-  }, [isInitialized, contextLocation, checkIn, checkOut, router, toast, minBookingDuration]);
+    setIsLoading(false);
+  }, [contextLocation, checkIn, checkOut, router, toast]);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -196,46 +198,23 @@ function CheckoutContent() {
     loadModels();
   }, [make]);
 
+  // Sync Guest and Vehicle info to context whenever they change
   useEffect(() => {
-    if (isInitialized && !hasHydrated) {
-      if (contextGuestInfo) {
-        if (!firstName) setFirstName(contextGuestInfo.firstName || "");
-        if (!lastName) setLastName(contextGuestInfo.lastName || "");
-        if (!email) setEmail(contextGuestInfo.email || "");
-        if (!phone) setPhone(contextGuestInfo.phone || "");
-      }
-      if (contextVehicleInfo) {
-        if (!make) setMake(contextVehicleInfo.make || "");
-        if (!model) setModel(contextVehicleInfo.model || "");
-        if (!color) setColor(contextVehicleInfo.color || "");
-        if (!licensePlate) setLicensePlate(contextVehicleInfo.licensePlate || "");
-      }
-      setHasHydrated(true);
-    }
-  }, [isInitialized, contextGuestInfo, contextVehicleInfo, hasHydrated]);
-
-  // Sync back to context only when user types or after hydration
-  useEffect(() => {
-    if (hasHydrated) {
-      updateContextGuestInfo({ firstName, lastName, email, phone });
-    }
-  }, [firstName, lastName, email, phone, updateContextGuestInfo, hasHydrated]);
+    updateContextGuestInfo({ firstName, lastName, email, phone });
+  }, [firstName, lastName, email, phone, updateContextGuestInfo]);
 
   useEffect(() => {
-    if (hasHydrated) {
-      updateContextVehicleInfo({ make, model, color, licensePlate });
-    }
-  }, [make, model, color, licensePlate, updateContextVehicleInfo, hasHydrated]);
-
-
+    updateContextVehicleInfo({ make, model, color, licensePlate });
+  }, [make, model, color, licensePlate, updateContextVehicleInfo]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Auto-fill Guest Info from session (favor active profile over stale storage)
-      if (user.firstName) setFirstName(user.firstName);
-      if (user.lastName) setLastName(user.lastName);
-      if (user.email) setEmail(user.email);
-      if (user.phone) setPhone(user.phone);
+      // Auto-fill Guest Info from session if both session exists and local state is empty
+      // BUT prioritized session data if we just returned from login
+      if (user.firstName && !firstName) setFirstName(user.firstName);
+      if (user.lastName && !lastName) setLastName(user.lastName);
+      if (user.email && !email) setEmail(user.email);
+      if (user.phone && !phone) setPhone(user.phone);
 
       const fetchSavedCards = async () => {
         try {
@@ -381,7 +360,6 @@ function CheckoutContent() {
       const response = await createBooking(bookingData);
 
       if (response.success && response.data) {
-        clearBookingData();
         toast({
           title: "Booking Confirmed!",
           description: "Your parking spot has been reserved.",
@@ -461,7 +439,6 @@ function CheckoutContent() {
       const response = await createBooking(bookingData);
 
       if (response.success && response.data) {
-        clearBookingData();
         toast({
           title: "Booking Confirmed!",
           description: "Your parking spot has been reserved using your saved card.",
@@ -488,7 +465,7 @@ function CheckoutContent() {
     });
   };
 
-  if (!isInitialized) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
@@ -557,7 +534,7 @@ function CheckoutContent() {
                       <div className="text-left">
                         <p className="font-semibold text-foreground">Guest Information</p>
                         <p className="text-sm text-muted-foreground">
-                          {isGuestInfoComplete ? `${firstName || contextGuestInfo?.firstName || ""} ${lastName || contextGuestInfo?.lastName || ""}` : "Enter your contact details"}
+                          {isGuestInfoComplete ? `${firstName} ${lastName}` : "Enter your contact details"}
                         </p>
                       </div>
                     </div>
@@ -569,7 +546,7 @@ function CheckoutContent() {
                         <Input
                           id="firstName"
                           placeholder="John"
-                          value={firstName || contextGuestInfo?.firstName || ""}
+                          value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                         />
                       </div>
@@ -578,7 +555,7 @@ function CheckoutContent() {
                         <Input
                           id="lastName"
                           placeholder="Doe"
-                          value={lastName || contextGuestInfo?.lastName || ""}
+                          value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
                         />
                       </div>
@@ -588,7 +565,7 @@ function CheckoutContent() {
                           id="email"
                           type="email"
                           placeholder="john@example.com"
-                          value={email || contextGuestInfo?.email || ""}
+                          value={email}
                           onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
@@ -598,7 +575,7 @@ function CheckoutContent() {
                           id="phone"
                           type="tel"
                           placeholder="(555) 123-4567"
-                          value={phone || contextGuestInfo?.phone || ""}
+                          value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                         />
                       </div>
@@ -624,7 +601,7 @@ function CheckoutContent() {
                       <div className="text-left">
                         <p className="font-semibold text-foreground">Vehicle Information</p>
                         <p className="text-sm text-muted-foreground">
-                          {isVehicleInfoComplete ? `${make || contextVehicleInfo?.make || ""} ${model || contextVehicleInfo?.model || ""} - ${licensePlate || contextVehicleInfo?.licensePlate || ""}` : "Enter your vehicle details"}
+                          {isVehicleInfoComplete ? `${make} ${model} - ${licensePlate}` : "Enter your vehicle details"}
                         </p>
                       </div>
                     </div>
@@ -695,7 +672,7 @@ function CheckoutContent() {
                           <div className="space-y-2">
                             <Label htmlFor="make">Vehicle Make</Label>
                             <Select
-                              value={make || contextVehicleInfo?.make || ""}
+                              value={make}
                               onValueChange={(v) => {
                                 setMake(v);
                                 setModel(""); // Reset model when make changes
@@ -722,7 +699,7 @@ function CheckoutContent() {
                               </div>
                             ) : models.length > 0 ? (
                               <Select
-                                value={model || contextVehicleInfo?.model || ""}
+                                value={model}
                                 onValueChange={(v) => setModel(v)}
                               >
                                 <SelectTrigger id="model">
@@ -741,7 +718,7 @@ function CheckoutContent() {
                               <Input
                                 id="model"
                                 placeholder={make ? "Enter model" : "Select make first"}
-                                value={model || contextVehicleInfo?.model || ""}
+                                value={model}
                                 onChange={(e) => setModel(e.target.value)}
                               />
                             )}
@@ -751,7 +728,7 @@ function CheckoutContent() {
                             <Input
                               id="color"
                               placeholder="Silver"
-                              value={color || contextVehicleInfo?.color || ""}
+                              value={color}
                               onChange={(e) => setColor(e.target.value)}
                             />
                           </div>
@@ -760,7 +737,7 @@ function CheckoutContent() {
                             <Input
                               id="licensePlate"
                               placeholder="ABC 1234"
-                              value={licensePlate || contextVehicleInfo?.licensePlate || ""}
+                              value={licensePlate}
                               onChange={(e) => setLicensePlate(e.target.value)}
                             />
                           </div>
