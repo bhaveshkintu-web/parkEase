@@ -112,10 +112,9 @@ export async function createPaymentIntent(
       amount: Math.round(amount), // Stripe expects amount in cents
       currency: "usd",
       customer: customerId,
-      // automatic_payment_methods enables Apple Pay, Google Pay, and all
-      // Stripe-supported methods automatically based on the user's device/region.
-      // The PaymentElement loading bug is fixed at the component level (overlay spinner).
-      automatic_payment_methods: { enabled: true },
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         ...metadata,
         integration_type: "production_v2",
@@ -282,9 +281,9 @@ export async function createSetupIntent(userId: string) {
 
     const setupIntent = await stripeClient.setupIntents.create({
       customer: customerId!,
-      // automatic_payment_methods enables Apple Pay, Google Pay, and all
-      // Stripe-supported methods. Loading bug is fixed at the component level.
-      automatic_payment_methods: { enabled: true },
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: { userId },
     });
 

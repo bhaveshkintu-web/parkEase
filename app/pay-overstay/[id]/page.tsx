@@ -86,16 +86,16 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
         }
     };
 
-
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-    const handlePayClick = async () => {
+    const handlePaymentIntentCreated = async () => {
         if (!agreedToTerms) {
             toast({ title: "Agreement Required", description: "You must agree to the terms to proceed.", variant: "destructive" });
             return;
         }
 
-        // If they chose a saved card, process immediately via server action
+        // 1. Saved Card Flow
         if (selectedCardId && !useNewCard) {
             setIsProcessing(true);
             try {
@@ -118,8 +118,27 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
             return;
         }
 
-        // Otherwise show payment UI for deferred intent creation
-        setShowPaymentForm(true);
+        // 2. New Card Flow (Create Intent)
+        setIsProcessing(true);
+        try {
+            const result = await createPaymentIntentAction({
+                amount: overstayCharge,
+                locationId: booking.locationId,
+                locationName: booking.location.name,
+                guestEmail: booking.guestEmail,
+            });
+
+            if (!result.success) throw new Error(result.error);
+
+            if (result.clientSecret) {
+                setClientSecret(result.clientSecret);
+                setShowPaymentForm(true);
+            }
+        } catch (err: any) {
+            toast({ title: "Payment Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -210,9 +229,9 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                     </div>
                 )}
 
-                {showPaymentForm && (useNewCard || savedCards.length === 0) ? (
+                {showPaymentForm && clientSecret && useNewCard ? (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-500">
-                        {!isStripeActive() ? (
+                        {!isStripeActive() || clientSecret.startsWith("mock_") ? (
                             <MockCardForm
                                 onSuccess={handlePaymentSuccess}
                                 amount={overstayCharge}
@@ -223,14 +242,9 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                                 showWallet={true}
                             />
                         ) : (
-                            <StripeElementsWrapper 
-                                mode="payment"
-                                amount={Math.round(overstayCharge * 100)}
-                                currency="usd"
-                                setupFutureUsage={isAuthenticated ? "off_session" : undefined}
-                            >
-
+                            <StripeElementsWrapper clientSecret={clientSecret}>
                                 <StripePaymentForm
+                                    clientSecret={clientSecret}
                                     amount={overstayCharge}
                                     onPaymentSuccess={handlePaymentSuccess}
                                     onPaymentError={(err) => toast({ title: "Payment Error", description: err, variant: "destructive" })}
@@ -238,16 +252,6 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                                     setIsSubmitting={setIsProcessing}
                                     agreedToTerms={agreedToTerms}
                                     setAgreedToTerms={setAgreedToTerms}
-                                    onCreateIntent={async () => {
-                                        const result = await createPaymentIntentAction({
-                                            amount: overstayCharge,
-                                            locationId: booking.locationId,
-                                            locationName: booking.location.name,
-                                            guestEmail: booking.guestEmail,
-                                        });
-                                        if (!result.success) throw new Error(result.error);
-                                        return result.clientSecret!;
-                                    }}
                                 />
                             </StripeElementsWrapper>
                         )}
@@ -288,7 +292,7 @@ function OverstayPaymentForm({ booking, onComplete }: { booking: any, onComplete
                                     ? "bg-slate-950 text-white shadow-primary/20 hover:shadow-primary/30"
                                     : "opacity-40 grayscale"
                             )}
-                            onClick={handlePayClick}
+                            onClick={handlePaymentIntentCreated}
                             disabled={isProcessing || !agreedToTerms}
                         >
                             {isProcessing ? (
