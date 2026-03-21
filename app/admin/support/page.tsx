@@ -200,7 +200,7 @@ export default function AdminSupportPage() {
       </Card>
 
       {/* Tickets List */}
-      <Card className="border-none shadow-sm overflow-x-auto bg-white">
+      <Card className="border-none shadow-sm overflow-hidden bg-white">
         {isLoading ? (
           <div className="flex items-center justify-center p-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -215,10 +215,10 @@ export default function AdminSupportPage() {
           <Table>
             <TableHeader className="bg-slate-50/50">
               <TableRow>
-                <TableHead className="w-[100px] font-semibold text-slate-900">Status</TableHead>
+                <TableHead className="w-[120px] font-semibold text-slate-900">Status</TableHead>
                 <TableHead className="font-semibold text-slate-900">Customer</TableHead>
-                <TableHead className="hidden sm:table-cell font-semibold text-slate-900">Subject</TableHead>
-                <TableHead className="hidden md:table-cell font-semibold text-slate-900">SLA Timer</TableHead>
+                <TableHead className="font-semibold text-slate-900">Subject</TableHead>
+                <TableHead className="font-semibold text-slate-900">SLA Timer</TableHead>
                 <TableHead className="text-right font-semibold text-slate-900">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -232,13 +232,13 @@ export default function AdminSupportPage() {
                       <span className="text-xs text-slate-500">{ticket.email}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="flex flex-col max-w-[200px] lg:max-w-[300px]">
+                  <TableCell>
+                    <div className="flex flex-col max-w-[300px]">
                       <span className="font-medium truncate">{ticket.subject}</span>
                       <span className="text-xs text-slate-500 truncate">{ticket.message}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{getSLABadge(ticket.createdAt)}</TableCell>
+                  <TableCell>{getSLABadge(ticket.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleManageTicket(ticket)} className="text-primary hover:text-primary hover:bg-primary/5">
                       Manage

@@ -235,9 +235,9 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
         ))}
       </div> */}
 
-      <div className={cn("grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]")}>
+      <div className={cn("grid gap-3", isHero ? "md:grid-cols-[1fr_auto_auto_auto]" : "md:grid-cols-[1fr_auto_auto_auto]")}>
         {/* Input */}
-        <div className="relative sm:col-span-2 lg:col-span-1">
+        <div className="relative">
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -321,7 +321,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
         {/* Date Pickers */}
         <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left w-full", isHero ? "h-11 md:h-12 lg:min-w-[160px]" : "h-9 md:h-10 lg:min-w-[140px]")}>
+            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left", isHero ? "h-11 md:h-12 min-w-[140px] md:min-w-[160px]" : "h-9 md:h-10 min-w-[120px] md:min-w-[140px]")}>
               <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex flex-col items-start leading-none">
                 <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase font-bold">Drop-off</span>
@@ -372,7 +372,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
 
         <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left w-full", isHero ? "h-11 md:h-12 lg:min-w-[160px]" : "h-9 md:h-10 lg:min-w-[140px]")}>
+            <Button variant="outline" className={cn("justify-start gap-2 font-normal bg-transparent text-left", isHero ? "h-11 md:h-12 min-w-[140px] md:min-w-[160px]" : "h-9 md:h-10 min-w-[120px] md:min-w-[140px]")}>
               <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex flex-col items-start leading-none">
                 <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase font-bold">Pick-up</span>
@@ -429,7 +429,7 @@ export function SearchWidget({ variant = "hero", className }: SearchWidgetProps)
           </PopoverContent>
         </Popover>
 
-        <Button onClick={onSearchClick} className={cn("gap-2 sm:col-span-2 lg:col-span-1", isHero ? "h-11 md:h-12 px-4 md:px-6" : "h-9 md:h-10 px-3 md:px-4")}>
+        <Button onClick={onSearchClick} className={cn("gap-2", isHero ? "h-11 md:h-12 px-4 md:px-6" : "h-9 md:h-10 px-3 md:px-4")}>
           <Search className="h-4 w-4 shrink-0" />
           <span className="truncate">Find Parking</span>
         </Button>

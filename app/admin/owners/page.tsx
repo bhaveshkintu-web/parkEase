@@ -172,8 +172,12 @@ export default function OwnersPage() {
           <h1 className="text-2xl font-bold tracking-tight">Owner Management</h1>
           <p className="text-muted-foreground">Manage partners, view analytics, and handle approvals.</p>
         </div>
-        <div className="flex items-center w-full sm:w-auto">
-          <Button asChild className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20">
+        <div className="flex items-center gap-2">
+          {/* <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button> */}
+          <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
             <Link href="/admin/owners/new">
               <Plus className="mr-2 h-4 w-4" />
               Add New Owner
@@ -183,47 +187,72 @@ export default function OwnersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Total Partners", value: owners.length, sub: "+2 from last month", icon: Users },
-          { label: "Pending Approval", value: owners.filter(o => normalizeStatus(o.status) === 'pending').length, sub: "Needs attention", icon: CheckCircle2 },
-          { label: "Active Locations", value: owners.reduce((acc, curr) => acc + (curr.locations?.length || 0), 0), sub: "Across partners", icon: MapPin },
-          { label: "Total Revenue", value: "$0.00", sub: "+0% from last month", icon: Building2 }
-        ].map((stat, i) => (
-          <Card key={i} className="hover:shadow-md transition-shadow border-none shadow-sm bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-4 pt-4">
-              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground">{stat.label}</CardTitle>
-              <stat.icon className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-lg sm:text-2xl font-bold">{stat.value}</div>
-              <p className="text-[9px] sm:text-xs text-muted-foreground uppercase">{stat.sub}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Partners</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{owners.length}</div>
+            <p className="text-xs text-muted-foreground">+2 from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{owners.filter(o => normalizeStatus(o.status) === 'pending').length}</div>
+            <p className="text-xs text-muted-foreground">Needs attention</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Locations</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {owners.reduce((acc, curr) => acc + (curr.locations?.length || 0), 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">Across all partners</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$0.00</div>
+            <p className="text-xs text-muted-foreground">+0% from last month</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content */}
-      <Card className="border-none shadow-sm overflow-hidden">
-        <CardHeader className="p-0">
-          <div className="flex flex-col gap-4 px-4 sm:px-6 py-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="flex flex-col gap-4">
-                <TabsList className="bg-transparent h-auto grid grid-cols-2 sm:flex sm:flex-row items-stretch gap-1.5 w-full p-0 border-none">
-                  <TabsTrigger value="all" className="h-10 data-[state=active]:bg-white data-[state=active]:shadow-sm border rounded-lg sm:border-none flex-1">All ({owners.length})</TabsTrigger>
-                  <TabsTrigger value="approved" className="h-10 data-[state=active]:bg-white data-[state=active]:shadow-sm border rounded-lg sm:border-none flex-1">Active ({owners.filter(o => normalizeStatus(o.status) === "approved").length})</TabsTrigger>
-                  <TabsTrigger value="pending" className="h-10 data-[state=active]:bg-white data-[state=active]:shadow-sm border rounded-lg sm:border-none flex-1">Pending ({owners.filter(o => normalizeStatus(o.status) === "pending").length})</TabsTrigger>
-                  <TabsTrigger value="suspended" className="h-10 data-[state=active]:bg-white data-[state=active]:shadow-sm border rounded-lg sm:border-none flex-1">Suspended ({owners.filter(o => normalizeStatus(o.status) === "suspended").length})</TabsTrigger>
-                  <TabsTrigger value="rejected" className="h-10 data-[state=active]:bg-white data-[state=active]:shadow-sm border rounded-lg sm:border-none flex-1 col-span-2 sm:col-span-1">Rejected ({owners.filter(o => normalizeStatus(o.status) === "rejected").length})</TabsTrigger>
+      <Card className="border-none shadow-sm">
+        <CardHeader className="p-0 pb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 pt-6">
+            <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <TabsList className="w-full md:w-auto grid grid-cols-5 h-10">
+                  <TabsTrigger value="all">All ({owners.length})</TabsTrigger>
+                  <TabsTrigger value="approved">Active ({owners.filter(o => normalizeStatus(o.status) === "approved").length})</TabsTrigger>
+                  <TabsTrigger value="pending">Pending ({owners.filter(o => normalizeStatus(o.status) === "pending").length})</TabsTrigger>
+                  <TabsTrigger value="suspended">Suspended ({owners.filter(o => normalizeStatus(o.status) === "suspended").length})</TabsTrigger>
+                  <TabsTrigger value="rejected">Rejected ({owners.filter(o => normalizeStatus(o.status) === "rejected").length})</TabsTrigger>
                 </TabsList>
                 
-                <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="relative w-full md:w-72">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search owners by name, email..."
+                    placeholder="Search owners..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-slate-50/80 h-10 w-full border-slate-100"
+                    className="pl-8 bg-muted/50"
                   />
                 </div>
               </div>
@@ -231,15 +260,15 @@ export default function OwnersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-x-auto no-scrollbar">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="w-[200px] sm:w-[300px]">Business Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Primary Contact</TableHead>
+                  <TableHead className="w-[300px]">Business Name</TableHead>
+                  <TableHead>Primary Contact</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden sm:table-cell">Locations</TableHead>
-                  <TableHead className="hidden lg:table-cell">Joined Date</TableHead>
+                  <TableHead>Locations</TableHead>
+                  <TableHead>Joined Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -265,7 +294,7 @@ export default function OwnersPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell>
                         <div className="flex flex-col">
                           <span className="text-sm">{owner.user.firstName} {owner.user.lastName}</span>
                           <span className="text-xs text-muted-foreground">{owner.user.email}</span>
@@ -274,12 +303,12 @@ export default function OwnersPage() {
                       <TableCell>
                         {getStatusBadge(owner.status)}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell>
                         <Badge variant="secondary" className="font-normal">
                           {owner.locations?.length || 0} Locations
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                      <TableCell className="text-muted-foreground">
                         {new Date(owner.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">

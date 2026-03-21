@@ -208,12 +208,11 @@ export default function AdminWithdrawalsPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-             <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-1 rounded-lg w-full md:w-fit">
+             <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg w-fit">
                 <Button 
                   variant={status === "all" ? "secondary" : "ghost"} 
                   size="sm" 
                   onClick={() => setStatus("all")}
-                  className="flex-1 md:flex-none"
                 >
                   All
                 </Button>
@@ -221,7 +220,6 @@ export default function AdminWithdrawalsPage() {
                   variant={status === "PENDING" ? "secondary" : "ghost"} 
                   size="sm" 
                   onClick={() => setStatus("PENDING")}
-                  className="flex-1 md:flex-none"
                 >
                   Pending
                 </Button>
@@ -229,7 +227,6 @@ export default function AdminWithdrawalsPage() {
                   variant={status === "APPROVED" ? "secondary" : "ghost"} 
                   size="sm" 
                   onClick={() => setStatus("APPROVED")}
-                  className="flex-1 md:flex-none"
                 >
                   Approved
                 </Button>
@@ -237,7 +234,6 @@ export default function AdminWithdrawalsPage() {
                   variant={status === "PROCESSED" ? "secondary" : "ghost"} 
                   size="sm" 
                   onClick={() => setStatus("PROCESSED")}
-                  className="flex-1 md:flex-none"
                 >
                   Processed
                 </Button>
@@ -259,10 +255,10 @@ export default function AdminWithdrawalsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Owner</TableHead>
-                  <TableHead className="hidden lg:table-cell">Bank Details</TableHead>
+                  <TableHead>Bank Details</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Requested At</TableHead>
+                  <TableHead>Requested At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -282,7 +278,7 @@ export default function AdminWithdrawalsPage() {
                            <span className="text-xs text-muted-foreground">{w.wallet.owner.user.email}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell>
                         <div className="flex flex-col text-sm">
                            <span className="font-medium flex items-center gap-1">
                              <Building className="w-3 h-3" /> {w.bankName}
@@ -300,7 +296,7 @@ export default function AdminWithdrawalsPage() {
                       <TableCell>
                         {getStatusBadge(w.status)}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground">
                         {new Date(w.requestedAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">

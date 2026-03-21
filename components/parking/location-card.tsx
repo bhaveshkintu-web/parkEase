@@ -176,7 +176,7 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
           </div>
 
           {/* Price & CTA */}
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between border-t border-border pt-4 gap-4">
+          <div className="mt-4 flex items-end justify-between border-t border-border pt-4">
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-foreground">
@@ -193,19 +193,19 @@ export function LocationCard({ location, checkIn, checkOut, days }: LocationCard
               </p>
             </div>
 
-            <div className="flex flex-col sm:items-end gap-2">
+            <div className="flex items-center gap-2">
               {availability.status === "soldout" && (
-                <span className="text-xs font-semibold text-destructive">
+                <span className="text-sm font-semibold text-destructive">
                   All slots are reserved
                 </span>
               )}
               {availability.status === "soldout" ? (
-                <Button disabled className="w-full sm:w-auto">
+                <Button disabled>
                   Select
                 </Button>
               ) : (
-                <Link href={`/parking/${location.id}`} className="w-full sm:w-auto">
-                  <Button className="w-full">Select</Button>
+                <Link href={`/parking/${location.id}`}>
+                  <Button>Select</Button>
                 </Link>
               )}
             </div>
