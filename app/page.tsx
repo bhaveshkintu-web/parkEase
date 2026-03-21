@@ -15,7 +15,7 @@ export default function HomePage() {
       <main className="flex-1">
         <HeroSection />
         <BenefitsSection />
-        <PopularAirports />
+        {/* <PopularAirports /> */}
         <HowItWorks />
         <Testimonials />
         {/* <AppDownload /> */}
