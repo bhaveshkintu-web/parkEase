@@ -24,6 +24,9 @@ interface BookingContextType extends BookingState {
   setParkingType: (type: "airport" | "hourly" | "monthly") => void;
   clearBooking: () => void;
   minBookingDuration: number;
+  taxRate: number;
+  serviceFee: number;
+  isInitialized: boolean;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -81,14 +84,14 @@ const loadBookingState = (): BookingState => {
   };
 };
 
-// Save booking state to session storage
+// Save booking state to local storage
 const saveBookingState = (state: BookingState) => {
   if (typeof window === "undefined") return;
 
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
-    console.error("Failed to save booking state to session storage:", error);
+    console.error("Failed to save booking state to storage:", error);
   }
 };
 
@@ -114,36 +117,17 @@ export function BookingProvider({
 }) {
   // Use a stable default state for SSR and initial client render
   const [state, setState] = useState<BookingState>(() => getInitialState(defaultCheckIn, defaultCheckOut));
-  const [isMounted, setIsMounted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [minBookingDuration, setMinBookingDuration] = useState(120);
+  const [taxRate, setTaxRate] = useState(12);
+  const [serviceFee, setServiceFee] = useState(5.99);
 
-  // Set isMounted on first client-side effect
+  // Consolidated initialization logic
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const fetchDuration = async () => {
+    const initialize = async () => {
+      // 1. Load from storage
       try {
-        const settings = await getGeneralSettings();
-        if (settings.minBookingDuration) {
-          setMinBookingDuration(settings.minBookingDuration);
-        }
-      } catch (error) {
-        console.error("Failed to fetch min duration setting:", error);
-      }
-    };
-    fetchDuration();
-  }, []);
-
-  // Load from session storage only on client mount
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const loadFromStorage = () => {
-      try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
           setState({
@@ -153,13 +137,29 @@ export function BookingProvider({
           });
         }
       } catch (error) {
-        console.error("Failed to load booking state from session storage:", error);
+        console.error("Failed to load booking state from storage:", error);
       }
+
+      // 2. Fetch general settings
+      try {
+        const settings = await getGeneralSettings();
+        if (settings.minBookingDuration) {
+          setMinBookingDuration(settings.minBookingDuration);
+        }
+        if (settings.taxRate !== undefined) setTaxRate(settings.taxRate);
+        if (settings.serviceFee !== undefined) setServiceFee(settings.serviceFee);
+      } catch (error) {
+        console.error("Failed to fetch general settings:", error);
+      }
+
+      // 3. Complete initialization
       setIsInitialized(true);
     };
 
-    loadFromStorage();
+    initialize();
   }, []);
+
+
 
   useEffect(() => {
     if (isInitialized) {
@@ -218,12 +218,12 @@ export function BookingProvider({
     };
     setState(newState);
 
-    // Also clear from session storage
+    // Also clear from storage
     if (typeof window !== "undefined") {
       try {
-        sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
-        console.error("Failed to clear booking state from session storage:", error);
+        console.error("Failed to clear booking state from storage:", error);
       }
     }
   }, []);
@@ -239,7 +239,10 @@ export function BookingProvider({
     setParkingType,
     clearBooking,
     minBookingDuration,
-  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking, minBookingDuration]);
+    taxRate,
+    serviceFee,
+    isInitialized,
+  }), [state, setLocation, setCheckIn, setCheckOut, setGuestInfo, setVehicleInfo, setSearchQuery, setParkingType, clearBooking, minBookingDuration, taxRate, serviceFee, isInitialized]);
 
   return (
     <BookingContext.Provider value={contextValue}>
