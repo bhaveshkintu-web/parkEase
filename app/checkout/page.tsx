@@ -75,7 +75,10 @@ function CheckoutContent() {
     vehicleInfo: contextVehicleInfo,
     setGuestInfo: updateContextGuestInfo,
     setVehicleInfo: updateContextVehicleInfo,
-    minBookingDuration
+    minBookingDuration,
+    taxRate: pricingTaxRate,
+    serviceFee: pricingServiceFee,
+    isInitialized
   } = useBooking();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
@@ -88,20 +91,8 @@ function CheckoutContent() {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const [bookingLocation, setBookingLocation] = useState<any>(contextLocation);
-  const [isLoading, setIsLoading] = useState(!contextLocation);
-
-  // Always fetch FRESH pricing settings on mount — context value may be stale from app init
-  const [pricingTaxRate, setPricingTaxRate] = useState(12);
-  const [pricingServiceFee, setPricingServiceFee] = useState(5.99);
-  useEffect(() => {
-    getGeneralSettings().then((s) => {
-      setPricingTaxRate(s.taxRate ?? 12);
-      setPricingServiceFee(s.serviceFee ?? 5.99);
-    }).catch(console.error);
-  }, []);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   // Saved Cards
   const [savedCards, setSavedCards] = useState<any[]>([]);
@@ -116,20 +107,20 @@ function CheckoutContent() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
-  // Guest Info initialized from context or user session
-  const [firstName, setFirstName] = useState(contextGuestInfo?.firstName || "");
-  const [lastName, setLastName] = useState(contextGuestInfo?.lastName || "");
-  const [email, setEmail] = useState(contextGuestInfo?.email || "");
-  const [phone, setPhone] = useState(contextGuestInfo?.phone || "");
+  // Guest Info state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
-  // Vehicle Info initialized from context
+  // Vehicle Info state
   const [savedVehicles, setSavedVehicles] = useState<any[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [useNewVehicle, setUseNewVehicle] = useState(true);
-  const [make, setMake] = useState(contextVehicleInfo?.make || "");
-  const [model, setModel] = useState(contextVehicleInfo?.model || "");
-  const [color, setColor] = useState(contextVehicleInfo?.color || "");
-  const [licensePlate, setLicensePlate] = useState(contextVehicleInfo?.licensePlate || "");
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [color, setColor] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
 
@@ -146,38 +137,67 @@ function CheckoutContent() {
   const isVehicleInfoComplete = make && model && licensePlate;
   const canProceedToPayment = isGuestInfoComplete && isVehicleInfoComplete && agreedToTerms;
 
+  // Hydrate local state from context
   useEffect(() => {
-    if (!contextLocation) {
-      toast({
-        title: "No location selected",
-        description: "Please select a parking location first.",
-        variant: "destructive",
-      });
-      router.push("/parking");
-      return;
+    if (isInitialized && !hasHydrated) {
+      if (!contextLocation) {
+        toast({
+          title: "No location selected",
+          description: "Please select a parking location first.",
+          variant: "destructive",
+        });
+        router.push("/parking");
+        return;
+      }
+
+      const minDuration = minBookingDuration * 60 * 1000;
+      if (checkOut.getTime() - checkIn.getTime() < minDuration) {
+        toast({
+          title: "Invalid Duration",
+          description: `Minimum booking duration is ${minBookingDuration >= 60 ? `${minBookingDuration / 60} hours` : `${minBookingDuration} minutes`}.`,
+          variant: "destructive",
+        });
+        router.push(`/parking/${contextLocation.id}`);
+        return;
+      }
+
+      // Pre-fill from context
+      if (contextGuestInfo) {
+        if (!firstName) setFirstName(contextGuestInfo.firstName || "");
+        if (!lastName) setLastName(contextGuestInfo.lastName || "");
+        if (!email) setEmail(contextGuestInfo.email || "");
+        if (!phone) setPhone(contextGuestInfo.phone || "");
+      }
+      if (contextVehicleInfo) {
+        if (!make) setMake(contextVehicleInfo.make || "");
+        if (!model) setModel(contextVehicleInfo.model || "");
+        if (!color) setColor(contextVehicleInfo.color || "");
+        if (!licensePlate) setLicensePlate(contextVehicleInfo.licensePlate || "");
+      }
+      setHasHydrated(true);
     }
+  }, [isInitialized, contextLocation, contextGuestInfo, contextVehicleInfo, hasHydrated, checkIn, checkOut, router, toast, minBookingDuration]);
 
-    const minDuration = minBookingDuration * 60 * 1000;
-    if (checkOut.getTime() - checkIn.getTime() < minDuration) {
-      toast({
-        title: "Invalid Duration",
-        description: `Minimum booking duration is ${minBookingDuration >= 60 ? `${minBookingDuration / 60} hours` : `${minBookingDuration} minutes`}.`,
-        variant: "destructive",
-      });
-      router.push(`/parking/${contextLocation.id}`);
-      return;
+  // Sync back to context
+  useEffect(() => {
+    if (hasHydrated) {
+      updateContextGuestInfo({ firstName, lastName, email, phone });
     }
+  }, [firstName, lastName, email, phone, updateContextGuestInfo, hasHydrated]);
 
-    setIsLoading(false);
-  }, [contextLocation, checkIn, checkOut, router, toast]);
+  useEffect(() => {
+    if (hasHydrated) {
+      updateContextVehicleInfo({ make, model, color, licensePlate });
+    }
+  }, [make, model, color, licensePlate, updateContextVehicleInfo, hasHydrated]);
 
+  // Handle vehicle models
   useEffect(() => {
     const loadModels = async () => {
       if (!make || make === "Other") {
         setModels([]);
         return;
       }
-
       setIsFetchingModels(true);
       try {
         const fetchedModels = await fetchModelsByMake(make);
@@ -189,27 +209,18 @@ function CheckoutContent() {
         setIsFetchingModels(false);
       }
     };
-
     loadModels();
   }, [make]);
 
-  // Sync Guest and Vehicle info to context whenever they change
-  useEffect(() => {
-    updateContextGuestInfo({ firstName, lastName, email, phone });
-  }, [firstName, lastName, email, phone, updateContextGuestInfo]);
 
-  useEffect(() => {
-    updateContextVehicleInfo({ make, model, color, licensePlate });
-  }, [make, model, color, licensePlate, updateContextVehicleInfo]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Auto-fill Guest Info from session if both session exists and local state is empty
-      // BUT prioritized session data if we just returned from login
-      if (user.firstName && !firstName) setFirstName(user.firstName);
-      if (user.lastName && !lastName) setLastName(user.lastName);
-      if (user.email && !email) setEmail(user.email);
-      if (user.phone && !phone) setPhone(user.phone);
+      // Favor active profile over stale storage on login
+      if (user.firstName) setFirstName(user.firstName);
+      if (user.lastName) setLastName(user.lastName);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
 
       const fetchSavedCards = async () => {
         try {
@@ -257,7 +268,7 @@ function CheckoutContent() {
     }
   }, [isAuthenticated, user]);
 
-  const quote = bookingLocation ? calculateQuote(bookingLocation, checkIn, checkOut, pricingTaxRate, pricingServiceFee) : null;
+  const quote = contextLocation ? calculateQuote(contextLocation, checkIn, checkOut, pricingTaxRate, pricingServiceFee) : null;
 
   // Calculate final price with dynamic promotion
   const calculateFinalPrice = () => {
@@ -282,13 +293,13 @@ function CheckoutContent() {
 
   // Create PaymentIntent when user reaches payment step
   const createPaymentIntentForCheckout = async () => {
-    if (!bookingLocation || !quote) return;
+    if (!contextLocation || !quote) return;
 
     try {
       const result = await createPaymentIntentAction({
         amount: finalPrice,
-        locationId: bookingLocation.id,
-        locationName: bookingLocation.name,
+        locationId: contextLocation.id,
+        locationName: contextLocation.name,
         checkIn: checkIn.toISOString(),
         checkOut: checkOut.toISOString(),
         guestEmail: email,
@@ -377,9 +388,10 @@ function CheckoutContent() {
   };
 
   const handlePaymentSuccess = async (paymentId: string) => {
+    if (!contextLocation || !quote) return;
     try {
       const bookingData = {
-        locationId: bookingLocation.id,
+        locationId: contextLocation.id,
         checkIn: new Date(checkIn),
         checkOut: new Date(checkOut),
         guestFirstName: firstName,
@@ -428,8 +440,8 @@ function CheckoutContent() {
       const chargeResult = await chargeSavedCardAction({
         amount: finalPrice,
         paymentMethodId: selectedCardId,
-        locationId: bookingLocation.id,
-        locationName: bookingLocation.name,
+        locationId: contextLocation!.id,
+        locationName: contextLocation!.name,
         checkIn: new Date(checkIn).toISOString(),
         checkOut: new Date(checkOut).toISOString(),
       });
@@ -457,7 +469,7 @@ function CheckoutContent() {
       // 2. If charge succeeds, then record the booking
       // We pass the real Stripe paymentIntentId from the charge action back to createBooking
       const bookingData = {
-        locationId: bookingLocation.id,
+        locationId: contextLocation!.id,
         checkIn: new Date(checkIn),
         checkOut: new Date(checkOut),
         guestFirstName: firstName,
@@ -506,7 +518,7 @@ function CheckoutContent() {
     });
   };
 
-  if (isLoading) {
+  if (!isInitialized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
@@ -540,7 +552,7 @@ function CheckoutContent() {
         <div className="container px-4 py-6">
           {/* Back Link */}
           <Link
-            href={`/parking/${bookingLocation.id}`}
+            href={`/parking/${contextLocation?.id}`}
             className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -575,7 +587,7 @@ function CheckoutContent() {
                       <div className="text-left">
                         <p className="font-semibold text-foreground">Guest Information</p>
                         <p className="text-sm text-muted-foreground">
-                          {isGuestInfoComplete ? `${firstName} ${lastName}` : "Enter your contact details"}
+                          {isGuestInfoComplete ? `${firstName || contextGuestInfo?.firstName} ${lastName || contextGuestInfo?.lastName}` : "Enter your contact details"}
                         </p>
                       </div>
                     </div>
@@ -978,9 +990,9 @@ function CheckoutContent() {
                   <div className="flex gap-4">
                     <div className="h-20 w-20 shrink-0 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
                       <div className="flex h-full items-center justify-center">
-                        {bookingLocation?.images?.length > 0 ? (
+                        {(contextLocation?.images?.length ?? 0) > 0 ? (
                           <img
-                            src={bookingLocation.images[0]}
+                            src={contextLocation?.images?.[0] || ""}
                             alt="Location"
                             className="h-full w-full object-cover"
                           />
@@ -990,11 +1002,11 @@ function CheckoutContent() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground">{bookingLocation.name}</h3>
-                      <p className="text-sm text-muted-foreground">{bookingLocation.airport}</p>
+                      <h3 className="font-semibold text-foreground">{contextLocation?.name}</h3>
+                      <p className="text-sm text-muted-foreground">{contextLocation?.airport}</p>
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" />
-                        {bookingLocation.distance}
+                        {contextLocation?.distance}
                       </div>
                     </div>
                   </div>
@@ -1062,7 +1074,7 @@ function CheckoutContent() {
                   <div className="space-y-2 border-t border-border pt-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {formatCurrency(bookingLocation.pricePerDay)} x {quote.durationText}
+                        {formatCurrency(contextLocation?.pricePerDay || 0)} x {quote.durationText}
                       </span>
                       <span className="text-foreground">{formatCurrency(basePrice)}</span>
                     </div>
